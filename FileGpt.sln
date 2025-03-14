@@ -1,0 +1,64 @@
+
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.8.34309.116
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{0C8537CB-F177-4668-BFED-D1DE0CCCF233}") = "FileGpt", "FileGpt\FileGpt.csproj", "{9EE21FD8-16B6-47A3-BAB3-5B2BAD40E557}"
+EndProject
+Project("{0C8537CB-F177-4668-BFED-D1DE0CCCF233}") = "FileGpt.Client", "FileGpt.Client\FileGpt.Client.csproj", "{DE3CCC59-9D25-47DF-B2AC-EE9682132F7A}"
+EndProject
+Project("{0C8537CB-F177-4668-BFED-D1DE0CCCF233}") = "FileGpt.DataAccess", "FileGpt.DataAccess\FileGpt.DataAccess.csproj", "{B2D4A7B3-5BD6-43A2-99E8-5E3C33BB5E36}"
+EndProject
+Project("{0C8537CB-F177-4668-BFED-D1DE0CCCF233}") = "FileGpt.DataObjects", "FileGpt.DataObjects\FileGpt.DataObjects.csproj", "{E3BC039F-89D7-49EC-B753-188F9EBDD3DF}"
+EndProject
+Project("{0C8537CB-F177-4668-BFED-D1DE0CCCF233}") = "FileGpt.EFModels", "FileGpt.EFModels\FileGpt.EFModels.csproj", "{4E07916E-072F-415E-A5DC-3E2075C5EC7C}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{8FCCE8A3-7A9D-4DCC-962D-FABBB2F581B8}"
+	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
+		.gitignore = .gitignore
+		LICENSE = LICENSE
+		README.md = README.md
+		Rename FreeFileGpt.exe = Rename FreeFileGpt.exe
+	EndProjectSection
+EndProject
+Project("{0C8537CB-F177-4668-BFED-D1DE0CCCF233}") = "FileGpt.Plugins", "FileGpt.Plugins\FileGpt.Plugins.csproj", "{5F6155E2-C8F3-488F-B340-9C5C4D65D41D}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{9EE21FD8-16B6-47A3-BAB3-5B2BAD40E557}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9EE21FD8-16B6-47A3-BAB3-5B2BAD40E557}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9EE21FD8-16B6-47A3-BAB3-5B2BAD40E557}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9EE21FD8-16B6-47A3-BAB3-5B2BAD40E557}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DE3CCC59-9D25-47DF-B2AC-EE9682132F7A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DE3CCC59-9D25-47DF-B2AC-EE9682132F7A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DE3CCC59-9D25-47DF-B2AC-EE9682132F7A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DE3CCC59-9D25-47DF-B2AC-EE9682132F7A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B2D4A7B3-5BD6-43A2-99E8-5E3C33BB5E36}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B2D4A7B3-5BD6-43A2-99E8-5E3C33BB5E36}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B2D4A7B3-5BD6-43A2-99E8-5E3C33BB5E36}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B2D4A7B3-5BD6-43A2-99E8-5E3C33BB5E36}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E3BC039F-89D7-49EC-B753-188F9EBDD3DF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E3BC039F-89D7-49EC-B753-188F9EBDD3DF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E3BC039F-89D7-49EC-B753-188F9EBDD3DF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E3BC039F-89D7-49EC-B753-188F9EBDD3DF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4E07916E-072F-415E-A5DC-3E2075C5EC7C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4E07916E-072F-415E-A5DC-3E2075C5EC7C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4E07916E-072F-415E-A5DC-3E2075C5EC7C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4E07916E-072F-415E-A5DC-3E2075C5EC7C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5F6155E2-C8F3-488F-B340-9C5C4D65D41D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5F6155E2-C8F3-488F-B340-9C5C4D65D41D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5F6155E2-C8F3-488F-B340-9C5C4D65D41D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5F6155E2-C8F3-488F-B340-9C5C4D65D41D}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {C4A59AD0-92A7-475D-A3BC-51E982A9C0FA}
+	EndGlobalSection
+EndGlobal
