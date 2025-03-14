@@ -58,8 +58,13 @@ public partial class EFDataModel : DbContext
     public virtual DbSet<UserInGroup> UserInGroups { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-#warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
-        => optionsBuilder.UseSqlServer("Data Source=(local);Initial Catalog=FileGpt;Persist Security Info=True;User ID=sa;Password=saPassword;MultipleActiveResultSets=True;TrustServerCertificate=True;");
+    {
+        
+        // to get it to work you need to add your connectoin string here and run 'update-database'
+        // in the Package Manager Console after selecting the EfModel project as the startup
+        //optionsBuilder.UseSqlServer("Data Source=(local);Initial Catalog=FileGpt;Persist Security Info=True;Trusted_Connection=true;MultipleActiveResultSets=True;TrustServerCertificate=True;");
+        //optionsBuilder.UseSqlServer("Data Source=(local);Initial Catalog=FileGpt;Persist Security Info=True;User ID=sa;Password=saPassword;MultipleActiveResultSets=True;TrustServerCertificate=True;");
+    }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
