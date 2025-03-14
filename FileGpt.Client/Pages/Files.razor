@@ -616,7 +616,7 @@ I look forward to working with you to accomplish our goals on this project.
 
         try
         {
-            var response = await Http.PostAsJsonAsync("/api/Data/GetFiles", new { Path = DirectoryPath });
+            var response = await Http.PostAsJsonAsync($"/{DataObjects.Endpoints.EndpointFileGpt.GetFiles}", new { Path = DirectoryPath });
             if (response.IsSuccessStatusCode)
             {
                 fileItems = await response.Content.ReadFromJsonAsync<List<FileItem>>() ?? new();
@@ -664,7 +664,7 @@ I look forward to working with you to accomplish our goals on this project.
             
                 try
                 {
-                    var metaResponseUnselected = await Http.PostAsJsonAsync("/api/Data/GetFileMetadata", new { FilePaths = unselectedFiles });
+                    var metaResponseUnselected = await Http.PostAsJsonAsync($"/{DataObjects.Endpoints.EndpointFileGpt.GetFileMetadata}", new { FilePaths = unselectedFiles });
                     if (metaResponseUnselected.IsSuccessStatusCode)
                     {
                         var metaItemsUnselected = await metaResponseUnselected.Content.ReadFromJsonAsync<List<FileMetadataItem>>();
