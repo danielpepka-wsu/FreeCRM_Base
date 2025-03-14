@@ -1,6 +1,7 @@
 using FileGpt.Server.Hubs;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Caching.Memory;
 using System.Security.Claims;
 
 namespace FileGpt.Server.Controllers;
@@ -15,6 +16,7 @@ public partial class DataController : ControllerBase
     private Guid TenantId = Guid.Empty;
     private IConfigurationHelper configurationHelper;
     private Plugins.IPlugins plugins;
+    private readonly IMemoryCache _cache;
 
     private readonly IHubContext<FileGpthub>? _signalR;
 
@@ -26,13 +28,15 @@ public partial class DataController : ControllerBase
         ICustomAuthentication auth, 
         IHubContext<FileGpthub> hubContext, 
         IConfigurationHelper configHelper, 
-        Plugins.IPlugins diPlugins)
+        Plugins.IPlugins diPlugins, 
+        IMemoryCache memoryCache)
     {
         da = daInjection;
         authenticationProviders = auth;
         configurationHelper = configHelper;
         plugins = diPlugins;
         _signalR = hubContext;
+        _cache = memoryCache; // <-- Assign the cache
 
         if (authenticationProviders != null) {
             da.SetAuthenticationProviders(new DataObjects.AuthenticationProviders { 

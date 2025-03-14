@@ -13,8 +13,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\FileGpt.DataAccess\FileGpt.DataAccess.csproj" />
     <ProjectReference Include="..\FileGpt.Client\FileGpt.Client.csproj" />
+    <ProjectReference Include="..\FileGpt.DataAccess\FileGpt.DataAccess.csproj" />
     <ProjectReference Include="..\FileGpt.Plugins\FileGpt.Plugins.csproj" />
     <PackageReference Include="AspNet.Security.OAuth.Apple" Version="9.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.Facebook" Version="9.0.2" />

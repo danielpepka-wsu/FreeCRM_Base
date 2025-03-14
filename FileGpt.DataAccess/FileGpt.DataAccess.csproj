@@ -27,4 +27,8 @@
     <ProjectReference Include="..\FileGpt.Plugins\FileGpt.Plugins.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="FileGpt\" />
+  </ItemGroup>
+
 </Project>
