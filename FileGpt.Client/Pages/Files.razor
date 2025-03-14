@@ -445,8 +445,8 @@ I look forward to working with you to accomplish our goals on this project.
 ";
 
 
-    private List<string> fileTypes = new() { ".cs", ".razor", ".cshtml", ".js", ".css", ".ts", ".json", ".html", ".xml", ".scss" };
-    private HashSet<string> selectedFileTypes = new() { ".cs", ".razor", ".cshtml" };
+    private List<string> fileTypes = new() { ".cs", ".razor", ".cshtml", ".md", ".js", ".css", ".ts", ".json", ".html", ".xml", ".scss" };
+    private HashSet<string> selectedFileTypes = new() { ".cs", ".razor", ".cshtml", ".md" };
 
     private List<string> ignoredFolders = new() { "fontawesome", "bootstrap" };
     private string customFileType = "";
@@ -882,7 +882,7 @@ I look forward to working with you to accomplish our goals on this project.
 
     private async Task CheckDefaults()
     {
-        List<string> stringList = ["Program.cs", "App.razor", "MainLayout.razor", "\\DataAccess.cs", "\\DataObjects.cs", "Controllers\\DataController.cs", "\\DataModel.cs", "\\EFDataModel.cs"];
+        List<string> stringList = ["Readme.md", "Program.cs", "App.razor", "MainLayout.razor", "\\DataAccess.cs", "\\DataObjects.cs", "Controllers\\DataController.cs", "\\DataModel.cs", "\\EFDataModel.cs"];
         var listCopy = fileItems.ToList();
         // now we need to select any file that matches the name
         foreach (FileItem item in listCopy)
