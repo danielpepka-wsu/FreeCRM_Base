@@ -4,27 +4,14 @@ public partial class DataObjects
 {
     public enum SignalRUpdateType
     {
-        Appointment,
-        AppointmentNote,
-        AppointmentService,
-        Department,
-        DepartmentGroup,
-        EmailTemplate,
         File,
-        Invoice,
         Language,
         LastAccessTime,
-        Location,
-        Payment,
-        Service,
         Setting,
-        Tag,
         Tenant,
-        UDF,
         Unknown,
         User,
         UserAttendance,
-        UserGroup,
         UserPreferences,
     }
 

@@ -416,7 +416,7 @@ public partial class DataAccess
                     x.TenantId, x.Extension, x.Bytes, x.Deleted, x.DeletedAt, x.FileId, x.FileName, x.ItemId, x.LastModified,
                     x.LastModifiedBy, x.SourceFileId, x.UploadDate, x.UploadedBy, x.UserId 
                 })
-            .Where(x => x.TenantId == TenantId && x.ItemId == null && x.UserId == null && !excludeSourceTypes.Contains(x.SourceFileId)).ToListAsync();
+            .Where(x => x!= null && ( x.TenantId == TenantId && x.ItemId == null && x.UserId == null && !excludeSourceTypes.Contains(string.Empty + x.SourceFileId))).ToListAsync();
         if(recs != null && recs.Any()) {
             foreach(var rec in recs) {
                 output.Add(new DataObjects.FileStorage {
@@ -626,6 +626,8 @@ public partial class DataAccess
         } else if (file.ItemId.HasValue) {
             // See if this is part of a special item and check access.
         }
+
+        await Task.CompletedTask;
 
         return output;
     }

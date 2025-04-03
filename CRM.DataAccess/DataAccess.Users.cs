@@ -7,7 +7,7 @@ public partial interface IDataAccess
     Task<DataObjects.User> CreateNewUserFromEmailAddress(Guid TenantId, string EmailAddress);
     Task<DataObjects.BooleanResponse> DeleteUser(Guid UserId, DataObjects.User? CurrentUser = null, bool ForceDeleteImmediately = false);
     Task<DataObjects.BooleanResponse> DeleteUserPhoto(Guid UserId);
-    string DisplayNameFromLastAndFirst(string? LastName, string? FirstName, string? Email, string? DepartmentName, string? Location);
+    string DisplayNameFromLastAndFirst(string? LastName, string? FirstName, string? Email);
     Task<DataObjects.User> ForgotPassword(DataObjects.User user);
     Task<DataObjects.User> ForgotPasswordConfirm(DataObjects.User user);
     Task<DataObjects.ActiveUser> GetActiveUser(Guid userId);
@@ -31,7 +31,6 @@ public partial interface IDataAccess
     Task<DataObjects.SimpleResponse> GetUserPhotoId(Guid UserId);
     Task<List<DataObjects.User>> GetUsers(Guid TenantId);
     Task<List<DataObjects.User>> GetUsersForEmailAddress(string? EmailAddress, string fingerprint = "");
-    Task<List<DataObjects.User>> GetUsersInDepartment(Guid TenantId, Guid DepartmentId, DataObjects.User? CurrentUser = null);
     Task<List<DataObjects.UserTenant>> GetUserTenantList(string? username, string? email, bool enabledUsersOnly = true);
     Task<List<DataObjects.Tenant>?> GetUserTenants(string? username, string? email, bool enabledUsersOnly = true);
     string GetUserToken(Guid TenantId, Guid UserId, string fingerprint = "");
@@ -44,8 +43,6 @@ public partial interface IDataAccess
     Task<List<DataObjects.User>> SaveUsers(List<DataObjects.User> users, DataObjects.User? CurrentUser = null);
     Task<DataObjects.User> UnlockUserAccount(Guid UserId, DataObjects.User? CurrentUser = null);
     //Task<DataObjects.User?> UpdateUserFromExternalDataSources(DataObjects.User User, DataObjects.TenantSettings? settings = null);
-    Task<DataObjects.User> UpdateUserFromPlugins(Guid userId);
-    Task<DataObjects.User> UpdateUserFromPlugins(DataObjects.User user);
     Task UpdateUserLastLoginTime(Guid UserId, string? Source = "");
     Task<bool> UserCanEditUser(Guid UserId, Guid EditUserId);
     Task<bool> UserCanViewUser(Guid UserId, Guid ViewUserId);
@@ -93,7 +90,6 @@ public partial class DataAccess
         rec = new EFModels.EFModels.User();
         rec.Added = now;
         rec.Admin = false;
-        rec.DepartmentId = null;
         rec.Deleted = false;
         rec.Email = EmailAddress;
         rec.Enabled = true;
@@ -101,8 +97,6 @@ public partial class DataAccess
         rec.LastName = EmailAddress;
         rec.LastModified = now;
         rec.PreventPasswordChange = false;
-        rec.CanBeScheduled = output.CanBeScheduled;
-        rec.ManageAppointments = output.ManageAppointments;
         rec.ManageFiles = output.ManageFiles;
         rec.TenantId = TenantId;
         rec.UserId = UserId;
@@ -138,28 +132,10 @@ public partial class DataAccess
                     // Update any LastModifiedBy values for this UserId to be the Display Name
                     string displayName = MaxStringLength(rec.FirstName + " " + rec.LastName, 100);
 
-                    await data.Database.ExecuteSqlRawAsync("DELETE FROM AppointmentUsers WHERE UserId={0}", UserId);
-
-                    await data.Database.ExecuteSqlRawAsync("UPDATE Appointments SET LastModifiedBy={0} WHERE LastModifiedBy={1}", displayName, UserId.ToString());
-                    await data.Database.ExecuteSqlRawAsync("UPDATE Appointments SET AddedBy={0} WHERE AddedBy={1}", displayName, UserId.ToString());
-
-                    await data.Database.ExecuteSqlRawAsync("UPDATE AppointmentNotes SET LastModifiedBy={0} WHERE LastModifiedBy={1}", displayName, UserId.ToString());
-                    await data.Database.ExecuteSqlRawAsync("UPDATE AppointmentNotes SET AddedBy={0} WHERE AddedBy={1}", displayName, UserId.ToString());
-
-                    await data.Database.ExecuteSqlRawAsync("UPDATE AppointmentServices SET LastModifiedBy={0} WHERE LastModifiedBy={1}", displayName, UserId.ToString());
                     
-                    await data.Database.ExecuteSqlRawAsync("UPDATE DepartmentGroups SET LastModifiedBy={0} WHERE LastModifiedBy={1}", displayName, UserId.ToString());
-                    await data.Database.ExecuteSqlRawAsync("UPDATE DepartmentGroups SET AddedBy={0} WHERE AddedBy={1}", displayName, UserId.ToString());
-
-                    await data.Database.ExecuteSqlRawAsync("UPDATE Departments SET LastModifiedBy={0} WHERE LastModifiedBy={1}", displayName, UserId.ToString());
-                    await data.Database.ExecuteSqlRawAsync("UPDATE Departments SET AddedBy={0} WHERE AddedBy={1}", displayName, UserId.ToString());
-
                     await data.Database.ExecuteSqlRawAsync("UPDATE FileStorage SET LastModifiedBy={0} WHERE LastModifiedBy={1}", displayName, UserId.ToString());
                     await data.Database.ExecuteSqlRawAsync("UPDATE FileStorage SET UploadedBy={0} WHERE UploadedBy={1}", displayName, UserId.ToString());
                     
-                    await data.Database.ExecuteSqlRawAsync("UPDATE Locations SET LastModifiedBy={0} WHERE LastModifiedBy={1}", displayName, UserId.ToString());
-                    await data.Database.ExecuteSqlRawAsync("UPDATE Locations SET AddedBy={0} WHERE AddedBy={1}", displayName, UserId.ToString());
-
                     await data.Database.ExecuteSqlRawAsync("UPDATE Services SET LastModifiedBy={0} WHERE LastModifiedBy={1}", displayName, UserId.ToString());
                     await data.Database.ExecuteSqlRawAsync("UPDATE Services SET AddedBy={0} WHERE AddedBy={1}", displayName, UserId.ToString());
 
@@ -168,16 +144,10 @@ public partial class DataAccess
                     await data.Database.ExecuteSqlRawAsync("UPDATE Tenants SET LastModifiedBy={0} WHERE LastModifiedBy={1}", displayName, UserId.ToString());
                     await data.Database.ExecuteSqlRawAsync("UPDATE Tenants SET AddedBy={0} WHERE AddedBy={1}", displayName, UserId.ToString());
 
-                    await data.Database.ExecuteSqlRawAsync("UPDATE UDFLabels SET LastModifiedBy={0} WHERE LastModifiedBy={1}", displayName, UserId.ToString());
-                    
-                    await data.Database.ExecuteSqlRawAsync("UPDATE UserGroups SET LastModifiedBy={0} WHERE LastModifiedBy={1}", displayName, UserId.ToString());
-                    await data.Database.ExecuteSqlRawAsync("UPDATE UserGroups SET AddedBy={0} WHERE AddedBy={1}", displayName, UserId.ToString());
-
                     await data.Database.ExecuteSqlRawAsync("UPDATE Users SET LastModifiedBy={0} WHERE LastModifiedBy={1}", displayName, UserId.ToString());
                     await data.Database.ExecuteSqlRawAsync("UPDATE Users SET AddedBy={0} WHERE AddedBy={1}", displayName, UserId.ToString());
 
                     data.FileStorages.RemoveRange(data.FileStorages.Where(x => x.UserId == UserId));
-                    data.UserInGroups.RemoveRange(data.UserInGroups.Where(x => x.UserId == UserId));
                     data.Settings.RemoveRange(data.Settings.Where(x => x.UserId == UserId));
 
                     await data.SaveChangesAsync();
@@ -193,8 +163,6 @@ public partial class DataAccess
             if (ForceDeleteImmediately ||tenantSettings.DeletePreference == DataObjects.DeletePreference.Immediate) {
                 data.Users.Remove(rec);
             } else {
-                // Even though we aren't deleting the user, we will remove them from any events now.
-                await data.Database.ExecuteSqlRawAsync("DELETE FROM AppointmentUsers WHERE UserId={0}", UserId);
 
                 rec.Deleted = true;
                 rec.DeletedAt = now;
@@ -255,7 +223,7 @@ public partial class DataAccess
         return output;
     }
 
-    public string DisplayNameFromLastAndFirst(string? LastName, string? FirstName, string? Email, string? DepartmentName, string? Location)
+    public string DisplayNameFromLastAndFirst(string? LastName, string? FirstName, string? Email)
     {
         string output = String.Empty;
 
@@ -274,18 +242,6 @@ public partial class DataAccess
             output = Email;
         }
 
-        if (!String.IsNullOrEmpty(DepartmentName) || !String.IsNullOrEmpty(Location)) {
-            output += " [";
-            if (!String.IsNullOrEmpty(Location) && !String.IsNullOrEmpty(DepartmentName)) {
-                output += Location + "/" + DepartmentName;
-            } else if (!String.IsNullOrEmpty(Location)) {
-                output += Location;
-            } else {
-                output += DepartmentName;
-            }
-
-            output += "]";
-        }
         return output;
     }
 
@@ -503,12 +459,8 @@ public partial class DataAccess
             
             if (rec != null) {
                 if (LastNameFirst) {
-                    string deptName = String.Empty;
-                    if (rec.Department != null && !String.IsNullOrEmpty(rec.Department.DepartmentName)) {
-                        deptName = rec.Department.DepartmentName;
-                    }
-
-                    output = DisplayNameFromLastAndFirst(rec.LastName, rec.FirstName, rec.Email, deptName, rec.Location);
+    
+                    output = DisplayNameFromLastAndFirst(rec.LastName, rec.FirstName, rec.Email);
                 } else {
                     output = rec.FirstName + " " + rec.LastName;
                 }
@@ -632,13 +584,9 @@ public partial class DataAccess
 
         if(AdminUser(CurrentUser)) {
             rec = await data.Users
-                .Include(x => x.Department)
-                .Include(x => x.UserInGroups)
                 .FirstOrDefaultAsync(x => x.UserId == UserId);
         } else {
             rec = await data.Users
-                .Include(x => x.Department)
-                .Include(x => x.UserInGroups)
                 .FirstOrDefaultAsync(x => x.UserId == UserId && x.Deleted != true);
         }
 
@@ -655,11 +603,6 @@ public partial class DataAccess
                 TenantId = GuidValue(rec.TenantId),
                 Admin = rec.Admin,
                 AppAdmin = output.AppAdmin,
-                CanBeScheduled = rec.CanBeScheduled,
-                DepartmentId = GuidValue(rec.DepartmentId),
-                DepartmentName = rec.DepartmentId.HasValue && rec.Department != null
-                    ? rec.Department.DepartmentName
-                    : String.Empty,
                 Email = rec.Email,
                 Phone = rec.Phone,
                 Photo = await GetUserPhoto(UserId),
@@ -672,8 +615,6 @@ public partial class DataAccess
                 LastModified = rec.LastModified,
                 LastModifiedBy = LastModifiedDisplayName(rec.LastModifiedBy),
                 LastName = rec.LastName,
-                Location = rec.Location,
-                ManageAppointments = rec.ManageAppointments,
                 ManageFiles = rec.ManageFiles,
                 Title = rec.Title,
                 UserId = rec.UserId,
@@ -684,16 +625,6 @@ public partial class DataAccess
                 HasLocalPassword = !String.IsNullOrWhiteSpace(rec.Password),
                 LastLockoutDate = rec.LastLockoutDate,
                 Source = rec.Source,
-                udf01 = rec.UDF01,
-                udf02 = rec.UDF02,
-                udf03 = rec.UDF03,
-                udf04 = rec.UDF04,
-                udf05 = rec.UDF05,
-                udf06 = rec.UDF06,
-                udf07 = rec.UDF07,
-                udf08 = rec.UDF08,
-                udf09 = rec.UDF09,
-                udf10 = rec.UDF10,
                 UserPreferences = preferences,
             };
 
@@ -705,22 +636,12 @@ public partial class DataAccess
             }
 
             if (output.Admin) {
-                output.ManageAppointments = true;
                 output.ManageFiles = true;
             }
 
-            if (rec.UserInGroups != null && rec.UserInGroups.Any()) {
-                output.UserGroups = new List<Guid>();
-                foreach (var g in rec.UserInGroups) {
-                    output.UserGroups.Add(g.GroupId);
-                }
-            }
 
-            output.DisplayName = DisplayNameFromLastAndFirst(output.LastName, output.FirstName, output.Email, output.DepartmentName, output.Location);
+            output.DisplayName = DisplayNameFromLastAndFirst(output.LastName, output.FirstName, output.Email);
 
-            if(_inMemoryDatabase && output.DepartmentId.HasValue && String.IsNullOrEmpty(output.DepartmentName)) {
-                output.DepartmentName = GetDepartmentName(output.TenantId, GuidValue(output.DepartmentId));
-            }
         }
 
         return output;
@@ -858,9 +779,7 @@ public partial class DataAccess
         List<string> blockedModules = settings.ModuleHideElements;
         List<string> optIn = settings.ModuleOptInElements;
 
-        bool showDepartments = ModuleEnabled("departments", settings);
         bool showEmployeeId = ModuleEnabled("employeeid", settings);
-        bool showUDF = ModuleEnabled("udf", settings);
 
         if (showEmployeeId) {
             output.Columns.Add(new DataObjects.FilterColumn {
@@ -873,16 +792,6 @@ public partial class DataAccess
             });
         }
 
-        if (showDepartments) {
-            output.Columns.Add(new DataObjects.FilterColumn {
-                Align = "",
-                Label = GetLanguageItem("Department", language),
-                TipText = "",
-                Sortable = true,
-                DataElementName = "departmentName",
-                DataType = "string"
-            });
-        }
 
         output.Columns.Add(new DataObjects.FilterColumn {
             Align = "center",
@@ -920,34 +829,11 @@ public partial class DataAccess
             DataType = "number",
         });
 
-        // See if any UDF labels need to be included in the column output
-        var udfLabels = await GetUDFLabels(output.TenantId, false);
-        if (showUDF) {
-            for (int x = 1; x < 11; x++) {
-                bool show = ShowUDFColumn("Users", x, udfLabels);
-                if (show) {
-                    string label = UDFLabel("Users", x, udfLabels);
-                    string udf = "udf" + x.ToString().PadLeft(2, '0');
-                    if (String.IsNullOrEmpty(label)) {
-                        label = udf.ToUpper();
-                    }
-                    output.Columns.Add(new DataObjects.FilterColumn {
-                        Align = "",
-                        Label = label,
-                        TipText = "",
-                        Sortable = true,
-                        DataElementName = udf,
-                        DataType = "string"
-                    });
-                }
-            }
-        }
 
         IQueryable<User>? recs = null;
 
         if(AdminUser(CurrentUser)) {
             recs = data.Users
-                .Include(x => x.Department)
                 .Where(x => x.TenantId == output.TenantId && x.Username != null && x.Username.ToLower() != "admin");
 
             if (!filter.IncludeDeletedItems) {
@@ -955,12 +841,7 @@ public partial class DataAccess
             }
         } else {
             recs = data.Users
-                .Include(x => x.Department)
                 .Where(x => x.TenantId == output.TenantId && x.Deleted != true && x.Username != null && x.Username.ToLower() != "admin");
-        }
-
-        if (output.FilterDepartments != null && output.FilterDepartments.Count() > 0) {
-            recs = recs.Where(x => x.DepartmentId != null && output.FilterDepartments.Contains((Guid)x.DepartmentId));
         }
 
         if (!String.IsNullOrWhiteSpace(output.Enabled)) {
@@ -987,56 +868,15 @@ public partial class DataAccess
             }
         }
 
-        // IF using the UDF filters, don't use Contains, as these will be exact matches. But compare case-insensitive
-        if (!String.IsNullOrWhiteSpace(output.udf01)) { recs = recs.Where(x => x.UDF01 != null && x.UDF01.ToLower() == output.udf01.ToLower()); }
-        if (!String.IsNullOrWhiteSpace(output.udf02)) { recs = recs.Where(x => x.UDF02 != null && x.UDF02.ToLower() == output.udf02.ToLower()); }
-        if (!String.IsNullOrWhiteSpace(output.udf03)) { recs = recs.Where(x => x.UDF03 != null && x.UDF03.ToLower() == output.udf03.ToLower()); }
-        if (!String.IsNullOrWhiteSpace(output.udf04)) { recs = recs.Where(x => x.UDF04 != null && x.UDF04.ToLower() == output.udf04.ToLower()); }
-        if (!String.IsNullOrWhiteSpace(output.udf05)) { recs = recs.Where(x => x.UDF05 != null && x.UDF05.ToLower() == output.udf05.ToLower()); }
-        if (!String.IsNullOrWhiteSpace(output.udf06)) { recs = recs.Where(x => x.UDF06 != null && x.UDF06.ToLower() == output.udf06.ToLower()); }
-        if (!String.IsNullOrWhiteSpace(output.udf07)) { recs = recs.Where(x => x.UDF07 != null && x.UDF07.ToLower() == output.udf07.ToLower()); }
-        if (!String.IsNullOrWhiteSpace(output.udf08)) { recs = recs.Where(x => x.UDF08 != null && x.UDF08.ToLower() == output.udf08.ToLower()); }
-        if (!String.IsNullOrWhiteSpace(output.udf09)) { recs = recs.Where(x => x.UDF09 != null && x.UDF09.ToLower() == output.udf09.ToLower()); }
-        if (!String.IsNullOrWhiteSpace(output.udf10)) { recs = recs.Where(x => x.UDF10 != null && x.UDF10.ToLower() == output.udf10.ToLower()); }
-
         // Add any filters
         if (!String.IsNullOrEmpty(output.Keyword)) {
             string keyword = output.Keyword.ToLower();
-            // Dynamically include only the UDF fields that are needed
-            bool includeUdf01 = showUDF && UDFLabelIncludedInSearch("Users", "UDF01", udfLabels);
-            bool includeUdf02 = showUDF && UDFLabelIncludedInSearch("Users", "UDF02", udfLabels);
-            bool includeUdf03 = showUDF && UDFLabelIncludedInSearch("Users", "UDF03", udfLabels);
-            bool includeUdf04 = showUDF && UDFLabelIncludedInSearch("Users", "UDF04", udfLabels);
-            bool includeUdf05 = showUDF && UDFLabelIncludedInSearch("Users", "UDF05", udfLabels);
-            bool includeUdf06 = showUDF && UDFLabelIncludedInSearch("Users", "UDF06", udfLabels);
-            bool includeUdf07 = showUDF && UDFLabelIncludedInSearch("Users", "UDF07", udfLabels);
-            bool includeUdf08 = showUDF && UDFLabelIncludedInSearch("Users", "UDF08", udfLabels);
-            bool includeUdf09 = showUDF && UDFLabelIncludedInSearch("Users", "UDF09", udfLabels);
-            bool includeUdf10 = showUDF && UDFLabelIncludedInSearch("Users", "UDF10", udfLabels);
-
-            if (includeUdf01 || includeUdf02 || includeUdf03 || includeUdf04 || includeUdf05 || includeUdf06 || includeUdf07 || includeUdf08 || includeUdf09 || includeUdf10) {
-                recs = recs.Where(x => (x.LastName != null && x.LastName.ToLower().Contains(keyword))
-                    || (x.FirstName != null && x.FirstName.ToLower().Contains(keyword))
-                    || (x.Email != null && x.Email.ToLower().Contains(keyword))
-                    || (x.Username != null && x.Username.ToLower().Contains(keyword))
-                    || (includeUdf01 ? x.UDF01 != null && x.UDF01.ToLower().Contains(keyword) : false)
-                    || (includeUdf02 ? x.UDF02 != null && x.UDF02.ToLower().Contains(keyword) : false)
-                    || (includeUdf03 ? x.UDF03 != null && x.UDF03.ToLower().Contains(keyword) : false)
-                    || (includeUdf04 ? x.UDF04 != null && x.UDF04.ToLower().Contains(keyword) : false)
-                    || (includeUdf05 ? x.UDF05 != null && x.UDF05.ToLower().Contains(keyword) : false)
-                    || (includeUdf06 ? x.UDF06 != null && x.UDF06.ToLower().Contains(keyword) : false)
-                    || (includeUdf07 ? x.UDF07 != null && x.UDF07.ToLower().Contains(keyword) : false)
-                    || (includeUdf08 ? x.UDF08 != null && x.UDF08.ToLower().Contains(keyword) : false)
-                    || (includeUdf09 ? x.UDF09 != null && x.UDF09.ToLower().Contains(keyword) : false)
-                    || (includeUdf10 ? x.UDF10 != null && x.UDF10.ToLower().Contains(keyword) : false)
-                );
-            } else {
-                recs = recs.Where(x => (x.LastName != null && x.LastName.ToLower().Contains(keyword))
-                    || (x.FirstName != null && x.FirstName.ToLower().Contains(keyword))
-                    || (x.Email != null && x.Email.ToLower().Contains(keyword))
-                    || (x.Username != null && x.Username.ToLower().Contains(keyword))
-                );
-            }
+            
+            recs = recs.Where(x => (x.LastName != null && x.LastName.ToLower().Contains(keyword))
+                || (x.FirstName != null && x.FirstName.ToLower().Contains(keyword))
+                || (x.Email != null && x.Email.ToLower().Contains(keyword))
+                || (x.Username != null && x.Username.ToLower().Contains(keyword))
+            );
         }
 
         if (String.IsNullOrWhiteSpace(output.Sort)) {
@@ -1102,16 +942,6 @@ public partial class DataAccess
                 }
                 break;
 
-            case "DEPARTMENTNAME":
-                if (Ascending) {
-                    recs = recs.OrderBy(x => (x.Department != null ? x.Department.DepartmentName : String.Empty))
-                        .ThenBy(x => x.LastName).ThenBy(x => x.FirstName);
-                } else {
-                    recs = recs.OrderByDescending(x => (x.Department != null ? x.Department.DepartmentName : String.Empty))
-                        .ThenByDescending(x => x.LastName).ThenByDescending(x => x.FirstName);
-                }
-                break;
-
             case "ENABLED":
                 if (Ascending) {
                     recs = recs.OrderBy(x => x.Enabled == false).ThenBy(x => x.LastName).ThenBy(x => x.FirstName);
@@ -1134,46 +964,6 @@ public partial class DataAccess
                 } else {
                     recs = recs.OrderByDescending(x => x.LastLogin).ThenByDescending(x => x.LastName).ThenByDescending(x => x.FirstName);
                 }
-                break;
-
-            case "UDF01":
-                recs = Ascending ? recs.OrderBy(x => x.UDF01) : recs.OrderByDescending(x => x.UDF01);
-                break;
-
-            case "UDF02":
-                recs = Ascending ? recs.OrderBy(x => x.UDF02) : recs.OrderByDescending(x => x.UDF02);
-                break;
-
-            case "UDF03":
-                recs = Ascending ? recs.OrderBy(x => x.UDF03) : recs.OrderByDescending(x => x.UDF03);
-                break;
-
-            case "UDF04":
-                recs = Ascending ? recs.OrderBy(x => x.UDF04) : recs.OrderByDescending(x => x.UDF04);
-                break;
-
-            case "UDF05":
-                recs = Ascending ? recs.OrderBy(x => x.UDF05) : recs.OrderByDescending(x => x.UDF05);
-                break;
-
-            case "UDF06":
-                recs = Ascending ? recs.OrderBy(x => x.UDF06) : recs.OrderByDescending(x => x.UDF06);
-                break;
-
-            case "UDF07":
-                recs = Ascending ? recs.OrderBy(x => x.UDF07) : recs.OrderByDescending(x => x.UDF07);
-                break;
-
-            case "UDF08":
-                recs = Ascending ? recs.OrderBy(x => x.UDF08) : recs.OrderByDescending(x => x.UDF08);
-                break;
-
-            case "UDF09":
-                recs = Ascending ? recs.OrderBy(x => x.UDF09) : recs.OrderByDescending(x => x.UDF09);
-                break;
-
-            case "UDF10":
-                recs = Ascending ? recs.OrderBy(x => x.UDF10) : recs.OrderByDescending(x => x.UDF10);
                 break;
         }
 
@@ -1210,20 +1000,12 @@ public partial class DataAccess
 
             List<DataObjects.User> records = new List<DataObjects.User>();
 
-            List<DataObjects.Department> departments = new List<DataObjects.Department>();
-            if (_inMemoryDatabase) {
-                departments = await GetDepartments(output.TenantId);
-            }
-
             foreach (var rec in recs) {
                 var u = new DataObjects.User {
                     ActionResponse = GetNewActionResponse(true),
                     Added = rec.Added,
                     //AddedBy = LastModifiedDisplayName(rec.AddedBy),
                     Admin = rec.Admin,
-                    CanBeScheduled = rec.CanBeScheduled,
-                    DepartmentId = rec.DepartmentId,
-                    DepartmentName = rec.DepartmentId.HasValue && rec.Department != null ? rec.Department.DepartmentName : String.Empty,
                     Email = rec.Email,
                     EmployeeId = rec.EmployeeId,
                     Enabled = rec.Enabled,
@@ -1233,7 +1015,6 @@ public partial class DataAccess
                     LastLogin = rec.LastLogin,
                     LastLoginSource = rec.LastLoginSource,
                     LastName = rec.LastName,
-                    ManageAppointments = rec.ManageAppointments,
                     ManageFiles = rec.ManageFiles,
                     Phone = rec.Phone,
                     UserId = rec.UserId,
@@ -1245,27 +1026,8 @@ public partial class DataAccess
                     LastModified = rec.LastModified,
                     LastModifiedBy = LastModifiedDisplayName(rec.LastModifiedBy),
                     Source = rec.Source,
-                    udf01 = rec.UDF01,
-                    udf02 = rec.UDF02,
-                    udf03 = rec.UDF03,
-                    udf04 = rec.UDF04,
-                    udf05 = rec.UDF05,
-                    udf06 = rec.UDF06,
-                    udf07 = rec.UDF07,
-                    udf08 = rec.UDF08,
-                    udf09 = rec.UDF09,
-                    udf10 = rec.UDF10,
                     FailedLoginAttempts = IntValue(rec.FailedLoginAttempts),
                 };
-
-                if(_inMemoryDatabase && u.DepartmentId.HasValue && String.IsNullOrEmpty(u.DepartmentName)) {
-                    var dept = departments.FirstOrDefault(x => x.DepartmentId == u.DepartmentId);
-                    if(dept != null) {
-                        u.DepartmentName = dept.DepartmentName;
-                    }
-                }
-
-                u.DisplayName = DisplayNameFromLastAndFirst(u.LastName, u.FirstName, u.Email, u.DepartmentName, u.Location);
 
                 records.Add(u);
             }
@@ -1369,7 +1131,7 @@ public partial class DataAccess
 
         var recs = await data.Users
             .Where(x => x.TenantId == TenantId && x.Username.ToLower() != "admin" && x.Deleted != true)
-            .Select(x => new { x.UserId, x.FirstName, x.LastName, x.Email, x.Username, x.Enabled, x.Admin, x.Deleted, x.DeletedAt, x.Location })
+            .Select(x => new { x.UserId, x.FirstName, x.LastName, x.Email, x.Username, x.Enabled, x.Admin, x.Deleted, x.DeletedAt })
             .OrderBy(x => x.FirstName).ThenBy(x => x.LastName).ToListAsync();
 
         if (recs != null && recs.Any()) {
@@ -1387,7 +1149,6 @@ public partial class DataAccess
                     Admin = admin || appAdmin,
                     Deleted = BooleanValue(rec.Deleted),
                     DeletedAt = rec.DeletedAt,
-                    Location = rec.Location,
                 });
             }
         }
@@ -1440,9 +1201,6 @@ public partial class DataAccess
                     AddedBy = LastModifiedDisplayName(rec.AddedBy),
                     TenantId = TenantId,
                     Admin = rec.Admin,
-                    CanBeScheduled = rec.CanBeScheduled,
-                    DepartmentId = rec.DepartmentId.HasValue ? (Guid)rec.DepartmentId : (Guid?)null,
-                    DepartmentName = rec.DepartmentId.HasValue && rec.Department != null ? rec.Department.DepartmentName : String.Empty,
                     Email = rec.Email,
                     Phone = rec.Phone,
                     Enabled = rec.Enabled,
@@ -1452,7 +1210,6 @@ public partial class DataAccess
                     LastLogin = rec.LastLogin,
                     LastLoginSource = rec.LastLoginSource,
                     LastName = rec.LastName,
-                    ManageAppointments = rec.ManageAppointments,
                     ManageFiles = rec.ManageFiles,
                     Photo = await GetUserPhoto(rec.UserId),
                     UserId = rec.UserId,
@@ -1465,19 +1222,9 @@ public partial class DataAccess
                     LastModified = rec.LastModified,
                     LastModifiedBy = LastModifiedDisplayName(rec.LastModifiedBy),
                     Source = rec.Source,
-                    udf01 = rec.UDF01,
-                    udf02 = rec.UDF02,
-                    udf03 = rec.UDF03,
-                    udf04 = rec.UDF04,
-                    udf05 = rec.UDF05,
-                    udf06 = rec.UDF06,
-                    udf07 = rec.UDF07,
-                    udf08 = rec.UDF08,
-                    udf09 = rec.UDF09,
-                    udf10 = rec.UDF10
                 };
 
-                u.DisplayName = DisplayNameFromLastAndFirst(u.LastName, u.FirstName, u.Email, u.DepartmentName, u.Location);
+                u.DisplayName = DisplayNameFromLastAndFirst(u.LastName, u.FirstName, u.Email);
 
                 output.Add(u);
             }
@@ -1502,31 +1249,6 @@ public partial class DataAccess
                         output.Add(user);
                     }
                 }
-            }
-        }
-
-        return output;
-    }
-
-    public async Task<List<DataObjects.User>> GetUsersInDepartment(Guid TenantId, Guid DepartmentId, DataObjects.User? CurrentUser = null)
-    {
-        List<DataObjects.User> output = new List<DataObjects.User>();
-
-        List<User>? recs = null;
-
-        if(AdminUser(CurrentUser)) {
-            recs = await data.Users.Where(x => x.TenantId == TenantId && x.DepartmentId == DepartmentId)
-                .OrderBy(x => x.LastName).ThenBy(x => x.FirstName).ToListAsync();
-        } else {
-            recs = await data.Users.Where(x => x.TenantId == TenantId && x.DepartmentId == DepartmentId && x.Deleted != true)
-                .OrderBy(x => x.LastName).ThenBy(x => x.FirstName).ToListAsync();
-        }
-
-        
-        if (recs != null && recs.Count() > 0) {
-            foreach (var rec in recs) {
-                var u = await GetUser(rec.UserId, false, CurrentUser);
-                output.Add(u);
             }
         }
 
@@ -1822,9 +1544,6 @@ public partial class DataAccess
         output.LastName = MaxStringLength(output.LastName, 100);
         rec.LastName = output.LastName;
 
-        output.Location = MaxStringLength(output.Location, 255);
-        rec.Location = output.Location;
-
         output.Phone = MaxStringLength(output.Phone, 20);
         rec.Phone = output.Phone;
 
@@ -1834,42 +1553,11 @@ public partial class DataAccess
         output.Source = MaxStringLength(output.Source, 100);
         rec.Source = output.Source;
 
-        output.udf01 = MaxStringLength(output.udf01, 500);
-        output.udf02 = MaxStringLength(output.udf02, 500);
-        output.udf03 = MaxStringLength(output.udf03, 500);
-        output.udf04 = MaxStringLength(output.udf04, 500);
-        output.udf05 = MaxStringLength(output.udf05, 500);
-        output.udf06 = MaxStringLength(output.udf06, 500);
-        output.udf07 = MaxStringLength(output.udf07, 500);
-        output.udf08 = MaxStringLength(output.udf08, 500);
-        output.udf09 = MaxStringLength(output.udf09, 500);
-        output.udf10 = MaxStringLength(output.udf10, 500);
-        rec.UDF01 = output.udf01;
-        rec.UDF02 = output.udf02;
-        rec.UDF03 = output.udf03;
-        rec.UDF04 = output.udf04;
-        rec.UDF05 = output.udf05;
-        rec.UDF06 = output.udf06;
-        rec.UDF07 = output.udf07;
-        rec.UDF08 = output.udf08;
-        rec.UDF09 = output.udf09;
-        rec.UDF10 = output.udf10;
-
         output.Username = MaxStringLength(output.Username, 100);
         rec.Username = output.Username;
 
-        rec.DepartmentId = output.DepartmentId.HasValue && output.DepartmentId != Guid.Empty ? (Guid)output.DepartmentId : null;
-        if (!output.DepartmentId.HasValue && !String.IsNullOrEmpty(output.DepartmentName)) {
-            var deptId = await DepartmentIdFromNameAndLocation(output.TenantId, output.DepartmentName);
-            if (deptId != Guid.Empty) {
-                rec.DepartmentId = deptId;
-            }
-        }
-
         rec.Enabled = output.Enabled;
         rec.Admin = output.Admin;
-        rec.CanBeScheduled = output.CanBeScheduled;
-        rec.ManageAppointments = output.ManageAppointments;
         rec.ManageFiles = output.ManageFiles;
         rec.PreventPasswordChange = output.PreventPasswordChange;
 
@@ -1962,9 +1650,6 @@ public partial class DataAccess
         user.LastName = MaxStringLength(user.LastName, 100);
         rec.LastName = user.LastName;
 
-        user.Location = MaxStringLength(user.Location, 255);
-        rec.Location = user.Location;
-
         user.Phone = MaxStringLength(user.Phone, 20);
         rec.Phone = user.Phone;
 
@@ -1974,43 +1659,11 @@ public partial class DataAccess
         user.Source = MaxStringLength(user.Source, 100);
         rec.Source = user.Source;
 
-        user.udf01 = MaxStringLength(user.udf01, 500);
-        user.udf02 = MaxStringLength(user.udf02, 500);
-        user.udf03 = MaxStringLength(user.udf03, 500);
-        user.udf04 = MaxStringLength(user.udf04, 500);
-        user.udf05 = MaxStringLength(user.udf05, 500);
-        user.udf06 = MaxStringLength(user.udf06, 500);
-        user.udf07 = MaxStringLength(user.udf07, 500);
-        user.udf08 = MaxStringLength(user.udf08, 500);
-        user.udf09 = MaxStringLength(user.udf09, 500);
-        user.udf10 = MaxStringLength(user.udf10, 500);
-        rec.UDF01 = user.udf01;
-        rec.UDF02 = user.udf02;
-        rec.UDF03 = user.udf03;
-        rec.UDF04 = user.udf04;
-        rec.UDF05 = user.udf05;
-        rec.UDF06 = user.udf06;
-        rec.UDF07 = user.udf07;
-        rec.UDF08 = user.udf08;
-        rec.UDF09 = user.udf09;
-        rec.UDF10 = user.udf10;
-
         user.Username = MaxStringLength(user.Username, 100);
         rec.Username = user.Username;
 
-        rec.DepartmentId = user.DepartmentId.HasValue && user.DepartmentId != Guid.Empty ? (Guid)user.DepartmentId : null;
-
-        if (!user.DepartmentId.HasValue && !String.IsNullOrEmpty(user.DepartmentName)) {
-            var deptId = await DepartmentIdFromNameAndLocation(user.TenantId, user.DepartmentName);
-            if (deptId != Guid.Empty) {
-                rec.DepartmentId = deptId;
-            }
-        }
-
         rec.Enabled = user.Enabled;
         rec.Admin = user.Admin;
-        rec.CanBeScheduled = user.CanBeScheduled;
-        rec.ManageAppointments = user.ManageAppointments;
         rec.ManageFiles = user.ManageFiles;
         rec.PreventPasswordChange = user.PreventPasswordChange;
 
@@ -2121,188 +1774,6 @@ public partial class DataAccess
         return output;
     }
 
-    public async Task<DataObjects.User> UpdateUserFromPlugins(Guid userId)
-    {
-        var output = await GetUser(userId);
-        if (output.ActionResponse.Result) {
-            output = await UpdateUserFromPlugins(output);
-        }
-        return output;
-    }
-
-    public async Task<DataObjects.User> UpdateUserFromPlugins(DataObjects.User user)
-    {
-        var output = user;
-
-        var messages = new List<string>();
-        var errors = new List<string>();
-        bool errorEncountered = false;
-        bool userUpdated = false;
-
-        var plugins = GetPlugins_UserUpdate();
-        if (plugins.Count > 0) {
-            foreach (var plugin in plugins) {
-                var result = ExecutePlugin(new Plugins.PluginExecuteRequest { 
-                    Plugin = plugin,
-                    Objects = null,
-                }, user);
-
-                if (result.Result) {
-                    if (result.Messages != null && result.Messages.Count > 0) {
-                        messages.AddRange(result.Messages);
-                    }
-
-                    // The result was a success, so get the user object returned and update the output with that object.
-                    if (result.Objects != null) {
-                        var objects = result.Objects.ToList();
-
-                        if (objects[0] is DataObjects.User) {
-                            try {
-                                var updatedUser = (DataObjects.User)objects[0];
-                                if (updatedUser != null) {
-                                    output = updatedUser;
-                                }
-                            } catch (Exception ex) {
-                                if (ex != null) {
-                                    errors.Add("Error Updating User from Plugin '" + plugin.Name + "' - " + ex.Message);
-                                    errorEncountered = true;
-                                }
-                            }
-                            
-                        }
-                        
-                        userUpdated = true;
-                    }
-                } else {
-                    errorEncountered = true;
-                    if (result.Messages != null && result.Messages.Count > 0) {
-                        errors.AddRange(result.Messages);
-                    }
-                }
-            }
-        }
-
-        // If the user was updated, then save the changes.
-        if (userUpdated) {
-            output = await SaveUser(output);
-        }
-
-        output.ActionResponse = GetNewActionResponse();
-        output.ActionResponse.Result = !errorEncountered;
-        output.ActionResponse.Messages.AddRange(messages);
-        output.ActionResponse.Messages.AddRange(errors);
-
-        return output;
-    }
-
-    //public async Task<DataObjects.User?> UpdateUserFromExternalDataSources(DataObjects.User User, DataObjects.TenantSettings? settings = null)
-    //{
-    //    DataObjects.User? output = null;
-
-    //    if (settings == null) {
-    //        settings = GetTenantSettings(User.TenantId);
-    //    }
-
-    //    if (settings != null && settings.ExternalUserDataSources != null && settings.ExternalUserDataSources.Any()) {
-    //        bool updated = false;
-    //        bool updatedDepartmentOrLocation = false;
-    //        var updatedUser = CopyUser(User);
-
-    //        foreach (var source in settings.ExternalUserDataSources.Where(x => x.Active == true).OrderBy(x => x.SortOrder).ThenBy(x => x.Name)) {
-    //            if (!String.IsNullOrWhiteSpace(source.Type)) {
-    //                switch (source.Type.ToUpper()) {
-    //                    case "SQL":
-    //                        if (!String.IsNullOrWhiteSpace(source.ConnectionString) && !String.IsNullOrWhiteSpace(source.Source)) {
-    //                            try {
-    //                                string connectionString = source.ConnectionString;
-
-    //                                string query = source.Source
-    //                                    .Replace("{{employeeid}}", User.EmployeeId)
-    //                                    .Replace("{{username}}", User.Username)
-    //                                    .Replace("{{email}}", User.Email);
-
-    //                                using (Sql2LINQ.Sql2LINQ s = new Sql2LINQ.Sql2LINQ(connectionString)) {
-    //                                    var records = s.RunQuery<DataObjects.User>(query);
-    //                                    if (records != null && records.Count() == 1) {
-    //                                        var userRecord = records.FirstOrDefault();
-    //                                        if (userRecord != null) {
-    //                                            if (!String.IsNullOrWhiteSpace(userRecord.FirstName) && updatedUser.FirstName != userRecord.FirstName) {
-    //                                                updatedUser.FirstName = userRecord.FirstName;
-    //                                                updated = true;
-    //                                            }
-    //                                            if (!String.IsNullOrWhiteSpace(userRecord.LastName) && updatedUser.LastName != userRecord.LastName) {
-    //                                                updatedUser.LastName = userRecord.LastName;
-    //                                                updated = true;
-    //                                            }
-    //                                            if (!String.IsNullOrWhiteSpace(userRecord.DepartmentName) && updatedUser.DepartmentName != userRecord.DepartmentName) {
-    //                                                updatedUser.DepartmentName = userRecord.DepartmentName;
-    //                                                updated = true;
-    //                                                updatedDepartmentOrLocation = true;
-    //                                            }
-    //                                            if (!String.IsNullOrWhiteSpace(userRecord.Location) && updatedUser.Location != userRecord.Location) {
-    //                                                updatedUser.Location = userRecord.Location;
-    //                                                updated = true;
-    //                                                updatedDepartmentOrLocation = true;
-    //                                            }
-    //                                        }
-    //                                    }
-    //                                }
-    //                            } catch { }
-    //                        }
-
-    //                        break;
-
-    //                    case "CSHARP":
-    //                        // By convention the code must have a namespace of CustomCode, a public class of CustomDynamicCode,
-    //                        // and a function named FindUser.
-    //                        if (!String.IsNullOrWhiteSpace(source.Source)) {
-    //                            string employeeId = StringValue(User.EmployeeId);
-    //                            string username = StringValue(User.Username);
-    //                            string email = StringValue(User.Email);
-
-    //                            var findUserResult = ExecuteDynamicCSharpCode<DataObjects.User>(source.Source, new object[] { employeeId, username, email, this }, null, "CustomCode", "CustomDynamicCode", "FindUser");
-    //                            if (findUserResult != null) {
-    //                                if (!String.IsNullOrWhiteSpace(findUserResult.FirstName) && updatedUser.FirstName != findUserResult.FirstName) {
-    //                                    updatedUser.FirstName = findUserResult.FirstName;
-    //                                    updated = true;
-    //                                }
-    //                                if (!String.IsNullOrWhiteSpace(findUserResult.LastName) && updatedUser.LastName != findUserResult.LastName) {
-    //                                    updatedUser.LastName = findUserResult.LastName;
-    //                                    updated = true;
-    //                                }
-    //                                if (!String.IsNullOrWhiteSpace(findUserResult.DepartmentName) && updatedUser.DepartmentName != findUserResult.DepartmentName) {
-    //                                    updatedUser.DepartmentName = findUserResult.DepartmentName;
-    //                                    updated = true;
-    //                                    updatedDepartmentOrLocation = true;
-    //                                }
-    //                                if (!String.IsNullOrWhiteSpace(findUserResult.Location) && updatedUser.Location != findUserResult.Location) {
-    //                                    updatedUser.Location = findUserResult.Location;
-    //                                    updated = true;
-    //                                    updatedDepartmentOrLocation = true;
-    //                                }
-    //                            }
-    //                        }
-
-    //                        break;
-    //                }
-    //            }
-    //        }
-
-    //        if (updated) {
-    //            if (updatedDepartmentOrLocation) {
-    //                var departmentId = await DepartmentIdFromNameAndLocation(updatedUser.TenantId, updatedUser.DepartmentName, updatedUser.Location);
-
-    //                if (departmentId != Guid.Empty && departmentId != updatedUser.DepartmentId) {
-    //                    updatedUser.DepartmentId = departmentId;
-    //                }
-    //            }
-
-    //            output = updatedUser;
-    //        }
-    //    }
-
-    //    return output;
-    //}
 
     public async Task UpdateUserLastLoginTime(Guid UserId, string? Source = "")
     {
@@ -2489,14 +1960,12 @@ public partial class DataAccess
                     await data.Users.AddAsync(new User {
                         Added = now,
                         Admin = false,
-                        CanBeScheduled = false,
                         Deleted = false,
                         Email = StringValue(user.Email),
                         Enabled = true,
                         FirstName = user.FirstName,
                         LastModified = now,
                         LastName = user.LastName,
-                        ManageAppointments = false,
                         ManageFiles = false,
                         Password = HashPassword(user.Password),
                         PreventPasswordChange = false,
@@ -2532,9 +2001,7 @@ public partial class DataAccess
                     Added = now,
                     TenantId = _guid1,
                     UserId = _guid1,
-                    CanBeScheduled = false,
                     PreventPasswordChange = false,
-                    ManageAppointments = true,
                     ManageFiles = true,
                     LastModified = now,
                 };
@@ -2569,8 +2036,6 @@ public partial class DataAccess
                         tenantAdmin = new EFModels.EFModels.User {
                             TenantId = tenant.TenantId,
                             UserId = Guid.NewGuid(),
-                            CanBeScheduled = false,
-                            ManageAppointments = true,
                             ManageFiles = true,
                             PreventPasswordChange = false
                         };
@@ -2618,7 +2083,6 @@ public partial class DataAccess
                             Added = now,
                             UserId = Guid.NewGuid(),
                             TenantId = tenant.TenantId,
-                            CanBeScheduled = user.CanBeScheduled,
                             FirstName = user.FirstName,
                             LastName = user.LastName,
                             Email = user.Email,
@@ -2627,7 +2091,6 @@ public partial class DataAccess
                             EmployeeId = user.EmployeeId,
                             Enabled = true,
                             Admin = false,
-                            ManageAppointments = user.ManageAppointments,
                             ManageFiles = user.ManageFiles,
                             Password = user.Password,
                             PreventPasswordChange = false,

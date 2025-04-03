@@ -103,7 +103,6 @@ public partial class DataObjects
         public Language DefaultLanguage { get; set; } = new Language();
         public List<Language> Languages { get; set; } = new List<Language>();
         public bool LoggedIn { get; set; }
-        public List<Plugins.Plugin> Plugins { get; set; } = new List<Plugins.Plugin>();
         public DateOnly Released { get; set; } = DateOnly.FromDateTime(DateTime.Now);
         public Guid TenantId { get; set; } = Guid.Empty;
         public List<Tenant> Tenants { get; set; } = new List<Tenant>();
@@ -123,17 +122,7 @@ public partial class DataObjects
     public class ConnectionStringConfig : ActionResponseObject
     {
         public string? ConnectionString { get; set; }
-        public string? DatabaseType { get; set; }
 
-        public string? MySQL_Server { get; set; }
-        public string? MySQL_Database { get; set; }
-        public string? MySQL_User { get; set; }
-        public string? MySQL_Password { get; set; }
-        public string? PostgreSql_Host { get; set; }
-        public string? PostgreSql_Database { get; set; }
-        public string? PostgreSql_Username { get; set; }
-        public string? PostgreSql_Password { get; set; }
-        public string? SQLiteDatabase { get; set; }
         public string? SqlServer_Server { get; set; }
         public string? SqlServer_Database { get; set; }
         public string? SqlServer_UserId { get; set; }
@@ -164,17 +153,7 @@ public partial class DataObjects
 
     public class DeletedRecordCounts
     {
-        public int AppointmentNotes { get; set; }
-        public int Appointments { get; set; }
-        public int AppointmentServices { get; set; }
-        public int DepartmentGroups { get; set; }
-        public int Departments { get; set; }
-        public int EmailTemplates { get; set; }
         public int FileStorage { get; set; }
-        public int Locations { get; set; }
-        public int Tags { get; set; }
-        public int Services { get; set; }
-        public int UserGroups { get; set; }
         public int Users { get; set; }
     }
 
@@ -188,17 +167,7 @@ public partial class DataObjects
 
     public class DeletedRecords
     {
-        public List<DeletedRecordItem> AppointmentNotes { get; set; } = new List<DeletedRecordItem>();
-        public List<DeletedRecordItem> Appointments { get; set; } = new List<DeletedRecordItem>();
-        public List<DeletedRecordItem> AppointmentServices { get; set; } = new List<DeletedRecordItem>();
-        public List<DeletedRecordItem> DepartmentGroups { get; set; } = new List<DeletedRecordItem>();
-        public List<DeletedRecordItem> Departments { get; set; } = new List<DeletedRecordItem>();
-        public List<DeletedRecordItem> EmailTemplates { get; set; } = new List<DeletedRecordItem>();
         public List<DeletedRecordItem> FileStorage { get; set; } = new List<DeletedRecordItem>();
-        public List<DeletedRecordItem> Locations { get; set; } = new List<DeletedRecordItem>();
-        public List<DeletedRecordItem> Services { get; set; } = new List<DeletedRecordItem>();
-        public List<DeletedRecordItem> Tags { get; set; } = new List<DeletedRecordItem>();
-        public List<DeletedRecordItem> UserGroups { get; set; } = new List<DeletedRecordItem>();
         public List<DeletedRecordItem> Users { get; set; } = new List<DeletedRecordItem>();
     }
 
@@ -298,19 +267,8 @@ public partial class DataObjects
     public class FilterUsers : Filter
     {
         public List<User>? Records { get; set; }
-        public Guid[]? FilterDepartments { get; set; } = new Guid[] { };
         public string? Enabled { get; set; }
         public string? Admin { get; set; }
-        public string? udf01 { get; set; }
-        public string? udf02 { get; set; }
-        public string? udf03 { get; set; }
-        public string? udf04 { get; set; }
-        public string? udf05 { get; set; }
-        public string? udf06 { get; set; }
-        public string? udf07 { get; set; }
-        public string? udf08 { get; set; }
-        public string? udf09 { get; set; }
-        public string? udf10 { get; set; }
     }
 
     public class Language
@@ -369,7 +327,6 @@ public partial class DataObjects
 
     public class PluginCache {
         public Guid RecordId { get; set; }
-        public Plugins.Plugin Plugin { get; set; } = new Plugins.Plugin();
     }
 
     public class Setting : ActionResponseObject
@@ -407,10 +364,7 @@ public partial class DataObjects
         public string? AddedBy { get; set; }
         public DateTime LastModified { get; set; }
         public string? LastModifiedBy { get; set; }
-        public List<Department>? Departments { get; set; } = null!;
-        public List<DepartmentGroup>? DepartmentGroups { get; set; } = null!;
         public TenantSettings TenantSettings { get; set; } = new TenantSettings();
-        public List<udfLabel>? udfLabels { get; set; } = null!;
         public List<UserListing> Users { get; set; } = new List<UserListing>();
     }
 
@@ -457,7 +411,6 @@ public partial class DataObjects
         public string? ThemeCss { get; set; } = "";
         public string? ThemeFont { get; set; } = "";
         public string? ThemeFontCssImport { get; set; } = "";
-        public WorkSchedule WorkSchedule { get; set; } = new WorkSchedule();
         public bool RequirePreExistingAccountToLogIn { get; set; }
         public List<ListItem>? ListItems { get; set; } = null!;
         //public List<ExternalDataSource>? ExternalUserDataSources { get; set; }
@@ -482,33 +435,18 @@ public partial class DataObjects
         public string? Phone { get; set; }
         public string? Username { get; set; }
         public string? EmployeeId { get; set; }
-        public Guid? DepartmentId { get; set; }
-        public string? DepartmentName { get; set; }
         public string? Title { get; set; }
-        public string? Location { get; set; }
         public bool Enabled { get; set; }
         public DateTime? LastLogin { get; set; }
         public string? LastLoginSource { get; set; }
         public bool Admin { get; set; }
         public bool AppAdmin { get; set; }
-        public bool CanBeScheduled { get; set; }
         public bool ManageFiles { get; set; }
-        public bool ManageAppointments { get; set; }
         public string? Password { get; set; }
         public bool PreventPasswordChange { get; set; }
         public int FailedLoginAttempts { get; set; }
         public DateTime? LastLockoutDate { get; set; }
         public string? Source { get; set; }
-        public string? udf01 { get; set; }
-        public string? udf02 { get; set; }
-        public string? udf03 { get; set; }
-        public string? udf04 { get; set; }
-        public string? udf05 { get; set; }
-        public string? udf06 { get; set; }
-        public string? udf07 { get; set; }
-        public string? udf08 { get; set; }
-        public string? udf09 { get; set; }
-        public string? udf10 { get; set; }
         public DateTime Added { get; set; }
         public string? AddedBy { get; set; }
         public DateTime LastModified { get; set; }
@@ -520,7 +458,6 @@ public partial class DataObjects
         public string? AuthToken { get; set; }
         public List<UserAccount> UserAccounts { get; set; } = new List<UserAccount>();
         public UserPreferences UserPreferences { get; set; } = new UserPreferences();
-        public List<Guid>? UserGroups { get; set; }
         public string? Confirmation { get; set; }
     }
 
@@ -540,8 +477,6 @@ public partial class DataObjects
         public string? LastName { get; set; }
         public string? Email { get; set; }
         public string? Username { get; set; }
-        public string? Department { get; set; }
-        public string? Location { get; set; }
         public bool Enabled { get; set; }
         public bool Deleted { get; set; }
         public DateTime? DeletedAt { get; set; }
@@ -559,10 +494,8 @@ public partial class DataObjects
 
     public class UserPreferences
     {
-        public int DefaultAppointmentDuration { get; set; }
         public bool EnabledItemsOnly { get; set; }
         public FilterFileStorage filterFileStorage { get; set; } = new FilterFileStorage();
-        public FilterInvoices filterInvoices { get; set; } = new FilterInvoices();
         public FilterUsers filterUsers { get; set; } = new FilterUsers();
         public bool IncludeDeletedItems { get; set; }
         public string? LastNavigationId { get; set; }
@@ -584,43 +517,5 @@ public partial class DataObjects
         public DateOnly Released { get; set; }
         public double RunningSince { get; set; }
         public string? Version { get; set; }
-    }
-
-    public class WorkSchedule
-    {
-        public bool Sunday { get; set; }
-        public bool SundayAllDay { get; set; }
-        public string? SundayStart { get; set; } = null!;
-        public string? SundayEnd { get; set; } = null!;
-
-        public bool Monday { get; set; }
-        public bool MondayAllDay { get; set; }
-        public string? MondayStart { get; set; } = null!;
-        public string? MondayEnd { get; set; } = null!;
-
-        public bool Tuesday { get; set; }
-        public bool TuesdayAllDay { get; set; }
-        public string? TuesdayStart { get; set; } = null!;
-        public string? TuesdayEnd { get; set; } = null!;
-
-        public bool Wednesday { get; set; }
-        public bool WednesdayAllDay { get; set; }
-        public string? WednesdayStart { get; set; } = null!;
-        public string? WednesdayEnd { get; set; } = null!;
-
-        public bool Thursday { get; set; }
-        public bool ThursdayAllDay { get; set; }
-        public string? ThursdayStart { get; set; } = null!;
-        public string? ThursdayEnd { get; set; } = null!;
-
-        public bool Friday { get; set; }
-        public bool FridayAllDay { get; set; }
-        public string? FridayStart { get; set; } = null!;
-        public string? FridayEnd { get; set; } = null!;
-
-        public bool Saturday { get; set; }
-        public bool SaturdayAllDay { get; set; }
-        public string? SaturdayStart { get; set; } = null!;
-        public string? SaturdayEnd { get; set; } = null!;
     }
 }

@@ -9,9 +9,5 @@
   <ItemGroup>
     <PackageReference Include="System.Runtime.Caching" Version="9.0.3" />
   </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\CRM.Plugins\CRM.Plugins.csproj" />
-  </ItemGroup>
-
+	
 </Project>

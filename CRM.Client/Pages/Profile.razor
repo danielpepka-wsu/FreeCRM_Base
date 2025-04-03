@@ -89,23 +89,6 @@
                             <input type="text" class="form-control" id="edit-profile-title" @bind="_user.Title" />
                         </div>
                     }
-                    @if (Model.AllowUsersToManageDepartment && Model.Departments.Any()) {
-                        <div class="mb-2">
-                            <label for="edit-profile-department"><Language Tag="Department" /></label>
-                            <select class="form-select" id="edit-profile-department" @bind="_user.DepartmentId">
-                                <option value=""></option>
-                                @foreach (var dept in Model.Departments) {
-                                    <option value="@dept.DepartmentId">@dept.DepartmentName</option>
-                                }
-                            </select>
-                        </div>
-                    }
-                    @if (Model.AllowUsersToManageLocation) {
-                        <div class="mb-2">
-                            <label for="edit-profile-location"><Language Tag="Location" /></label>
-                            <input type="text" class="form-control" id="edit-profile-location" @bind="_user.Location" />
-                        </div>
-                    }
                 </div>
             </div>
         }
@@ -197,9 +180,6 @@
 
         Model.ClearMessages();
 
-        if (Model.FeatureEnabledDepartments && !Model.Departments.Any()) {
-            await Helpers.LoadDepartments();
-        }
 
         _loading = true;
 

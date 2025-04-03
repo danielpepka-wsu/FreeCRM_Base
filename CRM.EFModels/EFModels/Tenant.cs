@@ -21,9 +21,5 @@ public partial class Tenant
 
     public string? LastModifiedBy { get; set; }
 
-    public virtual ICollection<Invoice> Invoices { get; set; } = new List<Invoice>();
-
-    public virtual ICollection<Payment> Payments { get; set; } = new List<Payment>();
-
     public virtual ICollection<User> Users { get; set; } = new List<User>();
 }

@@ -71,31 +71,9 @@
                     break;
 
                 case "addusersaving":
-                case "appointmentnotesaving":
                     <h2 class="quick-action">
                         <Language Tag="SavingWait" IncludeIcon="true" />
                     </h2>
-                    break;
-
-                case "appointmentnote":
-                    <h2 class="quick-action">
-                        <Language Tag="AppointmentNoteAdd" IncludeIcon="true" />
-                    </h2>
-
-                    <div class="mb-2">
-                        <label for="quickadd-appointment-note">
-                            <Language Tag="AppointmentNote" />
-                        </label>
-                        <textarea id="quickadd-appointment-note" rows="8" class="form-control" @bind="Model.QuickAddAppointmentNote.Note"></textarea>
-                    </div>
-
-                    <button type="button" class="btn btn-success btn-sm" @onclick="QuickAddAppointmentNoteSave">
-                        <Language Tag="Save" IncludeIcon="true" />
-                    </button>
-
-                    <button type="button" class="btn btn-dark btn-sm" @onclick="QuickActionClose">
-                        <Language Tag="Cancel" IncludeIcon="true" />
-                    </button>
                     break;
             }
         </div>
@@ -115,9 +93,6 @@
                     </div>
                     @if (!String.IsNullOrWhiteSpace(Model.User.Title)) {
                         <div class="menu-user-title">@Model.User.Title</div>
-                    }
-                    @if (!String.IsNullOrWhiteSpace(Model.User.DepartmentName)) {
-                        <div class="menu-user-dept">@Model.User.DepartmentName</div>
                     }
                     <div class="menu-user-username">
                         <Language Tag="Username" TransformCase="TextCase.Lowercase" />:
@@ -258,21 +233,7 @@
                         <div class="navbar-collapse collapse" id="navBarToggler">
                             <ul class="navbar-nav me-auto">
                                 @if (Model.LoggedIn) {
-                                    if (Model.FeatureEnabledScheduling) {
-                                        <li class="nav-item">
-                                            <a class="@(Model.View == "schedule" ? "nav-link active" : "nav-link")" href="@(Helpers.BuildUrl("Schedule"))">
-                                                <Language Tag="Schedule" IncludeIcon="true" />
-                                            </a>
-                                        </li>
-                                    }
-
-                                    @if (Model.FeatureEnabledInvoices){
-                                        <li class="nav-item">
-                                            <a class="@(new List<string>{ "invoices", "editinvoice", "createinvoice" }.Contains(Model.View) ? "nav-link active": "nav-link")" href="@(Helpers.BuildUrl("Invoices"))">
-                                                <Language Tag="Invoices" IncludeIcon="true" />
-                                            </a>
-                                        </li>
-                                    }
+                                   
 
 
                                     @if (Model.User.Admin) {
@@ -288,25 +249,7 @@
                                                         </a>
                                                     </li>
                                                 }
-                                                @if (Model.FeatureEnabledDepartments) {
-                                                    <li>
-                                                        <a class="@(new List<string>{ "departmentgroups", "editdepartmentgroup" }.Contains(Model.View) ? "dropdown-item active": "dropdown-item")" href="@(Helpers.BuildUrl("Settings/DepartmentGroups"))">
-                                                            <Language Tag="DepartmentGroups" IncludeIcon="true" />
-                                                        </a>
-                                                    </li>
-                                                    <li>
-                                                        <a class="@(new List<string>{ "departments", "editdepartment" }.Contains(Model.View) ? "dropdown-item active": "dropdown-item")" href="@(Helpers.BuildUrl("Settings/Departments"))">
-                                                            <Language Tag="Departments" IncludeIcon="true" />
-                                                        </a>
-                                                    </li>
-                                                }
-                                                @if (Model.FeatureEnabledEmailTemplates) {
-                                                    <li>
-                                                        <a class="@(new List<string>{ "emailtemplates", "editemailtemplate" }.Contains(Model.View) ? "dropdown-item active": "dropdown-item")" href="@(Helpers.BuildUrl("Settings/EmailTemplates"))">
-                                                            <Language Tag="EmailTemplates" IncludeIcon="true" />
-                                                        </a>
-                                                    </li>
-                                                }
+                                               
                                                 @if (Model.FeatureEnabledFiles){
                                                     <li>
                                                         <a class="@(Model.View == "files" ? "dropdown-item active" : "dropdown-item")" href="@(Helpers.BuildUrl("Settings/Files"))">
@@ -319,43 +262,16 @@
                                                         <Language Tag="Language" IncludeIcon="true" />
                                                     </a>
                                                 </li>
-                                                @if (Model.FeatureEnabledLocation) {
-                                                    <li>
-                                                        <a class="@(new List<string>{ "editlocation", "locations" }.Contains(Model.View) ? "dropdown-item active": "dropdown-item")" href="@(Helpers.BuildUrl("Settings/Locations"))">
-                                                            <Language Tag="Locations" IncludeIcon="true" />
-                                                        </a>
-                                                    </li>
-                                                }
+                                                
                                                 <li>
                                                     <a class="@(Model.View == "settings" ? "dropdown-item active" : "dropdown-item")" href="@(Helpers.BuildUrl("Settings"))">
                                                         <Language Tag="Settings" IncludeIcon="true" />
                                                     </a>
                                                 </li>
-                                                @if (Model.FeatureEnabledServices) {
-                                                    <li>
-                                                        <a class="@(new List<string>{ "editservice", "services" }.Contains(Model.View) ? "dropdown-item active": "dropdown-item")" href="@(Helpers.BuildUrl("Settings/Services"))">
-                                                            <Language Tag="Services" IncludeIcon="true" />
-                                                        </a>
-                                                    </li>
-                                                }
-                                                @if (Model.FeatureEnabledTags) {
-                                                    <li>
-                                                        <a class="@(new List<string>{ "edittag", "tags" }.Contains(Model.View) ? "dropdown-item active": "dropdown-item")" href="@(Helpers.BuildUrl("Settings/Tags"))">
-                                                            <Language Tag="Tags" IncludeIcon="true" />
-                                                        </a>
-                                                    </li>
-                                                }
                                                 @if (Model.User.AppAdmin) {
                                                     <li>
                                                         <a class="@(new List<string>{ "edittenant", "tenants" }.Contains(Model.View) ? "dropdown-item app-admin-only active": "dropdown-item app-admin-only")" href="@(Helpers.BuildUrl("Settings/Tenants"))">
                                                             <Language Tag="Tenants" IncludeIcon="true" />
-                                                        </a>
-                                                    </li>
-                                                }
-                                                @if (Model.FeatureEnabledUDF){
-                                                    <li>
-                                                        <a class="@(Model.View == "udf" ? "dropdown-item active" : "dropdown-item")" href="@(Helpers.BuildUrl("Settings/UDF"))">
-                                                            <Language Tag="UserDefinedFields" IncludeIcon="true" />
                                                         </a>
                                                     </li>
                                                 }
@@ -364,13 +280,6 @@
                                                         <Language Tag="Users" IncludeIcon="true" />
                                                     </a>
                                                 </li>
-                                                @if (Model.FeatureEnabledUserGroups) {
-                                                    <li>
-                                                        <a class="@(new List<string>{ "editusergroup", "usergroups" }.Contains(Model.View) ? "dropdown-item active": "dropdown-item")" href="@(Helpers.BuildUrl("Settings/UserGroups"))">
-                                                            <Language Tag="UserGroups" IncludeIcon="true" />
-                                                        </a>
-                                                    </li>
-                                                }
                                             </ul>
                                         </li>
                                     }
@@ -969,20 +878,7 @@
             var userId = update.UserId;
 
             switch (update.UpdateType) {
-                case DataObjects.SignalRUpdateType.Appointment:
-                    var appt = Helpers.DeserializeObject<DataObjects.Appointment>(update.ObjectAsString);
-                    break;
-
-                case DataObjects.SignalRUpdateType.Department:
-                    await Helpers.LoadDepartments();
-                    break;
-
-                case DataObjects.SignalRUpdateType.DepartmentGroup:
-                    break;
-
-                case DataObjects.SignalRUpdateType.EmailTemplate:
-                    var emailTemplate = Helpers.DeserializeObject<DataObjects.EmailTemplate>(update.ObjectAsString);
-                    break;
+              
 
                 case DataObjects.SignalRUpdateType.File:
                     var file = Helpers.DeserializeObject<DataObjects.FileStorage>(update.ObjectAsString);
@@ -1001,14 +897,6 @@
                         activeUserItem.LastAccess = DateTime.UtcNow;
                         StateHasChanged();
                     }
-                    break;
-
-                case DataObjects.SignalRUpdateType.Location:
-                    await Helpers.LoadLocations();
-                    break;
-
-                case DataObjects.SignalRUpdateType.Service:
-                    await Helpers.LoadServices();
                     break;
 
                 case DataObjects.SignalRUpdateType.Setting:
@@ -1042,9 +930,6 @@
                     }
                     break;
 
-                case DataObjects.SignalRUpdateType.Tag:
-                    await Helpers.LoadTags();
-                    break;
 
                 case DataObjects.SignalRUpdateType.Tenant:
                     switch (message) {
@@ -1070,8 +955,6 @@
                     }
                     break;
 
-                case DataObjects.SignalRUpdateType.UDF:
-                    break;
 
                 case DataObjects.SignalRUpdateType.Unknown:
                     await Helpers.ConsoleLog("Unknown SignalR Update Type Received");
@@ -1112,9 +995,6 @@
                     }
                     break;
 
-                case DataObjects.SignalRUpdateType.UserGroup:
-                    await Helpers.LoadUserGroups();
-                    break;
 
                 case DataObjects.SignalRUpdateType.UserPreferences:
                     var userPreferences = Helpers.DeserializeObject<DataObjects.UserPreferences>(update.ObjectAsString);
@@ -1145,39 +1025,6 @@
     protected async Task QuickActionClose()
     {
         await Helpers.HideMenus();
-    }
-
-    protected async Task QuickAddAppointmentNoteSave()
-    {
-        string focus = String.Empty;
-
-        if (String.IsNullOrWhiteSpace(Model.QuickAddAppointmentNote.Note)) {
-            focus = "quickadd-appointment-note";
-        }
-
-        if(focus != String.Empty) {
-            await Helpers.DelayedFocus(focus);
-            return;
-        }
-
-        Model.QuickAction = "appointmentnotesaving";
-
-        var saved = await Helpers.GetOrPost<DataObjects.AppointmentNote>("api/Data/SaveAppointmentNote", Model.QuickAddAppointmentNote);
-
-        await Helpers.HideMenus();
-
-        if(saved != null) {
-            if (saved.ActionResponse.Result) {
-                Model.AddMessage(Helpers.Text("AppointmentNoteCreated"), MessageType.Success);
-                if(Model.QuickActionOnComplete != null) {
-                    Model.QuickActionOnComplete.DynamicInvoke(saved);
-                }
-            } else {
-                Model.ErrorMessages(saved.ActionResponse.Messages);
-            }
-        } else {
-            Model.UnknownError();
-        }
     }
 
     protected async Task QuickAddUserSave()

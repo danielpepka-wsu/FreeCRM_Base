@@ -13,9 +13,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\CRM.DataAccess\CRM.DataAccess.csproj" />
-    <ProjectReference Include="..\CRM.Client\CRM.Client.csproj" />
-    <ProjectReference Include="..\CRM.Plugins\CRM.Plugins.csproj" />
     <PackageReference Include="AspNet.Security.OAuth.Apple" Version="9.1.0" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.Facebook" Version="9.0.3" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.Google" Version="9.0.3" />
@@ -34,33 +31,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Update="Plugins\UserUpdate.cs">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Compile>
-    <Compile Update="Plugins\LoginWithPrompts.cs">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Compile>
-    <Compile Update="Plugins\Example3.cs">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Compile>
-    <Compile Update="Plugins\Example2.cs">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Compile>
-    <Compile Update="Plugins\Example1.cs">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Compile>
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Update="Plugins\HelloWorld.assemblies">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Update="Plugins\HelloWorld.plugin">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Update="Plugins\HelloWorld\HelloWorld.dll">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
+    <ProjectReference Include="..\CRM.Client\CRM.Client.csproj" />
+    <ProjectReference Include="..\CRM.DataAccess\CRM.DataAccess.csproj" />
   </ItemGroup>
 
 </Project>

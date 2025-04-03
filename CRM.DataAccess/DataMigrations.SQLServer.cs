@@ -20,35 +20,6 @@ public partial class DataMigrations
 
         m1.Add(
             """
-            IF OBJECT_ID(N'[DepartmentGroups]') IS NULL
-            BEGIN
-                CREATE TABLE [DepartmentGroups] (
-                    [DepartmentGroupId] uniqueidentifier NOT NULL,
-                    [DepartmentGroupName] nvarchar(200) NULL,
-                    [TenantId] uniqueidentifier NULL,
-                    CONSTRAINT [PK_DepartmentGroups] PRIMARY KEY ([DepartmentGroupId])
-                )
-            END
-            """);
-
-        m1.Add(
-            """
-            IF OBJECT_ID(N'[Departments]') IS NULL
-            BEGIN
-                CREATE TABLE [Departments] (
-                    [DepartmentId] uniqueidentifier NOT NULL,
-                    [DepartmentName] nvarchar(100) NULL,
-                    [ActiveDirectoryNames] nvarchar(100) NULL,
-                    [Enabled] bit NULL,
-                    [DepartmentGroupId] uniqueidentifier NULL,
-                    [TenantId] uniqueidentifier NULL,
-                    CONSTRAINT [PK_Departments] PRIMARY KEY ([DepartmentId])
-                )
-            END
-            """);
-
-        m1.Add(
-            """
             IF OBJECT_ID(N'[Settings]') IS NULL
             BEGIN
                 CREATE TABLE [Settings] (
@@ -80,24 +51,6 @@ public partial class DataMigrations
 
         m1.Add(
             """
-            IF OBJECT_ID(N'[UDFLabels]') IS NULL
-            BEGIN
-                CREATE TABLE [UDFLabels] (
-                    [Id] uniqueidentifier NOT NULL,
-                    [Module] nvarchar(20) NULL,
-                    [UDF] nvarchar(10) NULL,
-                    [Label] nvarchar(max) NULL,
-                    [ShowColumn] bit NULL,
-                    [ShowInFilter] bit NULL,
-                    [IncludeInSearch] bit NULL,
-                    [TenantId] uniqueidentifier NULL,
-                    CONSTRAINT [PK_UDFLabels] PRIMARY KEY ([Id])
-                )
-            END
-            """);
-
-        m1.Add(
-            """
             IF OBJECT_ID(N'[Users]') IS NULL
             BEGIN
                 CREATE TABLE [Users] (
@@ -109,9 +62,7 @@ public partial class DataMigrations
                     [Phone] nvarchar(20) NULL,
                     [Username] nvarchar(100) NOT NULL,
                     [EmployeeId] nvarchar(50) NULL,
-                    [DepartmentId] uniqueidentifier NULL,
                     [Title] nvarchar(255) NULL,
-                    [Location] nvarchar(255) NULL,
                     [Enabled] bit NULL,
                     [LastLogin] datetime NULL,
                     [Admin] bit NULL,
@@ -120,18 +71,7 @@ public partial class DataMigrations
                     [FailedLoginAttempts] int NULL,
                     [LastLockoutDate] datetime NULL,
                     [Source] nvarchar(100) NULL,
-                    [UDF01] nvarchar(500) NULL,
-                    [UDF02] nvarchar(500) NULL,
-                    [UDF03] nvarchar(500) NULL,
-                    [UDF04] nvarchar(500) NULL,
-                    [UDF05] nvarchar(500) NULL,
-                    [UDF06] nvarchar(500) NULL,
-                    [UDF07] nvarchar(500) NULL,
-                    [UDF08] nvarchar(500) NULL,
-                    [UDF09] nvarchar(500) NULL,
-                    [UDF10] nvarchar(500) NULL,
                     CONSTRAINT [PK_Users] PRIMARY KEY ([UserId]),
-                    CONSTRAINT [FK_Users_Departments] FOREIGN KEY ([DepartmentId]) REFERENCES [Departments] ([DepartmentId]),
                     CONSTRAINT [FK_Users_Tenants] FOREIGN KEY ([TenantId]) REFERENCES [Tenants] ([TenantId])
                 )
             END
@@ -175,21 +115,6 @@ public partial class DataMigrations
 
         m1.Add(
             """
-            IF EXISTS(SELECT * FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS WHERE CONSTRAINT_NAME='FK_Users_Departments')
-            BEGIN
-            	ALTER TABLE [Users] DROP CONSTRAINT FK_Users_Departments
-            END
-
-            IF NOT EXISTS(SELECT * FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS WHERE CONSTRAINT_NAME='IX_Users_DepartmentId')
-            BEGIN
-                ALTER TABLE[dbo].[Users] WITH CHECK ADD CONSTRAINT[IX_Users_DepartmentId] FOREIGN KEY([DepartmentId])
-                REFERENCES[dbo].[Departments]([DepartmentId])
-                ALTER TABLE[dbo].[Users] CHECK CONSTRAINT[IX_Users_DepartmentId]
-            END
-            """);
-
-        m1.Add(
-            """
             IF EXISTS(SELECT * FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS WHERE CONSTRAINT_NAME='FK_Users_Tenants')
             BEGIN
             	ALTER TABLE [Users] DROP CONSTRAINT FK_Users_Tenants
@@ -221,14 +146,6 @@ public partial class DataMigrations
         });
 
 
-
-
-
-
-
-
-
-
         List<string> m2 = new List<string>();
 
         // Make sure the Source field exists in the Users table.
@@ -236,37 +153,6 @@ public partial class DataMigrations
             """
             IF NOT EXISTS (SELECT TOP 1 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE [TABLE_NAME] = 'Users' AND [COLUMN_NAME] = 'Source') BEGIN
             	ALTER TABLE [Users] ADD [Source] nvarchar(100) NULL
-            END
-            """);
-
-        m2.Add(
-            """
-            IF OBJECT_ID(N'[UserGroups]') IS NULL
-            BEGIN
-                CREATE TABLE [UserGroups] (
-                    [GroupId] uniqueidentifier NOT NULL,
-                    [TenantId] uniqueidentifier NOT NULL,
-                    [Name] nvarchar(100) NULL,
-                    [Enabled] bit NOT NULL,
-                    [Settings] nvarchar(max) NULL,
-                    CONSTRAINT [PK_UserGroups] PRIMARY KEY ([GroupId])
-                )
-            END
-            """);
-
-        m2.Add(
-            """
-            IF OBJECT_ID(N'[UserInGroups]') IS NULL
-            BEGIN
-                CREATE TABLE [UserInGroups] (
-                    [UserInGroupId] uniqueidentifier NOT NULL,
-                    [UserId] uniqueidentifier NOT NULL,
-                    [TenantId] uniqueidentifier NOT NULL,
-                    [GroupId] uniqueidentifier NOT NULL,
-                    CONSTRAINT [PK_UserInGroups] PRIMARY KEY ([UserInGroupId]),
-                    CONSTRAINT [FK_UserInGroups_UserGroups] FOREIGN KEY ([GroupId]) REFERENCES [UserGroups] ([GroupId]),
-                    CONSTRAINT [FK_UserInGroups_Users] FOREIGN KEY ([UserId]) REFERENCES [Users] ([UserId])
-                )
             END
             """);
 

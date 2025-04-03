@@ -31,9 +31,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Update="Pages\Invoices\EditInvoice.razor">
-      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
-    </Content>
     <Content Update="wwwroot\favicon.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
