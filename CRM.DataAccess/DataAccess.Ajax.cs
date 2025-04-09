@@ -71,18 +71,13 @@ public partial class DataAccess
                 if(StringValue(rec.Username).ToLower() != "admin") {
                     Local += 1;
                     if (Local < 26) {
-                        string deptName = rec.Department != null && !String.IsNullOrEmpty(rec.Department.DepartmentName) ? rec.Department.DepartmentName : String.Empty;
-                        string location = rec.Location != null ? rec.Location : String.Empty;
-
                         results.Add(new DataObjects.AjaxResults {
                             value = rec.UserId.ToString(),
-                            label = DisplayNameFromLastAndFirst(rec.LastName, rec.FirstName, rec.Email, deptName, location) +
+                            label = DisplayNameFromLastAndFirst(rec.LastName, rec.FirstName, rec.Email) +
                                 (!String.IsNullOrWhiteSpace(rec.Email) ? " (" + rec.Email + ")" : ""),
                             email = !String.IsNullOrWhiteSpace(rec.Email) ? rec.Email : "",
                             username = rec.Username,
                             extra1 = rec.Phone,
-                            extra2 = rec.Location,
-                            extra3 = rec.DepartmentId.ToString()
                         });
                     }
                 }
@@ -118,7 +113,7 @@ public partial class DataAccess
                         if (ldapResults < 26) {
                             results.Add(new DataObjects.AjaxResults {
                                 value = ldapUser.UserId.HasValue ? ((Guid)ldapUser.UserId).ToString() : Guid.Empty.ToString(),
-                                label = DisplayNameFromLastAndFirst(ldapUser.LastName, ldapUser.FirstName, ldapUser.Email, ldapUser.Department, ldapUser.Location) + " [LDAP]" +
+                                label = DisplayNameFromLastAndFirst(ldapUser.LastName, ldapUser.FirstName, ldapUser.Email) + " [LDAP]" +
                                     (!String.IsNullOrWhiteSpace(ldapUser.Email) ? " (" + ldapUser.Email + ")" : ""),
                                 email = ldapUser.Email
                             });

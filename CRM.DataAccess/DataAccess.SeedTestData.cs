@@ -68,9 +68,7 @@ public partial class DataAccess
         adminUser.LastModified = now;
         adminUser.PreventPasswordChange = false;
         adminUser.Admin = true;
-        adminUser.CanBeScheduled = false;
         adminUser.ManageFiles = true;
-        adminUser.ManageAppointments = true;
         adminUser.Deleted = false;
         adminUser.DeletedAt = null;
         if (String.IsNullOrEmpty(adminUser.Password)) {
@@ -147,9 +145,7 @@ public partial class DataAccess
                 }
 
                 tenantAdmin.PreventPasswordChange = false;
-                tenantAdmin.CanBeScheduled = false;
                 tenantAdmin.ManageFiles = true;
-                tenantAdmin.ManageAppointments = true;
 
                 if (newRecord) {
                     data.Users.Add(tenantAdmin);
@@ -190,26 +186,6 @@ public partial class DataAccess
             }
         }
 
-        // If this is the local database and we are in debug mode, then make sure
-        // that the test events are in the current month.
-#if DEBUG
-        if (_connectionString == "Data Source=localhost;Initial Catalog=CRM;TrustServerCertificate=True;User ID=sa;Password=saPassword;MultipleActiveResultSets=True;") {
-            var events = data.Appointments.Where(x => x.TenantId == _guid2).ToList();
-            if(events != null && events.Any()) {
-                foreach(var item in events) {
-                    if (item.Start.Month != now.Month || item.Start.Year != now.Year) {
-                        item.Start = SeedTestData_AdjustDate(item.Start);
-                        item.End = SeedTestData_AdjustDate(item.End);
-
-                        if (item.End < item.Start) {
-                            item.End = item.Start;
-                        }
-                    }
-                }
-            }
-        }
-#endif
-
         data.SaveChanges();
     }
 
@@ -244,53 +220,13 @@ public partial class DataAccess
         //tenantSettings.JasonWebTokenKey = TenantId.ToString().Replace("-", "");
         tenantSettings.AllowUsersToManageAvatars = true;
         tenantSettings.AllowUsersToManageBasicProfileInfo = true;
-        tenantSettings.AllowUsersToManageBasicProfileInfoElements = new List<string> { "name", "email", "phone", "employeeid", "title", "department", "location" };
+        tenantSettings.AllowUsersToManageBasicProfileInfoElements = new List<string> { "name", "email", "phone", "employeeid", "title" };
         tenantSettings.RequirePreExistingAccountToLogIn = TenantId == _guid1 ? true : false;
 
         SaveTenantSettings(TenantId, tenantSettings);
 
         // For the main test account add some default data
         if (TenantId == _guid2) {
-            // Make sure there is at least one department group
-            Guid departmentGroupId = Guid.Empty;
-            var deptGroups = data.DepartmentGroups.Where(x => x.TenantId == TenantId);
-            if (deptGroups != null && deptGroups.Any()) {
-                departmentGroupId = deptGroups.First().DepartmentGroupId;
-            } else {
-                departmentGroupId = Guid.NewGuid();
-                data.DepartmentGroups.Add(new DepartmentGroup {
-                    Added = now,
-                    AddedBy = "Seeded Test Data",
-                    LastModified = now,
-                    LastModifiedBy = "Seeded Test Data",
-                    DepartmentGroupId = departmentGroupId,
-                    DepartmentGroupName = "Main Departments",
-                    TenantId = TenantId
-                });
-                data.SaveChanges();
-            }
-
-            // Make sure there is at least one department
-            Guid departmentId = Guid.Empty;
-            var depts = data.Departments.Where(x => x.TenantId == TenantId);
-            if (depts != null && depts.Any()) {
-                departmentId = depts.First().DepartmentId;
-            } else {
-                departmentId = Guid.NewGuid();
-                data.Departments.Add(new Department {
-                    Added = now,
-                    AddedBy = "Seeded Test Data",
-                    LastModified = now,
-                    LastModifiedBy = "Seeded Test Data",
-                    DepartmentId = departmentId,
-                    TenantId = TenantId,
-                    DepartmentName = "IT",
-                    DepartmentGroupId = departmentGroupId,
-                    ActiveDirectoryNames = "{IT Active Directory Name}",
-                    Enabled = true
-                });
-                data.SaveChanges();
-            }
 
             var testUser = data.Users.FirstOrDefault(x => x.TenantId == TenantId && x.Username != null && x.Username.ToLower() == "test");
             if (testUser == null) {
@@ -310,9 +246,7 @@ public partial class DataAccess
                     Enabled = true,
                     EmployeeId = "000000001",
                     Phone = "509-555-1212",
-                    Location = "Works from Home",
                     Title = "A Test Admin User",
-                    DepartmentId = departmentId != Guid.Empty ? departmentId : null,
                     Admin = true,
                     LastLogin = DateTime.UtcNow.AddDays(-1)
                 });
@@ -332,9 +266,7 @@ public partial class DataAccess
                     Enabled = true,
                     EmployeeId = "000000002",
                     Phone = "208-555-1212",
-                    Location = "Works from Home",
                     Title = "A Regular User That's Enabled",
-                    DepartmentId = departmentId != Guid.Empty ? departmentId : null,
                     LastLogin = DateTime.UtcNow.AddDays(-2)
                 });
 
@@ -353,9 +285,7 @@ public partial class DataAccess
                     Enabled = false,
                     EmployeeId = "000000003",
                     Phone = "916-555-1212",
-                    Location = "Works from Home",
                     Title = "A Regular User That's Disabled",
-                    DepartmentId = departmentId != Guid.Empty ? departmentId : null,
                     LastLogin = DateTime.UtcNow.AddDays(-3)
                 });
 

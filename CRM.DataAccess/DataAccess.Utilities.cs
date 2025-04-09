@@ -25,7 +25,6 @@ public partial interface IDataAccess
     string CultureCodeDisplay(string cc);
     Guid? CurrentUserId(DataObjects.User? user);
     string? CurrentUserIdString(DataObjects.User? user);
-    string DatabaseType { get; }
     DateTime? DateOnlyToDateTime(DateOnly? dateOnly);
     public DateOnly? DateTimeToDateOnly(DateTime? dateTime);
     decimal DecimalValue(decimal? value);
@@ -368,12 +367,6 @@ public partial class DataAccess
         return user != null ? user.UserId.ToString() : null;
     }
 
-    public string DatabaseType {
-        get {
-            return _databaseType;
-        }
-    }
-
     public DateTime? DateOnlyToDateTime(DateOnly? dateOnly)
     {
         DateTime? output = null;
@@ -454,90 +447,9 @@ public partial class DataAccess
         DataObjects.BooleanResponse output = new DataObjects.BooleanResponse();
 
         try {
-            var appointments = await data.Appointments.Where(x => x.TenantId == TenantId && x.Deleted == true && (x.DeletedAt == null || x.DeletedAt > OlderThan)).ToListAsync();
-            if(appointments != null && appointments.Any()) {
-                foreach(var rec in appointments) {
-                    var result = await DeleteAppointment(rec.AppointmentId, null, true);
-                    if (!result.Result) {
-                        output.Messages = result.Messages;
-                        return output;
-                    }
-                }
-            }
-
-            await data.Database.ExecuteSqlRawAsync("DELETE FROM AppointmentNotes WHERE TenantId={0} AND Deleted=1 AND (DeletedAt IS NULL OR DeletedAt > {1})", TenantId, OlderThan);
-            await data.Database.ExecuteSqlRawAsync("DELETE FROM AppointmentServices WHERE TenantId={0} AND Deleted=1 AND (DeletedAt IS NULL OR DeletedAt > {1})", TenantId, OlderThan);
-
-            // Other items need to call their delete method to get all related data.
-            var departmentGroups = await data.DepartmentGroups.Where(x => x.TenantId == TenantId && x.Deleted == true && (x.DeletedAt == null || x.DeletedAt > OlderThan)).ToListAsync();
-            if(departmentGroups != null && departmentGroups.Any()) {
-                foreach(var rec in departmentGroups) {
-                    var result = await DeleteDepartmentGroup(rec.DepartmentGroupId, null, true);
-                    if (!result.Result) {
-                        output.Messages = result.Messages;
-                        return output;
-                    }
-                }
-            }
-
-            var departments = await data.Departments.Where(x => x.TenantId == TenantId && x.Deleted == true && (x.DeletedAt == null || x.DeletedAt > OlderThan)).ToListAsync();
-            if(departments != null && departments.Any()) {
-                foreach(var rec in departments) {
-                    var result = await DeleteDepartment(rec.DepartmentId, null, true);
-                    if (!result.Result) {
-                        output.Messages = result.Messages;
-                        return output;
-                    }
-                }
-            }
-
-            await data.Database.ExecuteSqlRawAsync("DELETE FROM EmailTemplates WHERE TenantId={0} AND Deleted=1 AND (DeletedAt IS NULL OR DeletedAt > {1})", TenantId, OlderThan);
-
+          
             await data.Database.ExecuteSqlRawAsync("DELETE FROM FileStorage WHERE TenantId={0} AND Deleted=1 AND (DeletedAt IS NULL OR DeletedAt > {1})", TenantId, OlderThan);
             
-            var locations = await data.Locations.Where(x => x.TenantId == TenantId && x.Deleted == true && (x.DeletedAt == null || x.DeletedAt > OlderThan)).ToListAsync();
-            if(locations != null && locations.Any()) {
-                foreach (var rec in locations) {
-                    // Clear out this location in any appointments
-                    await data.Database.ExecuteSqlRawAsync("UPDATE Appointments SET LocationId = NULL WHERE LocationId={0}", rec.LocationId);
-                    await data.SaveChangesAsync();
-                }
-                data.Locations.RemoveRange(locations);
-                await data.SaveChangesAsync();
-            }
-
-            var services = await data.Services.Where(x => x.TenantId == TenantId && x.Deleted == true && (x.DeletedAt == null || x.DeletedAt > OlderThan)).ToListAsync();
-            if(services != null && services.Any()) {
-                foreach(var rec in services) {
-                    await data.Database.ExecuteSqlRawAsync("DELETE FROM AppointmentServices WHERE ServiceId={0}", rec.ServiceId);
-                    await data.SaveChangesAsync();
-                }
-                data.Services.RemoveRange(services);
-                await data.SaveChangesAsync();
-            }
-
-            // For tags, remove any related items first, then delete the tags.
-            var tags = await data.Tags.Where(x => x.TenantId == TenantId && x.Deleted == true && (x.DeletedAt == null || x.DeletedAt > OlderThan)).ToListAsync();
-            if(tags != null && tags.Any()) {
-                foreach(var rec in tags) {
-                    await data.Database.ExecuteSqlRawAsync("DELETE FROM TagItems WHERE TagId={0}", rec.TagId);
-                    await data.SaveChangesAsync();
-                }
-                data.Tags.RemoveRange(tags);
-                await data.SaveChangesAsync();
-            }
-            
-            var userGroups = await data.UserGroups.Where(x => x.TenantId == TenantId && x.Deleted == true && (x.DeletedAt == null || x.DeletedAt > OlderThan)).ToListAsync();
-            if(userGroups != null &&  userGroups.Any()) {
-                foreach (var rec in userGroups) {
-                    var result = await DeleteUserGroup(rec.GroupId, null, true);
-                    if (!result.Result) {
-                        output.Messages = result.Messages;
-                        return output;
-                    }
-                }
-            }
-
             var users = await data.Users.Where(x => x.TenantId == TenantId && x.Deleted == true && (x.DeletedAt == null || x.DeletedAt > OlderThan)).ToListAsync();
             if(users != null && users.Any()) {
                 foreach(var rec in users) { 
@@ -597,48 +509,9 @@ public partial class DataAccess
 
         if (!String.IsNullOrWhiteSpace(Type)) {
             switch (Type.ToLower()) {
-                case "appointment":
-                    output = await DeleteAppointment(RecordId, CurrentUser, true);
-                    break;
-
-                case "appointmentnote":
-                    output = await DeleteAppointmentNote(RecordId, CurrentUser, true);
-                    break;
-
-                case "appointmentservice":
-                    output = await DeleteAppointmentService(RecordId, CurrentUser, true);
-                    break;
-
-                case "departmentgroup":
-                    output = await DeleteDepartmentGroup(RecordId, CurrentUser, true);
-                    break;
-
-                case "department":
-                    output = await DeleteDepartment(RecordId, CurrentUser, true);
-                    break;
-
-                case "emailtemplate":
-                    output = await DeleteEmailTemplate(RecordId, CurrentUser, true);
-                    break;
-
+              
                 case "filestorage":
                     output = await DeleteFileStorage(RecordId, CurrentUser, true);
-                    break;
-
-                case "location":
-                    output = await DeleteLocation(RecordId, CurrentUser, true);
-                    break;
-
-                case "service":
-                    output = await DeleteService(RecordId, CurrentUser, true);
-                    break;
-
-                case "tag":
-                    output = await DeleteTag(RecordId, CurrentUser, true);
-                    break;
-
-                case "usergroup":
-                    output = await DeleteUserGroup(RecordId, CurrentUser, true);
                     break;
 
                 case "user":
@@ -821,7 +694,6 @@ public partial class DataAccess
         output.CultureCodes = GetLanguageCultureCodes();
         output.Languages = new List<DataObjects.Language>();
         output.LoggedIn = false;
-        output.Plugins = GetPlugins();
         output.Released = Released;
         output.TenantId = Guid.Empty;
         output.Tenants = new List<DataObjects.Tenant>();
@@ -881,7 +753,6 @@ public partial class DataAccess
             output.CultureCodes = GetLanguageCultureCodes();
             output.Languages = languages;
             output.LoggedIn = true;
-            output.Plugins = GetPlugins();
             output.Released = Released;
             output.TenantId = CurrentUser.TenantId;
             output.Tenants = tenants;
@@ -914,7 +785,6 @@ public partial class DataAccess
             output.CultureCodes = GetLanguageCultureCodes();
             output.Languages = tenantLanguages;
             output.LoggedIn = false;
-            output.Plugins = GetPlugins();
             output.Released = Released;
             output.TenantId = tenant.TenantId;
             output.Tenants = new List<DataObjects.Tenant>{ tenant };
@@ -932,31 +802,11 @@ public partial class DataAccess
 
     public async Task<DataObjects.DeletedRecordCounts> GetDeletedRecordCounts(Guid TenantId)
     {
-        var appointmentNotes = await data.AppointmentNotes.CountAsync(x => x.TenantId == TenantId && x.Deleted == true);
-        var appointments = await data.Appointments.CountAsync(x => x.TenantId == TenantId && x.Deleted == true);
-        var appointmentServices = await data.AppointmentServices.CountAsync(x => x.TenantId == TenantId && x.Deleted == true);
-        var departmentGroups = await data.DepartmentGroups.CountAsync(x => x.TenantId == TenantId && x.Deleted == true);
-        var departments = await data.Departments.CountAsync(x => x.TenantId == TenantId && x.Deleted == true);
-        var emailTemplates = await data.EmailTemplates.CountAsync(x => x.TenantId == TenantId && x.Deleted == true);
         var fileStorage = await data.FileStorages.CountAsync(x => x.TenantId == TenantId && x.Deleted == true);
-        var locations = await data.Locations.CountAsync(x => x.TenantId == TenantId && x.Deleted == true);
-        var services = await data.Services.CountAsync(x => x.TenantId == TenantId && x.Deleted == true);
-        var tags = await data.Tags.CountAsync(x => x.TenantId == TenantId && x.Deleted == true);
-        var userGroups = await data.UserGroups.CountAsync(x => x.TenantId == TenantId && x.Deleted == true);
         var users = await data.Users.CountAsync(x => x.TenantId == TenantId && x.Deleted == true);
 
         DataObjects.DeletedRecordCounts output = new DataObjects.DeletedRecordCounts { 
-            AppointmentNotes = appointmentNotes,
-            Appointments = appointments,
-            AppointmentServices = appointmentServices,
-            DepartmentGroups = departmentGroups,
-            Departments = departments,
-            EmailTemplates = emailTemplates,
             FileStorage = fileStorage,
-            Locations = locations,
-            Services = services,
-            Tags = tags,
-            UserGroups = userGroups,
             Users = users,
         };
 
@@ -965,100 +815,7 @@ public partial class DataAccess
 
     public async Task<DataObjects.DeletedRecords> GetDeletedRecords(Guid TenantId)
     {
-        List<DataObjects.DeletedRecordItem> appointmentNotes = new List<DataObjects.DeletedRecordItem>();
-        var appointmentNoteRecords = await data.AppointmentNotes
-            .Where(x => x.TenantId == TenantId && x.Deleted == true)
-            .Select(x => new { x.DeletedAt, x.LastModified, x.LastModifiedBy, x.Note, x.AppointmentNoteId })
-            .ToListAsync();
-        if (appointmentNoteRecords != null && appointmentNoteRecords.Any()) {
-            foreach(var item in appointmentNoteRecords) {
-                appointmentNotes.Add(new DataObjects.DeletedRecordItem { 
-                    DeletedAt = item.DeletedAt.HasValue ? (DateTime)item.DeletedAt : DateTime.Now,
-                    DeletedBy = LastModifiedDisplayName(item.LastModifiedBy),
-                    Display = StringValue(item.Note),
-                    ItemId = item.AppointmentNoteId,
-                });
-            }
-        }
-
-        List<DataObjects.DeletedRecordItem> appointments = new List<DataObjects.DeletedRecordItem>();
-        var appointmentRecords = await data.Appointments
-            .Where(x => x.TenantId == TenantId && x.Deleted == true)
-            .Select(x => new { x.Deleted, x.LastModified, x.LastModifiedBy, x.DeletedAt, x.Title, x.AppointmentId, x.Start, x.End, x.AllDay })
-            .ToListAsync();
-        if (appointmentRecords != null && appointmentRecords.Any()) {
-            foreach(var item in appointmentRecords) {
-                appointments.Add(new DataObjects.DeletedRecordItem { 
-                    DeletedAt = item.DeletedAt.HasValue ? (DateTime)item.DeletedAt : DateTime.Now,
-                    DeletedBy = LastModifiedDisplayName(item.LastModifiedBy),
-                    Display = FormatAppointmentTitle(item.Title, item.Start, item.End, item.AllDay),
-                    ItemId = item.AppointmentId,
-                });
-            }
-        }
-
-        List<DataObjects.DeletedRecordItem> appointmentServices = new List<DataObjects.DeletedRecordItem>();
-        var appointmentServiceRecords = await data.AppointmentServices
-            .Include(x => x.Service)
-            .Where(x => x.TenantId == TenantId && x.Deleted == true).ToListAsync();
-        if (appointmentServiceRecords != null && appointmentServiceRecords.Any()) {
-            foreach (var item in appointmentServiceRecords) {
-                appointmentServices.Add(new DataObjects.DeletedRecordItem {
-                    DeletedAt = item.DeletedAt.HasValue ? (DateTime)item.DeletedAt : DateTime.Now,
-                    DeletedBy = LastModifiedDisplayName(item.LastModifiedBy),
-                    Display = StringValue(item.Service.Description),
-                    ItemId = item.AppointmentServiceId,
-                });
-            }
-        }
-
-        List<DataObjects.DeletedRecordItem> departmentGroups = new List<DataObjects.DeletedRecordItem>();
-        var departmentGroupRecords = await data.DepartmentGroups
-            .Where(x => x.TenantId == TenantId && x.Deleted == true)
-            .Select(x => new { x.DeletedAt, x.LastModified, x.LastModifiedBy, x.DepartmentGroupName, x.DepartmentGroupId })
-            .ToListAsync();
-        if (departmentGroupRecords != null && departmentGroupRecords.Any()) {
-            foreach(var item in departmentGroupRecords) {
-                departmentGroups.Add(new DataObjects.DeletedRecordItem {
-                    DeletedAt = item.DeletedAt.HasValue ? (DateTime)item.DeletedAt : DateTime.Now,
-                    DeletedBy = LastModifiedDisplayName(item.LastModifiedBy),
-                    Display = StringValue(item.DepartmentGroupName),
-                    ItemId = item.DepartmentGroupId,
-                });
-            }
-        }
-
-        List<DataObjects.DeletedRecordItem> departments = new List<DataObjects.DeletedRecordItem>();
-        var departmentRecords = await data.Departments
-            .Where(x => x.TenantId == TenantId && x.Deleted == true)
-            .Select(x => new { x.DeletedAt, x.LastModified, x.LastModifiedBy, x.DepartmentName, x.DepartmentId })
-            .ToListAsync();
-        if (departmentRecords != null && departmentRecords.Any()) {
-            foreach(var item in departmentRecords) {
-                departments.Add(new DataObjects.DeletedRecordItem {
-                    DeletedAt = item.DeletedAt.HasValue ? (DateTime)item.DeletedAt : DateTime.Now,
-                    DeletedBy = LastModifiedDisplayName(item.LastModifiedBy),
-                    Display = StringValue(item.DepartmentName),
-                    ItemId = item.DepartmentId,
-                });
-            }
-        }
-
-        List<DataObjects.DeletedRecordItem> emailTemplates = new List<DataObjects.DeletedRecordItem>();
-        var emailTemplateRecords = await data.EmailTemplates
-            .Where(x => x.TenantId == TenantId && x.Deleted == true)
-            .Select(x => new { x.DeletedAt, x.LastModified, x.LastModifiedBy, x.Name, x.EmailTemplateId })
-            .ToListAsync();
-        if(emailTemplateRecords != null && emailTemplateRecords.Any()) {
-            foreach(var item in emailTemplateRecords) {
-                emailTemplates.Add(new DataObjects.DeletedRecordItem {
-                    DeletedAt = item.DeletedAt.HasValue ? (DateTime)item.DeletedAt : DateTime.Now,
-                    DeletedBy = LastModifiedDisplayName(item.LastModifiedBy),
-                    Display = item.Name,
-                    ItemId = item.EmailTemplateId,
-                });
-            }
-        }
+        
 
         List<DataObjects.DeletedRecordItem> fileStorage = new List<DataObjects.DeletedRecordItem>();
         var fileStorageRecord = await data.FileStorages
@@ -1072,70 +829,6 @@ public partial class DataAccess
                     DeletedBy = LastModifiedDisplayName(item.LastModifiedBy),
                     Display = StringValue(item.FileName),
                     ItemId = item.FileId,
-                });
-            }
-        }
-
-        List<DataObjects.DeletedRecordItem> locations = new List<DataObjects.DeletedRecordItem>();
-        var locationRecords = await data.Locations
-            .Where(x => x.TenantId == TenantId && x.Deleted == true)
-            .Select(x => new { x.DeletedAt, x.LastModified, x.LastModifiedBy, x.Name, x.LocationId })
-            .ToListAsync();
-        if (locationRecords != null && locationRecords.Any()) {
-            foreach(var item in locationRecords) {
-                locations.Add(new DataObjects.DeletedRecordItem {
-                    DeletedAt = item.DeletedAt.HasValue ? (DateTime)item.DeletedAt : DateTime.Now,
-                    DeletedBy = LastModifiedDisplayName(item.LastModifiedBy),
-                    Display = StringValue(item.Name),
-                    ItemId = item.LocationId,
-                });
-            }
-        }
-
-        List<DataObjects.DeletedRecordItem> services = new List<DataObjects.DeletedRecordItem>();
-        var serviceRecords = await data.Services
-            .Where(x => x.TenantId == TenantId && x.Deleted == true)
-            .Select(x => new { x.DeletedAt, x.LastModified, x.LastModifiedBy, x.Description, x.ServiceId })
-            .ToListAsync();
-        if (serviceRecords != null && serviceRecords.Any()) {
-            foreach(var item in serviceRecords) {
-                services.Add(new DataObjects.DeletedRecordItem {
-                    DeletedAt = item.DeletedAt.HasValue ? (DateTime)item.DeletedAt : DateTime.Now,
-                    DeletedBy = LastModifiedDisplayName(item.LastModifiedBy),
-                    Display = StringValue(item.Description),
-                    ItemId = item.ServiceId,
-                });
-            }
-        }
-
-        List<DataObjects.DeletedRecordItem> tags = new List<DataObjects.DeletedRecordItem>();
-        var tagRecords = await data.Tags
-            .Where(x => x.TenantId == TenantId && x.Deleted == true)
-            .Select(x => new { x.DeletedAt, x.LastModified, x.LastModifiedBy, x.Name, x.TagId})
-            .ToListAsync();
-        if(tagRecords != null && tagRecords.Any()) {
-            foreach(var item in tagRecords) {
-                tags.Add(new DataObjects.DeletedRecordItem {
-                    DeletedAt = item.DeletedAt.HasValue ? (DateTime)item.DeletedAt : DateTime.Now,
-                    DeletedBy = LastModifiedDisplayName(item.LastModifiedBy),
-                    Display = item.Name,
-                    ItemId = item.TagId,
-                });
-            }
-        }
-
-        List<DataObjects.DeletedRecordItem> userGroups = new List<DataObjects.DeletedRecordItem>();
-        var userGroupRecords = await data.UserGroups
-            .Where(x => x.TenantId == TenantId && x.Deleted == true)
-            .Select(x => new { x.DeletedAt, x.LastModified, x.LastModifiedBy, x.Name, x.GroupId })
-            .ToListAsync();
-        if (userGroupRecords != null && userGroupRecords.Any()) {
-            foreach(var item in userGroupRecords) {
-                userGroups.Add(new DataObjects.DeletedRecordItem {
-                    DeletedAt = item.DeletedAt.HasValue ? (DateTime)item.DeletedAt : DateTime.Now,
-                    DeletedBy = LastModifiedDisplayName(item.LastModifiedBy),
-                    Display = StringValue(item.Name),
-                    ItemId = item.GroupId,
                 });
             }
         }
@@ -1157,17 +850,7 @@ public partial class DataAccess
         }
 
         DataObjects.DeletedRecords output = new DataObjects.DeletedRecords {
-            AppointmentNotes = appointmentNotes,
-            Appointments = appointments,
-            AppointmentServices = appointmentServices,
-            DepartmentGroups = departmentGroups,
-            Departments = departments,
-            EmailTemplates = emailTemplates,
             FileStorage = fileStorage,
-            Locations = locations,
-            Services = services,
-            Tags = tags,
-            UserGroups = userGroups,
             Users = users,
         };
 
@@ -1513,67 +1196,6 @@ public partial class DataAccess
                 withText.Replace("$", "$$"),
                 RegexOptions.IgnoreCase
             );
-        }
-
-        return output;
-    }
-
-    private DataObjects.EmailMessage ReplaceTagsInEmail(DataObjects.EmailMessage message, DataObjects.User? user = null, object? obj = null)
-    {
-        var output = message;
-
-        output.Subject = ReplaceTagsInText(output.Subject, user, obj);
-        output.Body = ReplaceTagsInText(output.Body, user, obj);
-
-        return output;
-    }
-
-    private string ReplaceTagsInText(string? input, DataObjects.User? user = null, object? obj = null)
-    {
-        string output = String.Empty;
-
-        if (!String.IsNullOrWhiteSpace(input)) {
-            output = input;
-
-            if (user != null) {
-                output = output.Replace("{{FirstName}}", user.FirstName, StringComparison.InvariantCultureIgnoreCase);
-                output = output.Replace("{{LastName}}", user.LastName, StringComparison.InvariantCultureIgnoreCase);
-                output = output.Replace("{{Email}}", user.Email, StringComparison.InvariantCultureIgnoreCase);
-            }
-
-            if (obj != null) {
-                if (obj.GetType() == typeof(DataObjects.Appointment)) {
-                    var appt = (DataObjects.Appointment)obj;
-
-                    output = output.Replace("{{Appointment:Title}}", appt.Title, StringComparison.InvariantCultureIgnoreCase);
-                    output = output.Replace("{{Appointment:Note}}", appt.Note, StringComparison.InvariantCultureIgnoreCase);
-
-                    string startDate = appt.Start.ToLocalTime().ToString();
-                    string endDate = appt.End.ToLocalTime().ToString();
-
-                    string datesAndTimes = "Format Dates and Times Here";
-
-                    output = output.Replace("{{Appointment:Start}}", startDate, StringComparison.InvariantCultureIgnoreCase);
-                    output = output.Replace("{{Appointment:End}}", endDate, StringComparison.InvariantCultureIgnoreCase);
-                    output = output.Replace("{{Appointment:DatesAndTimes}}", datesAndTimes, StringComparison.InvariantCultureIgnoreCase);
-
-                } else if (obj.GetType() == typeof(DataObjects.Service)) {
-                    var service = (DataObjects.Service)obj;
-
-                    output = output.Replace("{{Service:Code}}", service.Code, StringComparison.InvariantCultureIgnoreCase);
-                    output = output.Replace("{{Service:Description}}", service.Description, StringComparison.InvariantCultureIgnoreCase);
-                    output = output.Replace("{{Service:Rate}}", service.Rate.ToString("C"), StringComparison.InvariantCultureIgnoreCase);
-                }
-            }
-
-            // Now, replace any potential empty tags that weren't caught above.
-            List<string> tags = new List<string> { "{{FirstName}}", "{{LastName}}", "{{Email}}",
-            "{{Appointment:Title}}", "{{Appointment:Note}}", "{{Appointment:Start}}", "{{Appointment:End}}", "{{Appointment:DatesAndTimes}}",
-            "{{Service:Code}}", "{{Service:Description}}", "{{Service:Rate}}"};
-
-            foreach (var tag in tags) {
-                output = output.Replace(tag, "", StringComparison.InvariantCultureIgnoreCase);
-            }
         }
 
         return output;
@@ -1959,131 +1581,11 @@ public partial class DataAccess
         try {
             if (!String.IsNullOrWhiteSpace(Type)) {
                 switch (Type.ToLower()) {
-                    case "appointment":
-                        var recAppt = await data.Appointments.FirstOrDefaultAsync(x => x.AppointmentId == RecordId);
-                        if (recAppt != null) {
-                            recAppt.Deleted = false;
-                            recAppt.DeletedAt = null;
-                            await data.SaveChangesAsync();
-                            output.Result = true;
-                        } else {
-                            output.Messages.Add(Type + " Record '" + RecordId.ToString() + "' Not Found");
-                        }
-                        break;
-
-                    case "appointmentnote":
-                        var recApptNote = await data.AppointmentNotes.FirstOrDefaultAsync(x => x.AppointmentNoteId == RecordId);
-                        if (recApptNote != null) {
-                            recApptNote.Deleted = false;
-                            recApptNote.DeletedAt = null;
-                            await data.SaveChangesAsync();
-                            output.Result = true;
-                        } else {
-                            output.Messages.Add(Type + " Record '" + RecordId.ToString() + "' Not Found");
-                        }
-                        break;
-
-                    case "appointmentservice":
-                        var recApptService = await data.AppointmentServices.FirstOrDefaultAsync(x => x.AppointmentServiceId == RecordId);
-                        if (recApptService != null) {
-                            recApptService.Deleted = false;
-                            recApptService.DeletedAt = null;
-                            await data.SaveChangesAsync();
-                            output.Result = true;
-                        } else {
-                            output.Messages.Add(Type + " Record '" + RecordId.ToString() + "' Not Found");
-                        }
-                        break;
-
-                    case "departmentgroup":
-                        var recDeptGroup = await data.DepartmentGroups.FirstOrDefaultAsync(x => x.DepartmentGroupId == RecordId);
-                        if (recDeptGroup != null) {
-                            recDeptGroup.Deleted = false;
-                            recDeptGroup.DeletedAt = null;
-                            await data.SaveChangesAsync();
-                            output.Result = true;
-                        } else {
-                            output.Messages.Add(Type + " Record '" + RecordId.ToString() + "' Not Found");
-                        }
-                        break;
-
-                    case "department":
-                        var recDept = await data.Departments.FirstOrDefaultAsync(x => x.DepartmentId == RecordId);
-                        if (recDept != null) {
-                            recDept.Deleted = false;
-                            recDept.DeletedAt = null;
-                            await data.SaveChangesAsync();
-                            output.Result = true;
-                        } else {
-                            output.Messages.Add(Type + " Record '" + RecordId.ToString() + "' Not Found");
-                        }
-                        break;
-
-                    case "emailtemplate":
-                        var recEmailTemplate = await data.EmailTemplates.FirstOrDefaultAsync(x => x.EmailTemplateId == RecordId);
-                        if(recEmailTemplate != null) {
-                            recEmailTemplate.Deleted = false;
-                            recEmailTemplate.DeletedAt = null;
-                            await data.SaveChangesAsync();
-                            output.Result = true;
-                        } else {
-                            output.Messages.Add(Type + " Record '" + RecordId.ToString() + "' Not Found");
-                        }
-                        break;
-
                     case "filestorage":
                         var recFile = await data.FileStorages.FirstOrDefaultAsync(x => x.FileId == RecordId);
                         if (recFile != null) {
                             recFile.Deleted = false;
                             recFile.DeletedAt = null;
-                            await data.SaveChangesAsync();
-                            output.Result = true;
-                        } else {
-                            output.Messages.Add(Type + " Record '" + RecordId.ToString() + "' Not Found");
-                        }
-                        break;
-
-                    case "location":
-                        var recLocation = await data.Locations.FirstOrDefaultAsync(x => x.LocationId == RecordId);
-                        if (recLocation != null) {
-                            recLocation.Deleted = false;
-                            recLocation.DeletedAt = null;
-                            await data.SaveChangesAsync();
-                            output.Result = true;
-                        } else {
-                            output.Messages.Add(Type + " Record '" + RecordId.ToString() + "' Not Found");
-                        }
-                        break;
-
-                    case "service":
-                        var recService = await data.Services.FirstOrDefaultAsync(x => x.ServiceId == RecordId);
-                        if (recService != null) {
-                            recService.Deleted = false;
-                            recService.DeletedAt = null;
-                            await data.SaveChangesAsync();
-                            output.Result = true;
-                        } else {
-                            output.Messages.Add(Type + " Record '" + RecordId.ToString() + "' Not Found");
-                        }
-                        break;
-
-                    case "tag":
-                        var recTag = await data.Tags.FirstOrDefaultAsync(x => x.TagId == RecordId);
-                        if (recTag != null) {
-                            recTag.Deleted = false;
-                            recTag.DeletedAt = null;
-                            await data.SaveChangesAsync();
-                            output.Result = true;
-                        } else {
-                            output.Messages.Add(Type + " Record '" + RecordId.ToString() + "' Not Found");
-                        }
-                        break;
-
-                    case "usergroup":
-                        var recUserGroup = await data.UserGroups.FirstOrDefaultAsync(x => x.GroupId == RecordId);
-                        if (recUserGroup != null) {
-                            recUserGroup.Deleted = false;
-                            recUserGroup.DeletedAt = null;
                             await data.SaveChangesAsync();
                             output.Result = true;
                         } else {

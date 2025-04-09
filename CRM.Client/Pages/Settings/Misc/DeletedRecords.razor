@@ -15,18 +15,8 @@
     } else {
         if (Model.HaveDeletedRecords) {
             var deletedRecordTypes = new List<string> {
-                "Appointment",
-                "AppointmentNote",
-                "AppointmentService",
-                "Department",
-                "DepartmentGroup",
-                "EmailTemplate",
                 "FileStorage",
-                "Location",
-                "Service",
-                "Tag",
                 "User",
-                "UserGroup"
             };
 
             <div class="@Model.StickyMenuClass">
@@ -50,55 +40,15 @@
                 List<DataObjects.DeletedRecordItem>? deletedRecords = null;
 
                 switch (deletedRecordType) {
-                    case "Appointment":
-                        deletedRecords = _DeletedRecords.Appointments;
-                        break;
-
-                    case "AppointmentNote":
-                        deletedRecords = _DeletedRecords.AppointmentNotes;
-                        break;
-
-                    case "AppointmentService":
-                        deletedRecordTypeLanguageTag = "AppointmentServicesFull";
-                        deletedRecords = _DeletedRecords.AppointmentServices;
-                        break;
-
-                    case "Department":
-                        deletedRecords = _DeletedRecords.Departments;
-                        break;
-
-                    case "DepartmentGroup":
-                        deletedRecords = _DeletedRecords.DepartmentGroups;
-                        break;
-
-                    case "EmailTemplate":
-                        deletedRecords = _DeletedRecords.EmailTemplates;
-                        break;
-
                     case "FileStorage":
                         deletedRecords = _DeletedRecords.FileStorage;
                         deletedRecordTypeLanguageTag = "Files";
-                        break;
-
-                    case "Location":
-                        deletedRecords = _DeletedRecords.Locations;
-                        break;
-
-                    case "Service":
-                        deletedRecords = _DeletedRecords.Services;
-                        break;
-
-                    case "Tag":
-                        deletedRecords = _DeletedRecords.Tags;
                         break;
 
                     case "User":
                         deletedRecords = _DeletedRecords.Users;
                         break;
 
-                    case "UserGroup":
-                        deletedRecords = _DeletedRecords.UserGroups;
-                        break;
                 }
 
                 if (deletedRecords != null && deletedRecords.Any()) {
@@ -241,17 +191,7 @@
 
             // Also update the counts on the Main Model
             Model.DeletedRecordCounts = new DataObjects.DeletedRecordCounts {
-                AppointmentNotes = _DeletedRecords.AppointmentNotes.Count(),
-                Appointments = _DeletedRecords.Appointments.Count(),
-                AppointmentServices = _DeletedRecords.AppointmentServices.Count(),
-                DepartmentGroups = _DeletedRecords.DepartmentGroups.Count(),
-                Departments = _DeletedRecords.Departments.Count(),
-                EmailTemplates = _DeletedRecords.EmailTemplates.Count(),
                 FileStorage = _DeletedRecords.FileStorage.Count(),
-                Locations = _DeletedRecords.Locations.Count(),
-                Services = _DeletedRecords.Services.Count(),
-                Tags = _DeletedRecords.Tags.Count(),
-                UserGroups = _DeletedRecords.UserGroups.Count(),
                 Users = _DeletedRecords.Users.Count(),
             };
 

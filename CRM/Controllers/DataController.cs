@@ -14,7 +14,6 @@ public partial class DataController : ControllerBase
     private DataObjects.User CurrentUser;
     private Guid TenantId = Guid.Empty;
     private IConfigurationHelper configurationHelper;
-    private Plugins.IPlugins plugins;
 
     private readonly IHubContext<crmhub>? _signalR;
 
@@ -25,13 +24,11 @@ public partial class DataController : ControllerBase
         IHttpContextAccessor httpContextAccessor, 
         ICustomAuthentication auth, 
         IHubContext<crmhub> hubContext, 
-        IConfigurationHelper configHelper, 
-        Plugins.IPlugins diPlugins)
+        IConfigurationHelper configHelper)
     {
         da = daInjection;
         authenticationProviders = auth;
         configurationHelper = configHelper;
-        plugins = diPlugins;
         _signalR = hubContext;
 
         if (authenticationProviders != null) {

@@ -1,4 +1,6 @@
-﻿namespace CRM;
+﻿using Encryption;
+
+namespace CRM;
 
 public partial interface IDataAccess
 {

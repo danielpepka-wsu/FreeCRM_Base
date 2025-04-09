@@ -36,33 +36,6 @@ public partial class DataAccess
 
         try {
             var users = data.Users.Where(x => x.TenantId == TenantId).Select(o => o.UserId).ToList();
-
-            data.TagItems.RemoveRange(data.TagItems.Where(x => x.TenantId == TenantId));
-            await data.SaveChangesAsync();
-            
-            data.Tags.RemoveRange(data.Tags.Where(x => x.TenantId == TenantId));
-            await data.SaveChangesAsync();
-            
-            data.AppointmentNotes.RemoveRange(data.AppointmentNotes.Where(x => x.TenantId == TenantId));
-            await data.SaveChangesAsync();
-            
-            data.AppointmentServices.RemoveRange(data.AppointmentServices.Where(x => x.TenantId == TenantId));
-            await data.SaveChangesAsync();
-            
-            data.AppointmentUsers.RemoveRange(data.AppointmentUsers.Where(x => x.TenantId == TenantId));
-            await data.SaveChangesAsync();
-            
-            data.Appointments.RemoveRange(data.Appointments.Where(x => x.TenantId == TenantId));
-            await data.SaveChangesAsync();
-
-            data.EmailTemplates.RemoveRange(data.EmailTemplates.Where(x => x.TenantId != TenantId));
-            await data.SaveChangesAsync();
-            
-            data.Locations.RemoveRange(data.Locations.Where(x => x.TenantId == TenantId));
-            await data.SaveChangesAsync();
-            
-            data.Services.RemoveRange(data.Services.Where(x => x.TenantId == TenantId));
-            await data.SaveChangesAsync();
             
             data.FileStorages.RemoveRange(data.FileStorages.Where(x => x.TenantId == TenantId || users.Contains((Guid)x.UserId!)));
             await data.SaveChangesAsync();
@@ -70,16 +43,7 @@ public partial class DataAccess
             data.Settings.RemoveRange(data.Settings.Where(x => x.TenantId == TenantId));
             await data.SaveChangesAsync();
             
-            data.DepartmentGroups.RemoveRange(data.DepartmentGroups.Where(x => x.TenantId == TenantId));
-            await data.SaveChangesAsync();
-            
-            data.Departments.RemoveRange(data.Departments.Where(x => x.TenantId == TenantId));
-            await data.SaveChangesAsync();
-            
             data.Users.RemoveRange(data.Users.Where(x => x.TenantId == TenantId));
-            await data.SaveChangesAsync();
-            
-            data.UDFLabels.RemoveRange(data.UDFLabels.Where(x => x.TenantId == TenantId));
             await data.SaveChangesAsync();
             
             data.Tenants.RemoveRange(data.Tenants.Where(x => x.TenantId == TenantId));
@@ -180,12 +144,11 @@ public partial class DataAccess
             var tenant = GetTenant(TenantId, CurrentUser);
             if (tenant != null) {
                 output = tenant;
-                output.Departments = await GetDepartments(TenantId, CurrentUser);
-                output.DepartmentGroups = await GetDepartmentGroups(TenantId, CurrentUser);
-                output.udfLabels = await GetUDFLabels(TenantId);
             }
             CacheStore.SetCacheItem(TenantId, "FullTenant", output);
         }
+
+        await Task.CompletedTask;
 
         return output;
     }
@@ -440,42 +403,7 @@ public partial class DataAccess
 
     public DataObjects.TenantSettings GetTenantSettings(Guid TenantId)
     {
-        var defaultWorkSchedule = new DataObjects.WorkSchedule {
-            Sunday = false,
-            SundayAllDay = false,
-            SundayStart = "",
-            SundayEnd = "",
-
-            Monday = true,
-            MondayAllDay = false,
-            MondayStart = "8:00 am",
-            MondayEnd = "5:00 pm",
-
-            Tuesday = true,
-            TuesdayAllDay = false,
-            TuesdayStart = "8:00 am",
-            TuesdayEnd = "5:00 pm",
-
-            Wednesday = true,
-            WednesdayAllDay = false,
-            WednesdayStart = "8:00 am",
-            WednesdayEnd = "5:00 pm",
-
-            Thursday = true,
-            ThursdayAllDay = false,
-            ThursdayStart = "8:00 am",
-            ThursdayEnd = "5:00 pm",
-
-            Friday = true,
-            FridayAllDay = false,
-            FridayStart = "8:00 am",
-            FridayEnd = "5:00 pm",
-
-            Saturday = false,
-            SaturdayAllDay = false,
-            SaturdayStart = "",
-            SaturdayEnd = ""
-        };
+       
 
         DataObjects.TenantSettings output = new DataObjects.TenantSettings();
 
@@ -484,19 +412,11 @@ public partial class DataAccess
         var settings = GetSetting<DataObjects.TenantSettings>("Settings", DataObjects.SettingType.Object, TenantId);
         if (settings != null) {
             output = settings;
-            if (settings.WorkSchedule == null) {
-                settings.WorkSchedule = defaultWorkSchedule;
-                saveSettings = true;
-            } else if (!settings.WorkSchedule.Sunday && !settings.WorkSchedule.Monday && !settings.WorkSchedule.Tuesday
-                 && !settings.WorkSchedule.Wednesday && !settings.WorkSchedule.Thursday && !settings.WorkSchedule.Friday && !settings.WorkSchedule.Saturday) {
-                settings.WorkSchedule = defaultWorkSchedule;
-                saveSettings = true;
-            }
+            
         } else {
             // Create default settings for this tenant.
             output = new DataObjects.TenantSettings {
-                LoginOptions = new List<string>() { "local", "eitsso" },
-                WorkSchedule = defaultWorkSchedule
+                LoginOptions = new List<string>() { "local", "eitsso" }
             };
 
             saveSettings = true;
@@ -537,11 +457,9 @@ public partial class DataAccess
 
         if (AdminUser(CurrentUser)) {
             count = data.Users
-                .Include(x => x.Department)
                 .Where(x => x.TenantId == TenantId).Count();
         } else {
             count = data.Users
-                .Include(x => x.Department)
                 .Where(x => x.TenantId == TenantId && x.Deleted != true).Count();
         }
 
@@ -550,12 +468,10 @@ public partial class DataAccess
 
             if (AdminUser(CurrentUser)) {
                 recs = data.Users
-                    .Include(x => x.Department)
                     .Where(x => x.TenantId == TenantId);
 
             } else {
                 recs = data.Users
-                    .Include(x => x.Department)
                     .Where(x => x.TenantId == TenantId && x.Deleted != true);
 
             }
@@ -568,10 +484,6 @@ public partial class DataAccess
                         LastName = rec.LastName,
                         Email = rec.Email,
                         Username = rec.Username,
-                        Location = rec.Location,
-                        Department = rec.DepartmentId != null && rec.Department != null && rec.Department.DepartmentName != null
-                            ? rec.Department.DepartmentName
-                            : String.Empty,
                         Enabled = rec.Enabled,
                         Deleted = rec.Deleted,
                         Admin = BooleanValue(rec.Admin),

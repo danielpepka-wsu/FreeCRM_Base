@@ -129,9 +129,6 @@ public partial class DataAccess
                         // Valid login, so return the User Object
                         output = await GetUser(user.UserId);
 
-                        // If there are any plugins to update user info, do that now.
-                        output = await UpdateUserFromPlugins(output);
-
                         // No matter the result from the UpdateUserFromPlugins, we are still in a valid result.
                         output.ActionResponse.Result = true;
 

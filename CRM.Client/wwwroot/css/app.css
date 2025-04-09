@@ -857,11 +857,6 @@ table tbody tr.item-deleted td .action-button:hover:not(.btn-success):not(.btn-w
     text-transform:lowercase;
 }
 
-table.udf-labels tbody tr td.top {
-    vertical-align:top;
-    padding-top:.65em;
-}
-
 .marked-as-deleted-info {
     font-size:1.7em;
 }

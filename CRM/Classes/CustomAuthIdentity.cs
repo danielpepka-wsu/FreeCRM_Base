@@ -171,14 +171,14 @@ public static class CustomAuthenticationProviders
             output.UseGoogle = true;
         }
         
+        var auth = applicationBuilder.Services.AddAuthentication(options => {
+            options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+            options.DefaultChallengeScheme = OpenIdConnectDefaults.AuthenticationScheme;
+        });
+
+        auth.AddCookie();
+
         if (output.Enabled) {
-            var auth = applicationBuilder.Services.AddAuthentication(options => {
-                options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-                options.DefaultChallengeScheme = OpenIdConnectDefaults.AuthenticationScheme;
-            });
-
-            auth.AddCookie();
-
             if (output.UseApple) {
                 //var memory = new ReadOnlyMemory<byte>(Encoding.UTF8.GetBytes(applePrivateKey));
                 //var bytes = Encoding.UTF8.GetBytes(applePrivateKey);

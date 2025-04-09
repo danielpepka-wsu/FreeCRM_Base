@@ -24,7 +24,6 @@ using Radzen;
 using Radzen.Blazor;
 using Radzen.Blazor.Rendering;
 using static MudBlazor.Colors;
-using Plugins;
 
 namespace CRM.Client;
 
@@ -470,40 +469,6 @@ public static class Helpers
         return output;
     }
 
-    public static Plugins.Plugin? ConvertCodeToPlugin(string? code)
-    {
-        Plugins.Plugin? output = null;
-
-        if (!String.IsNullOrWhiteSpace(code)) {
-            string ns = GetPluginNamespace(code);
-            string c = GetPluginClass(code);
-
-            if (!String.IsNullOrWhiteSpace(ns) && !String.IsNullOrWhiteSpace(c)) {
-                output = new Plugin {
-                    Id = Guid.Empty,
-                    Author = "From Code",
-                    ClassName = c,
-                    Code = code,
-                    ContainsSensitiveData = false,
-                    Description = "",
-                    LimitToTenants = new List<Guid>(),
-                    Name = "From Code",
-                    Namespace = ns,
-                    Prompts = new List<PluginPrompt>(),
-                    PromptValues = new List<PluginPromptValue>(),
-                    PromptValuesOnUpdate = "",
-                    Properties = new Dictionary<string, object>(),
-                    Type = "Code",
-                    Version = "X",
-                    AdditionalAssemblies = new List<string>(),
-                    Invoker = "Execute",
-                    Values = new List<PluginPromptValue>(),
-                };
-            }
-        }
-
-        return output;
-    }
 
     /// <summary>
     /// Reads a cookie using jsInterop.
@@ -689,123 +654,6 @@ public static class Helpers
         }
     }
 
-    /// <summary>
-    /// Gets the name for a department group from the unique id.
-    /// </summary>
-    /// <param name="DepartmentGroupId">The unique id of the department group.</param>
-    /// <returns>The name of the department group.</returns>
-    public static async Task<string> DepartmentGroupName(string? DepartmentGroupId)
-    {
-        string output = String.Empty;
-
-        if (!String.IsNullOrWhiteSpace(DepartmentGroupId)) {
-            if (!Model.DepartmentGroups.Any()) {
-                await LoadDepartmentGroups();
-            }
-
-            var dept = Model.DepartmentGroups.FirstOrDefault(x => x.DepartmentGroupId.ToString() == DepartmentGroupId);
-            if (dept != null) {
-                output += dept.DepartmentGroupName;
-            }
-        }
-
-        return output;
-    }
-
-    /// <summary>
-    /// Gets the name for a department group from the unique id.
-    /// </summary>
-    /// <param name="DepartmentGroupId">The unique id of the department group.</param>
-    /// <returns>The name of the department group.</returns>
-    public static async Task<string> DepartmentGroupName(Guid? DepartmentGroupId)
-    {
-        string output = String.Empty;
-
-        if (DepartmentGroupId.HasValue) {
-            if (!Model.DepartmentGroups.Any()) {
-                await LoadDepartmentGroups();
-            }
-
-            var dept = Model.DepartmentGroups.FirstOrDefault(x => x.DepartmentGroupId == DepartmentGroupId);
-            if (dept != null) {
-                output += dept.DepartmentGroupName;
-            }
-        }
-
-        return output;
-    }
-
-    /// <summary>
-    /// Gets the name for a department from the unique id
-    /// </summary>
-    /// <param name="DepartmentId">The unique id of the department.</param>
-    /// <returns>The name of the department.</returns>
-    public static async Task<string> DepartmentName(string? DepartmentId)
-    {
-        string output = String.Empty;
-
-        if (!String.IsNullOrWhiteSpace(DepartmentId)) {
-            if (!Model.Departments.Any()) {
-                await LoadDepartments();
-            }
-
-            var dept = Model.Departments.FirstOrDefault(x => x.DepartmentId.ToString() == DepartmentId);
-            if (dept != null) {
-                output += dept.DepartmentName;
-            }
-        }
-
-        return output;
-    }
-
-    /// <summary>
-    /// Gets the name for a department from the unique id
-    /// </summary>
-    /// <param name="DepartmentId">The unique id of the department.</param>
-    /// <returns>The name of the department.</returns>
-    public static async Task<string> DepartmentName(Guid? DepartmentId)
-    {
-        string output = String.Empty;
-
-        if (DepartmentId.HasValue) {
-            if (!Model.Departments.Any()) {
-                await LoadDepartments();
-            }
-
-            var dept = Model.Departments.FirstOrDefault(x => x.DepartmentId == DepartmentId);
-            if (dept != null) {
-                output += dept.DepartmentName;
-            }
-        }
-
-        return output;
-    }
-
-    /// <summary>
-    /// Gets the list of department names from a list of unique ids.
-    /// </summary>
-    /// <param name="departmentIds">The list of unique ids of the departments.</param>
-    /// <param name="orderAlphabetically">Option to order the output alphabetically (Defaults to True).</param>
-    /// <returns>A list of strings containing the department names.</returns>
-    public static List<string> DepartmentNamesFromListOfGuids(List<Guid>? departmentIds, bool orderAlphabetically = true)
-    {
-        var output = new List<string>();
-
-        if (departmentIds != null && departmentIds.Any() && Model.Tenant.Departments != null && Model.Tenant.Departments.Any()) {
-            foreach (var deptId in departmentIds) {
-                var dept = Model.Tenant.Departments.FirstOrDefault(x => x.DepartmentId == deptId);
-                if (dept != null && !String.IsNullOrWhiteSpace(dept.DepartmentName)) {
-                    output.Add(dept.DepartmentName);
-                }
-            }
-
-            if (orderAlphabetically) {
-                output = output.OrderBy(x => x).ToList();
-            }
-        }
-
-        return output;
-    }
 
     /// <summary>
     /// Deserializes an object that was serialized as a JSON Document Object back into the object.
@@ -966,10 +814,8 @@ public static class Helpers
     /// <param name="LastName">The last name of the user.</param>
     /// <param name="FirstName">The first name of the user.</param>
     /// <param name="Email">The email address of the user.</param>
-    /// <param name="DepartmentName">The department name of the user.</param>
-    /// <param name="Location">The location of the user.</param>
     /// <returns>A formatted user display name.</returns>
-    public static string DisplayNameFromLastAndFirst(string? LastName, string? FirstName, string? Email, string? DepartmentName, string? Location)
+    public static string DisplayNameFromLastAndFirst(string? LastName, string? FirstName, string? Email)
     {
         string output = String.Empty;
 
@@ -986,21 +832,6 @@ public static class Helpers
 
         if (String.IsNullOrEmpty(output) && !String.IsNullOrEmpty(Email)) {
             output = Email;
-        }
-
-        if (!String.IsNullOrEmpty(DepartmentName) || !String.IsNullOrEmpty(Location)) {
-            if(Model.FeatureEnabledDepartments || Model.FeatureEnabledLocation) {
-                output += " [";
-                if (!String.IsNullOrEmpty(Location) && !String.IsNullOrEmpty(DepartmentName) && Model.FeatureEnabledDepartments && Model.FeatureEnabledLocation) {
-                    output += Location + "/" + DepartmentName;
-                } else if (!String.IsNullOrEmpty(Location) && Model.FeatureEnabledLocation) {
-                    output += Location;
-                } else if (Model.FeatureEnabledDepartments) {
-                    output += DepartmentName;
-                }
-
-                output += "]";
-            }
         }
         return output;
     }
@@ -1194,55 +1025,6 @@ public static class Helpers
         });
     }
 
-    /// <summary>
-    /// Deserializes the template stored as JSON back to an EmailTemplateDetails object.
-    /// </summary>
-    /// <param name="Template">The template JSON.</param>
-    /// <returns>An EmailTemplateDetails object.</returns>
-    public static DataObjects.EmailTemplateDetails EmailTemplateDetails(string? Template)
-    {
-        DataObjects.EmailTemplateDetails output = new DataObjects.EmailTemplateDetails();
-
-        if (!String.IsNullOrWhiteSpace(Template)) {
-            var deserialized = DeserializeObject<DataObjects.EmailTemplateDetails>(Template);
-            if (deserialized != null) {
-                output = deserialized;
-            }
-        }
-
-        return output;
-    }
-
-    public static async Task<PluginExecuteResult> ExecutePlugin(Plugin plugin, object[]? objects = null)
-    {
-        var output = new PluginExecuteResult {
-            Messages = new List<string>(),
-            Objects = new List<object>(),
-            Result = false,
-        };
-
-        var request = new PluginExecuteRequest {
-            Plugin = plugin,
-            Objects = objects,
-        };
-
-        var result = await Helpers.GetOrPost<PluginExecuteResult>("api/Data/ExecutePlugin", request);
-        if (result != null) {
-            output.Result = result.Result;
-
-            if (result.Messages != null && result.Messages.Count > 0) {
-                output.Messages = result.Messages;
-            }
-
-            if (result.Objects != null && result.Objects.Count > 0) {
-                output.Objects = result.Objects;
-            }
-        } else {
-            output.Messages.Add("An unknown error occurred attempting to execute the plugin '" + plugin.Name + "'.");
-        }
-
-        return output;
-    }
 
     /// <summary>
     /// The thumbnail graphic to show for a given file based on the file extension.
@@ -1375,65 +1157,6 @@ public static class Helpers
         Model.Language = lang;
     }
 
-    /// <summary>
-    /// Format an address.
-    /// </summary>
-    /// <param name="location">The location with an address to format.</param>
-    /// <returns>The formatted address.</returns>
-    public static string FormatAddress(DataObjects.Location location)
-    {
-        string output = String.Empty;
-
-        if (!String.IsNullOrWhiteSpace(location.Address)) {
-            output += location.Address;
-            if (!String.IsNullOrWhiteSpace(location.City)) {
-                output += "<br />" + location.City;
-
-                if (!String.IsNullOrWhiteSpace(location.State)) {
-                    output += ", " + location.State;
-
-                    if (!String.IsNullOrWhiteSpace(location.PostalCode)) {
-                        output += " " + location.PostalCode;
-                    }
-                }
-            }
-        }
-
-        return output;
-    }
-
-    /// <summary>
-    /// Formats the dates and times for an appointment.
-    /// </summary>
-    /// <param name="appt">The Appointment object.</param>
-    /// <returns>The formatted dates and times.</returns>
-    public static string FormatAppointmentDatesAndTimes(DataObjects.Appointment appt)
-    {
-        string output = String.Empty;
-
-        bool multiDay = appt.Start.ToShortDateString() != appt.End.ToShortDateString();
-
-        if (appt.AllDay) {
-            if (multiDay) {
-                output = appt.Start.ToString("d") + " - " + appt.End.ToString("d") + " " + Text("AllDay");
-            } else {
-                output = appt.Start.ToString("d") + " " + Text("AllDay");
-            }
-        } else {
-            // Start with just the main event date and time
-            output = appt.Start.ToString("d") + " " + appt.Start.ToString("t");
-
-            // If this is a multi-day event then add the end date and time
-            if (multiDay) {
-                output += " - " + appt.End.ToString("d") + " " + appt.End.ToString("t");
-            } else if(appt.Start.ToString("t") != appt.End.ToString("t")) {
-                // Add the end time
-                output += " - " + appt.End.ToString("t");
-            }
-        }
-
-        return output;
-    }
 
     /// <summary>
     /// Formats a value in the currency format.
@@ -1659,10 +1382,9 @@ public static class Helpers
     /// Formats the user display name of a UserListing object.
     /// </summary>
     /// <param name="userListing">The UserListing object to be formatted.</param>
-    /// <param name="IncludeLocation">Option to include the Location in the output.</param>
     /// <param name="IncludeEmail">Option to include the email address in the output.</param>
     /// <returns>The formatting user display name.</returns>
-    public static string FormatUserDisplayName(DataObjects.UserListing? userListing, bool IncludeLocation = true, bool IncludeEmail = true)
+    public static string FormatUserDisplayName(DataObjects.UserListing? userListing, bool IncludeEmail = true)
     {
         string output = String.Empty;
 
@@ -1674,13 +1396,6 @@ public static class Helpers
                     output += " ";
                 }
                 output += userListing.LastName;
-            }
-
-            if (IncludeLocation && !String.IsNullOrWhiteSpace(userListing.Location)) {
-                if (!String.IsNullOrWhiteSpace(output)) {
-                    output += " ";
-                }
-                output += "[" + userListing.Location + "]";
             }
 
             if (IncludeEmail && !String.IsNullOrWhiteSpace(userListing.Email)) {
@@ -1699,10 +1414,9 @@ public static class Helpers
     /// Formats the user display name of a user based on the unique user id.
     /// </summary>
     /// <param name="UserId">The unique user id of the user.</param>
-    /// <param name="IncludeLocation">Option to include the Location in the output.</param>
     /// <param name="IncludeEmail">Option to include the email address in the output.</param>
     /// <returns>The formatting user display name.</returns>
-    public static string FormatUserDisplayName(string? UserId, bool IncludeLocation = false, bool IncludeEmail = false)
+    public static string FormatUserDisplayName(string? UserId, bool IncludeEmail = false)
     {
         string output = String.Empty;
 
@@ -1717,13 +1431,6 @@ public static class Helpers
                         output += " ";
                     }
                     output += user.LastName;
-                }
-
-                if (IncludeLocation && !String.IsNullOrWhiteSpace(user.Location)) {
-                    if (!String.IsNullOrWhiteSpace(output)) {
-                        output += " ";
-                    }
-                    output += "[" + user.Location + "]";
                 }
 
                 if (IncludeEmail && !String.IsNullOrWhiteSpace(user.Email)) {
@@ -1743,10 +1450,9 @@ public static class Helpers
     /// Formats the user display name of a user based on the unique user id.
     /// </summary>
     /// <param name="UserId">The unique user id of the user.</param>
-    /// <param name="IncludeLocation">Option to include the Location in the output.</param>
     /// <param name="IncludeEmail">Option to include the email address in the output.</param>
     /// <returns>The formatting user display name.</returns>
-    public static string FormatUserDisplayName(Guid? UserId, bool IncludeLocation = false, bool IncludeEmail = false)
+    public static string FormatUserDisplayName(Guid? UserId, bool IncludeEmail = false)
     {
         string output = String.Empty;
 
@@ -1761,13 +1467,6 @@ public static class Helpers
                         output += " ";
                     }
                     output += user.LastName;
-                }
-
-                if (IncludeLocation && !String.IsNullOrWhiteSpace(user.Location)) {
-                    if (!String.IsNullOrWhiteSpace(output)) {
-                        output += " ";
-                    }
-                    output += "[" + user.Location + "]";
                 }
 
                 if (IncludeEmail && !String.IsNullOrWhiteSpace(user.Email)) {
@@ -2037,46 +1736,6 @@ public static class Helpers
                     output = result;
                 }
             } catch { }
-        }
-
-        return output;
-    }
-
-    /// <summary>
-    /// Gets the style for a given location.
-    /// </summary>
-    /// <param name="LocationId">The unique id of the location.</param>
-    /// <param name="appointment">An optional Appointment object.</param>
-    /// <returns>A string with the style for the location.</returns>
-    public static async Task<string> GetLocationStyle(Guid? LocationId, DataObjects.Appointment? appointment = null)
-    {
-        string output = String.Empty;
-
-        // See if the event has specific colors
-        if (appointment != null) {
-            if (!String.IsNullOrWhiteSpace(appointment.BackgroundColor)) {
-                output += "background-color:" + appointment.BackgroundColor + ";";
-            }
-            if (!String.IsNullOrWhiteSpace(appointment.ForegroundColor)) {
-                output += "color:" + appointment.ForegroundColor + ";";
-            }
-        }
-
-        if (String.IsNullOrWhiteSpace(output) && LocationId.HasValue && LocationId != Guid.Empty) {
-            if (!Model.Locations.Any()) {
-                await LoadLocations();
-            }
-
-            var locationItem = Model.Locations.FirstOrDefault(x => x.LocationId == LocationId);
-            if(locationItem != null) {
-                if (!String.IsNullOrWhiteSpace(locationItem.CalendarBackgroundColor)) {
-                    output += "background-color:" + locationItem.CalendarBackgroundColor + ";";
-                }
-
-                if (!String.IsNullOrWhiteSpace(locationItem.CalendarForegroundColor)) {
-                    output += "color:" + locationItem.CalendarForegroundColor + ";";
-                }
-            }
         }
 
         return output;
@@ -2521,123 +2180,6 @@ public static class Helpers
         return output;
     }
 
-    /// <summary>
-    /// Gets a plugin by it's unique Guid Id.
-    /// </summary>
-    /// <param name="id">The Guid Id of the plugin.</param>
-    /// <returns>A nullable Plugin object.</returns>
-    public static Plugin? GetPluginById(Guid id)
-    {
-        var output = Model.Plugins.FirstOrDefault(x => x.Id == id);
-        return output;
-    }
-
-    /// <summary>
-    /// Gets a plugin by it's unique Guid Id as a string.
-    /// </summary>
-    /// <param name="id">The Guid Id of the plugin as a string.</param>
-    /// <returns>A nullable Plugin object.</returns>
-    public static Plugin? GetPluginById(string? id)
-    {
-        Plugin? output = null;
-
-        if (!String.IsNullOrWhiteSpace(id)) {
-            Guid pluginId = Guid.Empty;
-
-            try {
-                pluginId = new Guid(id);
-            } catch { }
-
-            if (pluginId != Guid.Empty) {
-                output = GetPluginById(pluginId);
-            }
-        }
-
-        return output;
-    }
-
-    public static string GetPluginNamespace(string code)
-    {
-        string output = String.Empty;
-
-        var line = FindFirstLineStartingWith(code, "namespace");
-        if (!String.IsNullOrWhiteSpace(line)) {
-            output = line.Replace("namespace ", "").Replace(";", "").Replace("{", "").Trim();
-        }
-
-        return output;
-    }
-
-    public static string GetPluginClass(string code)
-    {
-        string output = String.Empty;
-
-        var line = FindFirstLineStartingWith(code, "public class ");
-        if (String.IsNullOrWhiteSpace(line)) {
-            line = FindFirstLineStartingWith(code, "public partial class ");
-        }
-
-        if (!String.IsNullOrWhiteSpace(line)) {
-            output = line.Replace("public class", "").Replace(";", "").Replace("{", "").Trim();
-
-            if (output.Contains(":")) {
-                output = output.Substring(0, output.IndexOf(":")).Trim();
-            }
-        }
-
-
-        return output;
-    }
-
-    public static string[] GetPromptDefaultValue(PluginPromptType type)
-    {
-        var output = new string[] { "" };
-
-        switch (type) {
-            case PluginPromptType.Checkbox:
-                output = new string[] { "False" };
-                break;
-
-            case PluginPromptType.CheckboxList:
-                break;
-
-            case PluginPromptType.Date:
-                break;
-
-            case PluginPromptType.DateTime:
-                break;
-
-            case PluginPromptType.File:
-                break;
-
-            case PluginPromptType.Multiselect:
-                break;
-
-            case PluginPromptType.Number:
-                break;
-
-            case PluginPromptType.Password:
-                break;
-
-            case PluginPromptType.Radio:
-                break;
-
-            case PluginPromptType.Select:
-                break;
-
-            case PluginPromptType.Text:
-                break;
-
-            case PluginPromptType.Textarea:
-                break;
-
-            case PluginPromptType.Time:
-                break;
-        }
-
-        return output;
-    }
-
     public static string GetPromptItemValueAsString(object? o)
     {
         string output = String.Empty;
@@ -2774,30 +2316,6 @@ public static class Helpers
                             output.Add(key, value);
                         }
                     }
-                }
-            }
-        }
-
-        return output;
-    }
-
-    /// <summary>
-    /// Gets a Tag by its unique id.
-    /// </summary>
-    /// <param name="tagId">The unique id of the Tag.</param>
-    /// <returns>A nullable Tag object.</returns>
-    public static async Task<DataObjects.Tag?> GetTag(Guid? tagId)
-    {
-        DataObjects.Tag? output = null;
-
-        if (tagId.HasValue) {
-            output = Model.Tags.FirstOrDefault(x => x.TagId == tagId);
-
-            if (output == null) {
-                output = await GetOrPost<DataObjects.Tag>("api/Data/GetTag/" + tagId.ToString());
-
-                if (output != null) {
-                    Model.Tags.Add(output);
                 }
             }
         }
@@ -3161,20 +2679,16 @@ public static class Helpers
             // then the second part indicates the source (eg: google:home, fa:fa fa-home, etc.)
             Dictionary<string, List<string>> icons =    new Dictionary<string, List<string>> {
                 { "fa:fa-regular fa-address-card",               new List<string> { "ManageProfile", "ManageProfileInfo" }},
-                { "fa:fa-regular fa-calendar",                   new List<string> { "AppointmentTypeEvent", "Schedule", "Scheduling" }},
                 { "fa:fa-regular fa-calendar-check",             new List<string> { "Now" }},
-                { "fa:fa-regular fa-calendar-plus",              new List<string> { "AddAppointment" }},
                 { "fa:fa-regular fa-circle",                     new List<string> { "TenantChange" }},
                 { "fa:fa-regular fa-circle-check",               new List<string> { "CurrentCredential", "OK", "Select", "Selected", "UserEnabled" }},
                 { "fa:fa-regular fa-circle-dot",                 new List<string> { "TenantCurrent" }},
                 { "fa:fa-regular fa-file",                       new List<string> { "Files", "ManageFile" }},
-                { "fa:fa-regular fa-note-sticky",                new List<string> { "AppointmentNoteAdd" }},
                 { "fa:fa-regular fa-square-check",               new List<string> { "Checked" }},
-                { "fa:fa-regular fa-square-plus",                new List<string> { "Add", "AddLanguage", "AddNewEmailTemplate", "AddNewUserGroup", "CreateInvoiceForUser", "InvoiceAddItem" }},
+                { "fa:fa-regular fa-square-plus",                new List<string> { "Add", "AddLanguage" }},
                 { "fa:fa-regular fa-sun",                        new List<string> { "Theme", "ThemeLight" }},
 
                 { "fa:fa-solid fa-arrows-rotate",                new List<string> { "Refresh" }},
-                { "fa:fa-solid fa-bell-concierge",               new List<string> { "AddNewService", "AppointmentAddService", "EditService", "Service", "Services" }},
                 { "fa:fa-solid fa-broom",                        new List<string> { "Clear", "Reset", "ResetLanguageDefaults" }},
                 { "fa:fa-solid fa-building-circle-arrow-right",  new List<string> { "AddNewTenant", "NewTenant" }},
                 { "fa:fa-solid fa-building-user",                new List<string> { "EditTenant", "Tenants" }},
@@ -3187,7 +2701,6 @@ public static class Helpers
                 { "fa:fa-solid fa-circle-info",                  new List<string> { "About", "Info" }},
                 { "fa:fa-solid fa-circle-user",                  new List<string> { "ManageAvatar", "User", "UserMenuIcon" }},
                 { "fa:fa-solid fa-code",                         new List<string> { "Code", "HTML", "ThemeCustomCssDefault" }},
-                { "fa:fa-solid fa-envelopes-bulk",               new List<string> { "EmailTemplate", "EmailTemplates" }},
                 { "fa:fa-solid fa-file-invoice",                 new List<string> { "CreateInvoice", "EditInvoice", "Invoice", "Invoices", "ViewInvoice" }},
                 { "fa:fa-solid fa-file-lines",                   new List<string> { "UserDefinedFields" }},
                 { "fa:fa-solid fa-file-pdf",                     new List<string> { "DownloadPDF", "PDF" }},
@@ -3199,7 +2712,6 @@ public static class Helpers
                 { "fa:fa-solid fa-image",                        new List<string> { "InsertImage", "Photo" }},
                 { "fa:fa-solid fa-key",                          new List<string> { "ChangePassword", "ForgotPassword", "GeneratePassword", "GenerateNewPassword", "PasswordChanged", "UserAdmin" }},
                 { "fa:fa-solid fa-language",                     new List<string> { "Language" }},
-                { "fa:fa-solid fa-location-dot",                 new List<string> { "AddNewLocation", "EditLocation", "Locations" }},
                 { "fa:fa-solid fa-magnifying-glass",             new List<string> { "IncludeInSearch", "Preview", "Search", "View" }},
                 { "fa:fa-solid fa-moon",                         new List<string> { "ThemeDark" }},
                 { "fa:fa-solid fa-paper-plane",                  new List<string> { "SendTestEmail" }},
@@ -3211,10 +2723,8 @@ public static class Helpers
                 { "fa:fa-solid fa-shield-halved",                new List<string> { "AccessDenied" }},
                 { "fa:fa-solid fa-sign-in-alt",                  new List<string> { "Log-In", "Login", "LoginTitle", "LoginWithLocalAccount", "Logout" }},
                 { "fa:fa-solid fa-signature",                    new List<string> { "SignUp" }},
-                { "fa:fa-solid fa-sitemap",                      new List<string> { "AddNewDepartment", "Departments", "EditDepartment" }},
                 { "fa:fa-solid fa-sliders",                      new List<string> { "Admin", "Settings" }},
                 { "fa:fa-solid fa-table-columns",                new List<string> { "ShowColumn" }},
-                { "fa:fa-solid fa-tags",                         new List<string> { "Tags" }},
                 { "fa:fa-solid fa-thumbtack",                    new List<string> { "Pinned" }},
                 { "fa:fa-solid fa-thumbtack-slash",              new List<string> { "Unpinned" }},
                 { "fa:fa-solid fa-trash",                        new List<string> { "ConfirmDelete", "ConfirmDeleteTenant", "Delete", "DeleteAvatar", "DeleteTenant", "PermanentlyDelete", "Remove", "RemoveFile" }},
@@ -3226,8 +2736,7 @@ public static class Helpers
                 { "fa:fa-solid fa-user-lock",                    new List<string> { "ResetPassword", "ResetUserPassword", "UpdatePassword" }},
                 { "fa:fa-solid fa-user-plus",                    new List<string> { "AddNewUser" }},
                 { "fa:fa-solid fa-user-shield",                  new List<string> { "RecordsTableIconAdmin" }},
-                { "fa:fa-solid fa-users",                        new List<string> { "ActiveUsers", "AppointmentTypeMeeting", "EditUserGroup", "NewUserGroup", "UserGroups" }},
-                { "fa:fa-solid fa-users-rectangle",              new List<string> { "AddNewDepartmentGroup", "DepartmentGroups", "EditDepartmentGroup" }},
+                { "fa:fa-solid fa-users",                        new List<string> { "ActiveUsers" }},
                 { "fa:fa-solid fa-xmark",                        new List<string> { "Cancel", "Close", "CloseDialog", "Hide" }},
             };
 
@@ -3654,23 +3163,6 @@ public static class Helpers
         }
     }
 
-    /// <summary>
-    /// Loads the Department Groups from the API endpoint.
-    /// </summary>
-    public async static Task LoadDepartmentGroups()
-    {
-        var items = await GetOrPost<List<DataObjects.DepartmentGroup>>("api/Data/GetDepartmentGroups");
-        Model.DepartmentGroups = items != null && items.Any() ? items : new List<DataObjects.DepartmentGroup>();
-    }
-
-    /// <summary>
-    /// Loads the Departments from the API endpoint.
-    /// </summary>
-    public async static Task LoadDepartments()
-    {
-        var items = await GetOrPost<List<DataObjects.Department>>("api/Data/GetDepartments");
-        Model.Departments = items != null && items.Any() ? items : new List<DataObjects.Department>();
-    }
 
     /// <summary>
     /// Loads the Image Files from the API endpoint.
@@ -3682,57 +3174,12 @@ public static class Helpers
     }
 
     /// <summary>
-    /// Loads the locations from the API endpoint.
-    /// </summary>
-    public async static Task LoadLocations()
-    {
-        var items = await GetOrPost<List<DataObjects.Location>>("api/Data/GetLocations");
-        Model.Locations = items != null && items.Any() ? items : new List<DataObjects.Location>();
-    }
-
-    /// <summary>
-    /// Loads the services from the API endpoints.
-    /// </summary>
-    public async static Task LoadServices()
-    {
-        var items = await GetOrPost<List<DataObjects.Service>>("api/Data/GetServices");
-        Model.Services = items != null && items.Any() ? items : new List<DataObjects.Service>();
-    }
-
-    /// <summary>
-    /// Loads the Tags from the API endpoint.
-    /// </summary>
-    public async static Task LoadTags()
-    {
-        var items = await GetOrPost<List<DataObjects.Tag>>("api/Data/GetTags");
-        Model.Tags = items != null && items.Any() ? items : new List<DataObjects.Tag>();
-    }
-
-    /// <summary>
     /// Loads the Tenant List from the API endpoint.
     /// </summary>
     public async static Task LoadTenantList()
     {
         var items = await GetOrPost<List<DataObjects.TenantList>>("api/Data/GetTenantList");
         Model.TenantList = items != null && items.Any() ? items : new List<DataObjects.TenantList>();
-    }
-
-    /// <summary>
-    /// Loads the User-Defined Field Labels from the API endpoint.
-    /// </summary>
-    public async static Task LoadUdfLabels()
-    {
-        var items = await GetOrPost<List<DataObjects.udfLabel>>("api/Data/GetUdfLabels");
-        Model.udfLabels = items != null && items.Any() ? items : new List<DataObjects.udfLabel>();
-    }
-
-    /// <summary>
-    /// Loads the User Groups from the API endpoint.
-    /// </summary>
-    public async static Task LoadUserGroups()
-    {
-        var items = await GetOrPost<List<DataObjects.UserGroup>>("api/Data/GetUserGroups");
-        Model.UserGroups = items != null && items.Any() ? items : new List<DataObjects.UserGroup>();
     }
 
     /// <summary>
@@ -4173,105 +3620,9 @@ public static class Helpers
     }
 
     /// <summary>
-    /// Gets the value for a given option value for a prompt.
-    /// </summary>
-    /// <param name="prompt">The prompt.</param>
-    /// <param name="label">The label of the option item.</param>
-    /// <returns>The value for the option item, or an empty string.</returns>
-    public static string PluginPromptOptionValue(PluginPrompt prompt, string? label)
-    {
-        string output = String.Empty;
-
-        if (!String.IsNullOrWhiteSpace(label) && prompt.Options != null && prompt.Options.Count > 0) {
-            var option = prompt.Options.FirstOrDefault(x => x.Label.ToLower() == label.ToLower());
-            if (option != null) {
-                output += option.Value;
-            }
-        }
-
-        return output;
-    }
-
-    public static string PluginResultToString(Plugins.PluginExecuteResult result, bool includeObjects = false)
-    {
-        System.Text.StringBuilder output = new StringBuilder();
-
-        output.AppendLine(Text("Result") + ": " + result.Result.ToString().ToLower());
-
-        if (result.Messages != null && result.Messages.Count > 0) {
-            output.AppendLine("");
-            output.AppendLine((result.Messages.Count == 1 ? Text("Message") : Text("Messages")) + ":");
-            foreach (var msg in result.Messages) {
-                output.AppendLine(" - " + msg);
-            }
-        }
-
-        if (result.Objects != null && result.Objects.Count() > 0) {
-            var objects = result.Objects.ToList();
-            output.AppendLine("");
-
-            int index = -1;
-
-            if (includeObjects) {
-                output.AppendLine(Text("Objects"));
-
-                foreach (var o in objects) {
-                    index++;
-                    var json = SerializeObject(o);
-
-                    if (!String.IsNullOrWhiteSpace(json) && json != "[]") {
-                        output.AppendLine("");
-                        output.AppendLine(Text("Object") + " " + index.ToString() + ":");
-                        output.AppendLine(json);
-                    }
-                }
-            }
-        }
-
-        return output.ToString();
-    }
-
-    /// <summary>
-    /// Gets the preview for an invoice.
-    /// </summary>
-    /// <param name="invoice">The invoice to preview.</param>
-    public async static Task PreviewInvoice(DataObjects.Invoice invoice)
-    {
-        Model.ClearMessages();
-        Model.Message_Loading();
-
-        var preview = await Helpers.GetOrPost<DataObjects.Invoice>("api/Data/GenerateInvoiceImages", invoice);
-
-        Model.ClearMessages();
-
-        if (preview != null) {
-            if (preview.ActionResponse.Result) {
-                System.Text.StringBuilder html = new System.Text.StringBuilder();
-
-                if (preview.Images != null && preview.Images.Any()) {
-                    foreach (var image in preview.Images) {
-                        html.AppendLine("<div class=\"mb-2\">");
-                        html.AppendLine("  <img src=\"data:image/jpg;base64," + Convert.ToBase64String(image) + "\" style=\"width:100%;\" />");
-                        html.AppendLine("</div>");
-                    }
-                } else {
-                    html.AppendLine(Helpers.Text("NoItemsToShow"));
-                }
-
-                await Helpers.ModalMessage(html.ToString(), Helpers.Text("Preview"));
-
-            } else {
-                Model.ErrorMessages(preview.ActionResponse.Messages);
-            }
-        } else {
-            Model.UnknownError();
-        }
-    }
-
-    /// <summary>
     /// Opens a quick action slideout.
     /// </summary>
-    /// <param name="Action">The name of the action (AddUser or AppointmentNote)</param>
+    /// <param name="Action">The name of the action (AddUser)</param>
     /// <param name="OnComplete">An optional Delegate to be invoked after the action has completed.</param>
     public async static Task QuickAction(string Action, Delegate? OnComplete = null)
     {
@@ -4289,10 +3640,6 @@ public static class Helpers
                     Enabled = true,
                 };
                 focus = "quickadd-user-FirstName";
-                break;
-
-            case "appointmentnote":
-                focus = "quickadd-appointment-note";
                 break;
         }
 
@@ -4334,65 +3681,6 @@ public static class Helpers
         return output;
     }
 
-    /// <summary>
-    /// Renders a tag as HTML.
-    /// </summary>
-    /// <param name="tag">The tag to render.</param>
-    /// <returns>The HTML for the tag.</returns>
-    public static string RenderTag(DataObjects.Tag tag)
-    {
-        string output = String.Empty;
-
-        if (!String.IsNullOrWhiteSpace(tag.Name)) {
-            if (!String.IsNullOrWhiteSpace(tag.Style)) {
-                string style = tag.Style;
-
-                if (TagColors.Contains(style)) {
-                    output += "<div class=\"tag tag-" + style.ToLower() + "\">" + tag.Name + "</div>";
-                } else {
-                    output += "<div class=\"tag\"" + (!String.IsNullOrWhiteSpace(tag.Style) ? " style=\"" + tag.Style + "\"" : "") + ">" +
-                    tag.Name +
-                    "</div>";
-                }
-            } else {
-                output += "<div class=\"tag\">" +
-                tag.Name +
-                "</div>";
-            }
-
-
-        }
-
-        return output;
-    }
-
-    /// <summary>
-    /// Renders a collection of tags as HTML.
-    /// </summary>
-    /// <param name="TagIds">The collection of tag ids.</param>
-    /// <param name="SortAlphabetically">Option to sort the results alphabetically.</param>
-    /// <returns>The rendered HTML for the tags.</returns>
-    public static string RenderTags(List<Guid>? TagIds, bool SortAlphabetically = true)
-    {
-        string output = String.Empty;
-
-        if (SortAlphabetically) {
-            TagIds = SortTagList(TagIds);
-        }
-
-        if (TagIds != null && TagIds.Any()) {
-            List<DataObjects.OptionPair> tags = new List<DataObjects.OptionPair>();
-
-            foreach(var tagId in TagIds) {
-                var tag = Model.Tags.FirstOrDefault(x => x.TagId == tagId);
-                if(tag != null) {
-                    output += RenderTag(tag);
-                }
-            }
-        }
-
-        return output;
-    }
 
     /// <summary>
     /// Reloads the entire data model for the selected user id.
@@ -4474,8 +3762,6 @@ public static class Helpers
             if (Model.LoggedIn != blazorDataModelLoader.LoggedIn) {
                 Model.LoggedIn = blazorDataModelLoader.LoggedIn;
             }
-
-            Model.Plugins = blazorDataModelLoader.Plugins;
 
             if (Model.Released != blazorDataModelLoader.Released) {
                 Model.Released = blazorDataModelLoader.Released;
@@ -4696,45 +3982,6 @@ public static class Helpers
         });
     }
 
-    /// <summary>
-    /// Shows a dialog to select tags.
-    /// </summary>
-    /// <param name="OnComplete">The Delegate that will be invoked and received the selected tags.</param>
-    /// <param name="Title">An optional title for the dialog.</param>
-    /// <param name="ExistingTags">An optional collection of any existing selected tags.</param>
-    /// <param name="ShowCurrentTags">An option to show the currently-selected tags.</param>
-    /// <param name="PreventDeselctingSelectedTags">An option to prevent the user from deselecting existing tags.</param>
-    public static async Task SelectTags(Delegate OnComplete, 
-        string Title = "", 
-        DataObjects.TagModule? Module = null, 
-        List<Guid>? ExistingTags = null, 
-        bool ShowCurrentTags = true, 
-        bool PreventDeselctingSelectedTags = false){
-
-        if (String.IsNullOrWhiteSpace(Title)) {
-            Title = IconAndText("SelectTags");
-        }
-
-        Dictionary<string, object> parameters = new Dictionary<string, object>();
-        parameters.Add("OnComplete", OnComplete);
-
-        if(Module != null) {
-            parameters.Add("Module", Module);
-        }
-
-        if (ExistingTags != null) {
-            parameters.Add("SelectedTags", ExistingTags);
-        }
-
-        parameters.Add("ShowCurrentTags", ShowCurrentTags);
-        parameters.Add("PreventDeselctingSelectedTags", PreventDeselctingSelectedTags);
-
-        await DialogService.OpenAsync<TagSelector>(Title, parameters, new Radzen.DialogOptions() {
-            AutoFocusFirstElement = false,
-            Resizable = false,
-            Draggable = false,
-        });
-    }
 
     /// <summary>
     /// Serializes an object to JSON using the System.Text.Json.JsonSerializer.
@@ -4820,36 +4067,6 @@ public static class Helpers
         null, millisecondsDelay, System.Threading.Timeout.Infinite);
     }
 
-    /// <summary>
-    /// Sorts a list of tag by their names.
-    /// </summary>
-    /// <param name="TagIds">A list of Guids representing tags.</param>
-    /// <returns>The list of Guids sorted by the name of the tags.</returns>
-    public static List<Guid>? SortTagList(List<Guid>? TagIds)
-    {
-        var output = TagIds;
-
-        if (TagIds != null && TagIds.Any()) {
-            List<DataObjects.OptionPair> items = new List<DataObjects.OptionPair>();
-            foreach (var tagId in TagIds) {
-                var tag = Model.Tags.FirstOrDefault(x => x.TagId == tagId);
-                if (tag != null) {
-                    items.Add(new DataObjects.OptionPair {
-                        Id = tag.Name,
-                        Value = tag.TagId.ToString(),
-                    });
-                }
-            }
-
-            output = items
-                .OrderBy(x => x.Id)
-                .ToList()
-                .Select(x => new Guid(String.Empty + x.Value)).ToList();
-        }
-
-
-        return output;
-    }
 
     /// <summary>
     /// Returns a spacer image with a given width.
@@ -4944,116 +4161,6 @@ public static class Helpers
         }
 
         Model.NotifyTenantChanged();
-    }
-
-    /// <summary>
-    /// The list of colors for tags.
-    /// </summary>
-    public static List<string> TagColors
-    {
-        get {
-            return new List<string> {
-                "LIGHTCORAL", "SALMON", "DARKSALMON", "LIGHTSALMON", "CRIMSON",
-                "RED", "FIREBRICK", "DARKRED", "PINK", "LIGHTPINK", "HOTPINK",
-                "DEEPPINK", "MEDIUMVIOLETRED", "PALEVIOLETRED",
-                "CORAL", "TOMATO", "ORANGERED", "DARKORANGE", "ORANGE",
-                "GOLD", "YELLOW", "LIGHTYELLOW", "LEMONCHIFFON",
-                "LIGHTGOLDENRODYELLOW", "PAPAYAWHIP", "MOCCASIN", "PEACHPUFF",
-                "PALEGOLDENROD", "KHAKI", "DARKKHAKI", "LAVENDER", "THISTLE",
-                "PLUM", "VIOLET", "ORCHID", "FUCHSIA", "MAGENTA", "MEDIUMORCHID",
-                "MEDIUMPURPLE", "REBECCAPURPLE", "BLUEVIOLET", "DARKVIOLET",
-                "DARKORCHID", "DARKMAGENTA", "PURPLE", "INDIGO", "SLATEBLUE",
-                "DARKSLATEBLUE", "MEDIUMSLATEBLUE", "GREENYELLOW", "CHARTREUSE",
-                "LAWNGREEN", "LIME", "LIMEGREEN", "PALEGREEN", "LIGHTGREEN",
-                "MEDIUMSPRINGGREEN", "SPRINGGREEN", "MEDIUMSEAGREEN", "SEAGREEN",
-                "FORESTGREEN", "GREEN", "DARKGREEN", "YELLOWGREEN", "OLIVEDRAB",
-                "OLIVE", "DARKOLIVEGREEN", "MEDIUMAQUAMARINE", "DARKSEAGREEN",
-                "LIGHTSEAGREEN", "DARKCYAN", "TEAL", "AQUA", "CYAN", "LIGHTCYAN",
-                "PALETURQUOISE", "AQUAMARINE", "TURQUOISE", "MEDIUMTURQUOISE",
-                "DARKTURQUOISE", "CADETBLUE", "STEELBLUE", "LIGHTSTEELBLUE",
-                "POWDERBLUE", "LIGHTBLUE", "SKYBLUE", "LIGHTSKYBLUE", "DEEPSKYBLUE",
-                "DODGERBLUE", "CORNFLOWERBLUE", "ROYALBLUE",
-                "BLUE", "MEDIUMBLUE", "DARKBLUE", "NAVY", "MIDNIGHTBLUE",
-                "CORNSILK", "BLANCHEDALMOND", "BISQUE", "NAVAJOWHITE", "WHEAT",
-                "BURLYWOOD", "TAN", "ROSYBROWN", "SANDYBROWN", "GOLDENROD",
-                "DARKGOLDENROD", "PERU", "CHOCOLATE", "SADDLEBROWN", "SIENNA",
-                "BROWN", "MAROON", "MISTYROSE", "GAINSBORO", "LIGHTGRAY",
-                "SILVER", "DARKGRAY", "GRAY", "DIMGRAY", "LIGHTSLATEGRAY",
-                "SLATEGRAY", "DARKSLATEGRAY", "BLACK" };
-        }
-    }
-
-    /// <summary>
-    /// Converts a CSV list of tag ids to a list of tag names.
-    /// </summary>
-    /// <param name="TagsAsCsvString">A string containing a CSV list of tag ids.</param>
-    /// <returns>A list of tag names.</returns>
-    public static async Task<string> TagsListFromIds(string? TagsAsCsvString)
-    {
-        string output = String.Empty;
-
-        if (!String.IsNullOrWhiteSpace(TagsAsCsvString)) {
-            var list = TagsAsCsvString.Split(',').Select(x => x.Trim()).ToList();
-            output = await TagsListFromIds(list);
-        }
-
-        return output;
-    }
-
-    /// <summary>
-    /// Converts a list of strings containing tag id to a list of tag names.
-    /// </summary>
-    /// <param name="Tags">The list of strings of tag ids.</param>
-    /// <returns>A list of tag names.</returns>
-    public static async Task<string> TagsListFromIds(List<string>? Tags)
-    {
-        string output = String.Empty;
-
-        if (Tags != null && Tags.Any()) {
-            if (!Model.Tags.Any()) {
-                await LoadTags();
-            }
-
-            foreach (var tagId in Tags) {
-                var tag = Model.Tags.FirstOrDefault(x => x.TagId.ToString() == tagId);
-                if (tag != null && !String.IsNullOrWhiteSpace(tag.Name)) {
-                    if (!String.IsNullOrEmpty(output)) {
-                        output += ", ";
-                    }
-                    output += tag.Name;
-                }
-            }
-        }
-
-        return output;
-    }
-
-    /// <summary>
-    /// Converts a list of tag ids to a list of tag names.
-    /// </summary>
-    /// <param name="Tags">The list of tag ids.</param>
-    /// <returns>A list of tag names.</returns>
-    public static async Task<string> TagsListFromIds(List<Guid>? Tags)
-    {
-        string output = String.Empty;
-
-        if (Tags != null && Tags.Any()) {
-            if (!Model.Tags.Any()) {
-                await LoadTags();
-            }
-
-            foreach (var tagId in Tags) {
-                var tag = Model.Tags.FirstOrDefault(x => x.TagId == tagId);
-                if (tag != null && !String.IsNullOrWhiteSpace(tag.Name)) {
-                    if (!String.IsNullOrEmpty(output)) {
-                        output += ", ";
-                    }
-                    output += tag.Name;
-                }
-            }
-        }
-
-        return output;
     }
 
     /// <summary>
@@ -5357,28 +4464,6 @@ public static class Helpers
         }
     }
 
-    /// <summary>
-    /// Gets the name of a User Group based on the unique id.
-    /// </summary>
-    /// <param name="GroupId">The unique id of the User Group.</param>
-    /// <returns>The name of the User Group.</returns>
-    public static async Task<string> UserGroupName(Guid? GroupId)
-    {
-        string output = String.Empty;
-
-        if (GroupId.HasValue) {
-            if (!Model.UserGroups.Any()) {
-                await LoadUserGroups();
-            }
-
-            var userGroup = Model.UserGroups.FirstOrDefault(x => x.GroupId == GroupId);
-            if (userGroup != null) {
-                output += userGroup.Name;
-            }
-        }
-
-        return output;
-    }
 
     /// <summary>
     /// Gets either the user photo or the default user icon.

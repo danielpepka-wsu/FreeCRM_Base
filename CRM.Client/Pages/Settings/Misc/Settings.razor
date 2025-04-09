@@ -59,14 +59,6 @@
                     </li>
                 }
 
-                @if (Model.FeatureEnabledWorkSchedule) {
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="tabWorkScheduleButton" data-bs-toggle="tab" data-bs-target="#tabWorkSchedule"
-                                type="button" role="tab" aria-controls="home" aria-selected="true">
-                            <Language Tag="SettingsWorkSchedule" />
-                        </button>
-                    </li>
-                }
                 <li class="nav-item" role="presentation">
                     <button class="nav-link" id="tabEmailButton" data-bs-toggle="tab" data-bs-target="#tabEmail"
                             type="button" role="tab" aria-controls="home" aria-selected="true">
@@ -277,19 +269,6 @@
                         <Language Tag="FeatureOptInInfo" />
                     </div>
 
-                    @if (_availableOptInOptions.Contains("departments")) {
-                        <div class="mb-2 form-check form-switch">
-                            <input type="checkbox" role="switch" class="form-check-input" id="opt-in-departments" @bind="_optInDepartments" />
-                            <label for="opt-in-departments" class="form-check-label"><Language Tag="FeatureOptInDepartments" /></label>
-                        </div>
-                    }
-
-                    @if (_availableOptInOptions.Contains("emailtemplates")) {
-                        <div class="mb-2 form-check form-switch">
-                            <input type="checkbox" role="switch" class="form-check-input" id="opt-in-emailtemplates" @bind="_optInEmailTemplates" />
-                            <label for="opt-in-emailtemplates" class="form-check-label"><Language Tag="FeatureOptInEmailTemplates" /></label>
-                        </div>
-                    }
 
                     @if (_availableOptInOptions.Contains("employeeid")) {
                         <div class="mb-2 form-check form-switch">
@@ -305,41 +284,6 @@
                         </div>
                     }
 
-                    @if (_availableOptInOptions.Contains("invoices")) {
-                        <div class="mb-2 form-check form-switch">
-                            <input type="checkbox" role="switch" class="form-check-input" id="opt-in-invoices" @bind="_optInInvoices" />
-                            <label for="opt-in-invoices" class="form-check-label"><Language Tag="FeatureOptInInvoices" /></label>
-                        </div>
-                    }
-
-                    @if (_availableOptInOptions.Contains("location")) {
-                        <div class="mb-2 form-check form-switch">
-                            <input type="checkbox" role="switch" class="form-check-input" id="opt-in-location" @bind="_optInLocation" />
-                            <label for="opt-in-location" class="form-check-label"><Language Tag="FeatureOptInLocation" /></label>
-                        </div>
-                    }
-
-                    @if (_availableOptInOptions.Contains("scheduling")) {
-                        <div class="mb-2 form-check form-switch">
-                            <input type="checkbox" role="switch" class="form-check-input" id="opt-in-scheduling" @bind="_optInScheduling" />
-                            <label for="opt-in-scheduling" class="form-check-label"><Language Tag="FeatureOptInScheduling" /></label>
-                        </div>
-                    }
-
-                    @if (_availableOptInOptions.Contains("services")) {
-                        <div class="mb-2 form-check form-switch">
-                            <input type="checkbox" role="switch" class="form-check-input" id="opt-in-services" @bind="_optInServices" />
-                            <label for="opt-in-services" class="form-check-label"><Language Tag="FeatureOptInServices" /></label>
-                        </div>
-                    }
-
-                    @if (_availableOptInOptions.Contains("tags")) {
-                        <div class="mb-2 form-check form-switch">
-                            <input type="checkbox" role="switch" class="form-check-input" id="opt-in-tags" @bind="_optInTags" />
-                            <label for="opt-in-tags" class="form-check-label"><Language Tag="FeatureOptInTags" /></label>
-                        </div>
-                    }
-
                     @if (_availableOptInOptions.Contains("themes")) {
                         <div class="mb-2 form-check form-switch">
                             <input type="checkbox" role="switch" class="form-check-input" id="opt-in-themes" @bind="_optInThemes" />
@@ -347,26 +291,6 @@
                         </div>
                     }
 
-                    @if (_availableOptInOptions.Contains("udf")) {
-                        <div class="mb-2 form-check form-switch">
-                            <input type="checkbox" role="switch" class="form-check-input" id="opt-in-udf" @bind="_optInUDF" />
-                            <label for="opt-in-udf" class="form-check-label"><Language Tag="FeatureOptInUDF" /></label>
-                        </div>
-                    }
-
-                    @if (_availableOptInOptions.Contains("usergroups")) {
-                        <div class="mb-2 form-check form-switch">
-                            <input type="checkbox" role="switch" class="form-check-input" id="opt-in-usergroups" @bind="_optInUserGroups" />
-                            <label for="opt-in-usergroups" class="form-check-label"><Language Tag="FeatureOptInUserGroups" /></label>
-                        </div>
-                    }
-
-                    @if (_availableOptInOptions.Contains("workschedule")) {
-                        <div class="mb-2 form-check form-switch">
-                            <input type="checkbox" role="switch" class="form-check-input" id="opt-in-workschedule" @bind="_optInWorkSchedule" />
-                            <label for="opt-in-workschedule" class="form-check-label"><Language Tag="FeatureOptInWorkSchedule" /></label>
-                        </div>
-                    }
                 </div>
             }
 
@@ -377,136 +301,6 @@
                 </div>
 
             </div>
-
-            @if (Model.FeatureEnabledWorkSchedule) {
-                <div id="tabWorkSchedule" class="tab-pane" role="tabpanel" aria-labelledby="tabWorkScheduleButton">
-                    <table class="table table-sm">
-                        <thead>
-                            <tr>
-                                <th style="width:1%;"></th>
-                                <th style="width:1%;"><Language Tag="WorkScheduleDay" ReplaceSpaces="true" /></th>
-                                <th style="width:1%;"><Language Tag="WorkScheduleAllDay" ReplaceSpaces="true" /></th>
-                                <th><Language Tag="WorkScheduleStart" ReplaceSpaces="true" /></th>
-                                <th><Language Tag="WorkScheduleEnd" ReplaceSpaces="true" /></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td>
-                                    <div class="form-check form-switch">
-                                        <input type="checkbox" id="edit-tenant-Sunday" role="switch" class="form-check-input" @bind="_tenant.TenantSettings.WorkSchedule.Sunday" />
-                                    </div>
-                                </td>
-                                <td><label for="edit-tenant-Sunday" class="form-check-label"><Language Tag="DayLabelSunday" /></label></td>
-                                <td class="center">
-                                    <div class="form-check form-switch">
-                                        <input type="checkbox" role="switch" class="form-check-input" @bind="_tenant.TenantSettings.WorkSchedule.SundayAllDay" disabled="@(!_tenant.TenantSettings.WorkSchedule.Sunday)" />
-                                    </div>
-                                </td>
-                                <td><input type="text" class="form-control" @bind="_tenant.TenantSettings.WorkSchedule.SundayStart" disabled="@(!_tenant.TenantSettings.WorkSchedule.Sunday || _tenant.TenantSettings.WorkSchedule.SundayAllDay)" /></td>
-                                <td><input type="text" class="form-control" @bind="_tenant.TenantSettings.WorkSchedule.SundayEnd" disabled="@(!_tenant.TenantSettings.WorkSchedule.Sunday || _tenant.TenantSettings.WorkSchedule.SundayAllDay)" /></td>
-                            </tr>
-
-                            <tr>
-                                <td>
-                                    <div class="form-check form-switch">
-                                        <input type="checkbox" id="edit-tenant-Monday" role="switch" class="form-check-input" @bind="_tenant.TenantSettings.WorkSchedule.Monday" />
-                                    </div>
-                                </td>
-                                <td><label for="edit-tenant-Monday" class="form-check-label"><Language Tag="DayLabelMonday" /></label></td>
-                                <td class="center">
-                                    <div class="form-check form-switch">
-                                        <input type="checkbox" role="switch" class="form-check-input" @bind="_tenant.TenantSettings.WorkSchedule.MondayAllDay" disabled="@(!_tenant.TenantSettings.WorkSchedule.Monday)" />
-                                    </div>
-                                </td>
-                                <td><input type="text" class="form-control" @bind="_tenant.TenantSettings.WorkSchedule.MondayStart" disabled="@(!_tenant.TenantSettings.WorkSchedule.Monday || _tenant.TenantSettings.WorkSchedule.MondayAllDay)" /></td>
-                                <td><input type="text" class="form-control" @bind="_tenant.TenantSettings.WorkSchedule.MondayEnd" disabled="@(!_tenant.TenantSettings.WorkSchedule.Monday || _tenant.TenantSettings.WorkSchedule.MondayAllDay)" /></td>
-                            </tr>
-
-                            <tr>
-                                <td>
-                                    <div class="form-check form-switch">
-                                        <input type="checkbox" id="edit-tenant-Tuesday" role="switch" class="form-check-input" @bind="_tenant.TenantSettings.WorkSchedule.Tuesday" />
-                                    </div>
-                                </td>
-                                <td><label for="edit-tenant-Tuesday" class="form-check-label"><Language Tag="DayLabelTuesday" /></label></td>
-                                <td class="center">
-                                    <div class="form-check form-switch">
-                                        <input type="checkbox" role="switch" class="form-check-input" @bind="_tenant.TenantSettings.WorkSchedule.TuesdayAllDay" disabled="@(!_tenant.TenantSettings.WorkSchedule.Tuesday)" />
-                                    </div>
-                                </td>
-                                <td><input type="text" class="form-control" @bind="_tenant.TenantSettings.WorkSchedule.TuesdayStart" disabled="@(!_tenant.TenantSettings.WorkSchedule.Tuesday || _tenant.TenantSettings.WorkSchedule.TuesdayAllDay)" /></td>
-                                <td><input type="text" class="form-control" @bind="_tenant.TenantSettings.WorkSchedule.TuesdayEnd" disabled="@(!_tenant.TenantSettings.WorkSchedule.Tuesday || _tenant.TenantSettings.WorkSchedule.TuesdayAllDay)" /></td>
-                            </tr>
-
-                            <tr>
-                                <td>
-                                    <div class="form-check form-switch">
-                                        <input type="checkbox" id="edit-tenant-Wednesday" role="switch" class="form-check-input" @bind="_tenant.TenantSettings.WorkSchedule.Wednesday" />
-                                    </div>
-                                </td>
-                                <td><label for="edit-tenant-Wednesday" class="form-check-label"><Language Tag="DayLabelWednesday" /></label></td>
-                                <td class="center">
-                                    <div class="form-check form-switch">
-                                        <input type="checkbox" role="switch" class="form-check-input" @bind="_tenant.TenantSettings.WorkSchedule.WednesdayAllDay" disabled="@(!_tenant.TenantSettings.WorkSchedule.Wednesday)" />
-                                    </div>
-                                </td>
-                                <td><input type="text" class="form-control" @bind="_tenant.TenantSettings.WorkSchedule.WednesdayStart" disabled="@(!_tenant.TenantSettings.WorkSchedule.Wednesday || _tenant.TenantSettings.WorkSchedule.WednesdayAllDay)" /></td>
-                                <td><input type="text" class="form-control" @bind="_tenant.TenantSettings.WorkSchedule.WednesdayEnd" disabled="@(!_tenant.TenantSettings.WorkSchedule.Wednesday || _tenant.TenantSettings.WorkSchedule.WednesdayAllDay)" /></td>
-                            </tr>
-
-                            <tr>
-                                <td>
-                                    <div class="form-check form-switch">
-                                        <input type="checkbox" id="edit-tenant-Thursday" role="switch" class="form-check-input" @bind="_tenant.TenantSettings.WorkSchedule.Thursday" />
-                                    </div>
-                                </td>
-                                <td><label for="edit-tenant-Thursday" class="form-check-label"><Language Tag="DayLabelThursday" /></label></td>
-                                <td class="center">
-                                    <div class="form-check form-switch">
-                                        <input type="checkbox" role="switch" class="form-check-input" @bind="_tenant.TenantSettings.WorkSchedule.ThursdayAllDay" disabled="@(!_tenant.TenantSettings.WorkSchedule.Thursday)" />
-                                    </div>
-                                </td>
-                                <td><input type="text" class="form-control" @bind="_tenant.TenantSettings.WorkSchedule.ThursdayStart" disabled="@(!_tenant.TenantSettings.WorkSchedule.Thursday || _tenant.TenantSettings.WorkSchedule.ThursdayAllDay)" /></td>
-                                <td><input type="text" class="form-control" @bind="_tenant.TenantSettings.WorkSchedule.ThursdayEnd" disabled="@(!_tenant.TenantSettings.WorkSchedule.Thursday || _tenant.TenantSettings.WorkSchedule.ThursdayAllDay)" /></td>
-                            </tr>
-
-                            <tr>
-                                <td>
-                                    <div class="form-check form-switch">
-                                        <input type="checkbox" id="edit-tenant-Friday" role="switch" class="form-check-input" @bind="_tenant.TenantSettings.WorkSchedule.Friday" />
-                                    </div>
-                                </td>
-                                <td><label for="edit-tenant-Friday" class="form-check-label"><Language Tag="DayLabelFriday" /></label></td>
-                                <td class="center">
-                                    <div class="form-check form-switch">
-                                        <input type="checkbox" role="switch" class="form-check-input" @bind="_tenant.TenantSettings.WorkSchedule.FridayAllDay" disabled="@(!_tenant.TenantSettings.WorkSchedule.Friday)" />
-                                    </div>
-                                </td>
-                                <td><input type="text" class="form-control" @bind="_tenant.TenantSettings.WorkSchedule.FridayStart" disabled="@(!_tenant.TenantSettings.WorkSchedule.Friday || _tenant.TenantSettings.WorkSchedule.FridayAllDay)" /></td>
-                                <td><input type="text" class="form-control" @bind="_tenant.TenantSettings.WorkSchedule.FridayEnd" disabled="@(!_tenant.TenantSettings.WorkSchedule.Friday || _tenant.TenantSettings.WorkSchedule.FridayAllDay)" /></td>
-                            </tr>
-
-                            <tr>
-                                <td>
-                                    <div class="form-check form-switch">
-                                        <input type="checkbox" id="edit-tenant-Saturday" role="switch" class="form-check-input" @bind="_tenant.TenantSettings.WorkSchedule.Saturday" />
-                                    </div>
-                                </td>
-                                <td><label for="edit-tenant-Saturday" class="form-check-label"><Language Tag="DayLabelSaturday" /></label></td>
-                                <td class="center">
-                                    <div class="form-check form-switch">
-                                        <input type="checkbox" role="switch" class="form-check-input" @bind="_tenant.TenantSettings.WorkSchedule.SaturdayAllDay" disabled="@(!_tenant.TenantSettings.WorkSchedule.Saturday)" />
-                                    </div>
-                                </td>
-                                <td><input type="text" class="form-control" @bind="_tenant.TenantSettings.WorkSchedule.SaturdayStart" disabled="@(!_tenant.TenantSettings.WorkSchedule.Saturday || _tenant.TenantSettings.WorkSchedule.SaturdayAllDay)" /></td>
-                                <td><input type="text" class="form-control" @bind="_tenant.TenantSettings.WorkSchedule.SaturdayEnd" disabled="@(!_tenant.TenantSettings.WorkSchedule.Saturday || _tenant.TenantSettings.WorkSchedule.SaturdayAllDay)" /></td>
-                            </tr>
-
-                        </tbody>
-                    </table>
-                </div>
-            }
             
         </div>
     }
@@ -519,19 +313,9 @@
     protected bool _loadedData = false;
     protected bool _loading = true;
     protected string[] _loginOptions = new string[] { };
-    protected bool _optInDepartments = false;
-    protected bool _optInEmailTemplates = false;
     protected bool _optInEmployeeId = false;
     protected bool _optInFiles = false;
-    protected bool _optInInvoices = false;
-    protected bool _optInLocation = false;
-    protected bool _optInScheduling = false;
-    protected bool _optInServices = false;
-    protected bool _optInTags = false;
     protected bool _optInThemes = false;
-    protected bool _optInUDF = false;
-    protected bool _optInUserGroups = false;
-    protected bool _optInWorkSchedule = false;
     protected DataObjects.Tenant _tenant = new DataObjects.Tenant();
 
     protected string _deletePreference = "";
@@ -698,19 +482,9 @@
             }
 
             if (_tenant.TenantSettings.ModuleOptInElements.Any()) {
-                _optInDepartments = _tenant.TenantSettings.ModuleOptInElements.Contains("departments");
-                _optInEmailTemplates = _tenant.TenantSettings.ModuleOptInElements.Contains("emailtemplates");
                 _optInEmployeeId = _tenant.TenantSettings.ModuleOptInElements.Contains("employeeid");
                 _optInFiles = _tenant.TenantSettings.ModuleOptInElements.Contains("files");
-                _optInInvoices = _tenant.TenantSettings.ModuleOptInElements.Contains("invoices");
-                _optInLocation = _tenant.TenantSettings.ModuleOptInElements.Contains("location");
-                _optInScheduling = _tenant.TenantSettings.ModuleOptInElements.Contains("scheduling");
-                _optInServices = _tenant.TenantSettings.ModuleOptInElements.Contains("services");
-                _optInTags = _tenant.TenantSettings.ModuleOptInElements.Contains("tags");
                 _optInThemes = _tenant.TenantSettings.ModuleOptInElements.Contains("themes");
-                _optInUDF = _tenant.TenantSettings.ModuleOptInElements.Contains("udf");
-                _optInUserGroups = _tenant.TenantSettings.ModuleOptInElements.Contains("usergroups");
-                _optInWorkSchedule = _tenant.TenantSettings.ModuleOptInElements.Contains("workschedule");
             }
 
             _loading = false;
@@ -755,19 +529,9 @@
 
         List<string> optIn = new List<string>();
 
-        if (_availableOptInOptions.Contains("departments") && _optInDepartments) { optIn.Add("departments"); }
-        if (_availableOptInOptions.Contains("emailtemplates") && _optInEmailTemplates) { optIn.Add("emailtemplates"); }
         if (_availableOptInOptions.Contains("employeeid") && _optInEmployeeId) { optIn.Add("employeeid"); }
         if (_availableOptInOptions.Contains("files") && _optInFiles) { optIn.Add("files"); }
-        if (_availableOptInOptions.Contains("invoices") && _optInInvoices) { optIn.Add("invoices"); }
-        if (_availableOptInOptions.Contains("location") && _optInLocation) { optIn.Add("location"); }
-        if (_availableOptInOptions.Contains("scheduling") && _optInScheduling) { optIn.Add("scheduling"); }
-        if (_availableOptInOptions.Contains("services") && _optInServices){ optIn.Add("services"); }
-        if (_availableOptInOptions.Contains("tags") && _optInTags) { optIn.Add("tags"); }
         if (_availableOptInOptions.Contains("themes") && _optInThemes) { optIn.Add("themes"); }
-        if (_availableOptInOptions.Contains("udf") && _optInUDF) { optIn.Add("udf"); }
-        if (_availableOptInOptions.Contains("usergroups") && _optInUserGroups) { optIn.Add("usergroups"); }
-        if (_availableOptInOptions.Contains("workschedule") && _optInWorkSchedule) { optIn.Add("workschedule"); }
 
         _tenant.TenantSettings.ModuleOptInElements = optIn;
 

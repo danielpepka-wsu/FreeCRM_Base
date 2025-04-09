@@ -139,29 +139,10 @@
                         <td><label for="edit-user-title-@_user.UserId"><Language Tag="Title" ReplaceSpaces="true" /></label></td>
                         <td><input type="text" id="edit-user-title-@_user.UserId" class="form-control" @bind="_user.Title" /></td>
                     </tr>
-                    @if (Model.FeatureEnabledLocation) {
-                        <tr>
-                            <td><label for="edit-user-location-@_user.UserId"><Language Tag="Location" ReplaceSpaces="true" /></label></td>
-                            <td><input type="text" id="edit-user-location-@_user.UserId" class="form-control" @bind="_user.Location" /></td>
-                        </tr>
-                    }
                     <tr>
                         <td><label for="edit-user-phone-@_user.UserId"><Language Tag="PhoneNumber" ReplaceSpaces="true" /></label></td>
                         <td><input type="text" id="edit-user-phone-@_user.UserId" class="form-control" @bind="_user.Phone" /></td>
                     </tr>
-                    @if (Model.FeatureEnabledDepartments) {
-                        <tr>
-                            <td><label for="edit-user-department-@_user.UserId"><Language Tag="Department" ReplaceSpaces="true" /></label></td>
-                            <td>
-                                <select id="edit-user-department-@_user.UserId" class="form-select" @bind="_user.DepartmentId">
-                                    <option value=""></option>
-                                    @foreach (var dept in Model.Departments) {
-                                        <option value="@dept.DepartmentId">@dept.DepartmentName</option>
-                                    }
-                                </select>
-                            </td>
-                        </tr>
-                    }
                     <tr>
                         <td><label for="edit-user-source-@_user.UserId"><Language Tag="Source" ReplaceSpaces="true" /></label></td>
                         <td><input type="text" id="edit-user-source-@_user.UserId" class="form-control" @bind="_user.Source" /></td>
@@ -183,17 +164,7 @@
                         </td>
                         <td><label for="edit-user-preventPasswordChange-@_user.UserId" class="form-check-label"><Language Tag="PreventPasswordChange" /></label></td>
                     </tr>
-                    @if (Model.FeatureEnabledScheduling)
-                    {
-                        <tr>
-                            <td>
-                                <div class="form-check form-switch right">
-                                    <input type="checkbox" id="edit-user-CanBeScheduled-@_user.UserId" role="switch" class="form-check-input" @bind="_user.CanBeScheduled" />
-                                </div>
-                            </td>
-                            <td><label for="edit-user-CanBeScheduled-@_user.UserId" class="form-check-label"><Language Tag="CanBeScheduled" /></label></td>
-                        </tr>
-                    }
+                   
                     <tr>
                         <td>
                             <div class="form-check form-switch right">
@@ -203,24 +174,7 @@
                         <td><label for="edit-user-admin-@_user.UserId" class="form-check-label"><Language Tag="Admin" /></label></td>
                     </tr>
 
-                    @if (!_user.Admin && Model.FeatureEnabledScheduling) {
-                        <tr>
-                            <td>
-                                <div class="form-check form-switch right">
-                                    <input type="checkbox" id="edit-user-ManageAppointments-@_user.UserId" role="switch" class="form-check-input" @bind="_user.ManageAppointments" />
-                                </div>
-                            </td>
-                            <td><label for="edit-user-ManageAppointments-@_user.UserId" class="form-check-label"><Language Tag="ManageAppointments" /></label></td>
-                        </tr>
-                        <tr>
-                            <td>
-                                <div class="form-check form-switch right">
-                                    <input type="checkbox" id="edit-user-ManageFiles-@_user.UserId" role="switch" class="form-check-input" @bind="_user.ManageFiles" />
-                                </div>
-                            </td>
-                            <td><label for="edit-user-ManageFiles-@_user.UserId" class="form-check-label"><Language Tag="ManageFiles" /></label></td>
-                        </tr>
-                    }
+                   
 
                     @if (!_newUser) {
                         <tr>
@@ -390,14 +344,6 @@
 
     protected async Task LoadUser()
     {
-        if (Model.FeatureEnabledDepartments && !Model.Departments.Any()) {
-            await Helpers.LoadDepartments();
-        }
-
-        if (!Model.udfLabels.Any()) {
-            await Helpers.LoadUdfLabels();
-        }
-
         if (!String.IsNullOrWhiteSpace(userid)) {
             if (!InDialog){
                 Model.NavigationId = userid;
