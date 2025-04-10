@@ -603,40 +603,6 @@ public partial class DataAccess
         return output;
     }
 
-    private string FormatAppointmentTitle(string title, DateTime start, DateTime end, bool allDay)
-    {
-        string output = String.Empty;
-
-        string startDate = start.ToString("d");
-        string startTime = start.ToString("t");
-        string endDate = end.ToString("d");
-        string endTime = end.ToString("t");
-
-        if (allDay) {
-            if(startDate == endDate) {
-                output = startDate + " All Day";
-            } else {
-                output = startDate + " - " + endDate + " All Day";
-            }
-        } else {
-            if(startDate == endDate) {
-                output = startDate + " " + startTime;
-
-                if(endTime != startTime) {
-                    output += " - " + endTime;
-                }
-            } else {
-                output = startDate + " " + startTime + " - " + endDate + " " + endTime;
-            }
-        }
-
-        if (!String.IsNullOrWhiteSpace(title)) {
-            output += " - " + title;
-        }
-
-        return output;
-    }
-
     public string FormatStringAsGuid(string input)
     {
         string output = String.Empty;

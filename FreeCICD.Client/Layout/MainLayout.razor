@@ -552,7 +552,7 @@
 
         updateTimer = new System.Threading.Timer(async (object? stateInfo) => {
             await CheckForUpdates();
-        }, new System.Threading.AutoResetEvent(false), 0, 10000);
+        }, new System.Threading.AutoResetEvent(false), 0, 60000);
     }
 
     protected async override Task OnAfterRenderAsync(bool firstRender)
@@ -601,12 +601,29 @@
                     .Build();
 
                 hubConnection.On<DataObjects.SignalRUpdate>("SignalRUpdate", async(update) => {
+                    Console.WriteLine("in signalr update");
                     await ProcessSignalRUpdate(update);
                 });
 
                 await hubConnection.StartAsync();
 
                 await hubConnection.InvokeAsync("JoinTenantId", Model.TenantId);
+
+                Console.WriteLine("SignalR Connected: " + hubConnection.ConnectionId);
+                hubConnection.Reconnected += async (connectionId) => {
+                    Console.WriteLine("SignalR Reconnected: " + connectionId);
+                    
+                    Model.SignalrClientRegistration = new DataObjects.SignalrClientRegistration {
+                        ConnectionId = hubConnection.ConnectionId,
+                        RegistrationId   = Guid.NewGuid().ToString()
+                    };
+                    await hubConnection.InvokeAsync("JoinTenantId", Model.TenantId);
+                };
+
+                Model.SignalrClientRegistration = new DataObjects.SignalrClientRegistration {
+                    ConnectionId = hubConnection.ConnectionId,
+                    RegistrationId   = Guid.NewGuid().ToString()
+                };
             }
 
             if(!versionInfoLoaded) {
@@ -862,8 +879,10 @@
             string message = update.Message.ToLower();
             var userId = update.UserId;
 
-            switch (update.UpdateType) {
-              
+            switch (update.UpdateType) {     
+                case DataObjects.SignalRUpdateType.LoadingDevOpsInfoStatusUpdate:
+                    // pass - gets handled on the page
+                    break;  
 
                 case DataObjects.SignalRUpdateType.File:
                     var file = Helpers.DeserializeObject<DataObjects.FileStorage>(update.ObjectAsString);
@@ -941,10 +960,6 @@
                     break;
 
 
-                case DataObjects.SignalRUpdateType.Unknown:
-                    await Helpers.ConsoleLog("Unknown SignalR Update Type Received");
-                    break;
-
                 case DataObjects.SignalRUpdateType.User:
                     var user = Helpers.DeserializeObject<DataObjects.User>(update.ObjectAsString);
                     if(user != null) {
@@ -997,6 +1012,8 @@
                     }
                     break;
 
+
+                case DataObjects.SignalRUpdateType.Unknown:
                 default:
                     await Helpers.ConsoleLog("Unknown SignalR Update Type Received");
                     break;
@@ -1194,20 +1211,12 @@
                             allowAnonymousAccess = true;
                         }
 
-                        if (!allowAnonymousAccess) {
-                            if (!String.IsNullOrWhiteSpace(pagename)) {
-                                if (!allowAnonymousAccess) {
-                                    switch (pagename.ToUpper()) {
-                                        case "ABOUT":
-                                        case "DATABASEOFFLINE":
-                                        case "LOGIN":
-                                        case "LOGOUT":
-                                        case "PROCESSLOGIN":
-                                        case "SETUP":
-                                            allowAnonymousAccess = true;
-                                            break;
-                                    }
-                                }
+                        
+                        if (!allowAnonymousAccess) {    
+                            if(GlobalSettings.App.AnonamousAccessList
+                                .Select(o => string.Empty + o?.ToUpper())
+                                .Contains(string.Empty + pagename?.ToUpper())) {
+                                allowAnonymousAccess = true;
                             }
                         }
 

@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.SignalR;
 
 namespace FreeCICD.Server.Hubs
 {
-    public class FreeCICDhub : Hub
+    public partial class FreeCICDhub : Hub
     {
         private List<string> tenants = new List<string>();
 

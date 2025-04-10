@@ -1,6 +1,6 @@
 namespace FreeCICD;
 
-public class ConfigurationHelper : IConfigurationHelper
+public partial class ConfigurationHelper : IConfigurationHelper
 {
     private ConfigurationHelperLoader _loader = new ConfigurationHelperLoader();
 
@@ -31,14 +31,14 @@ public class ConfigurationHelper : IConfigurationHelper
     }
 }
 
-public interface IConfigurationHelper
+public partial interface IConfigurationHelper
 {
     public string? BasePath { get; }
     ConfigurationHelperConnectionStrings ConnectionStrings { get; }
     List<string>? GloballyDisabledModules { get; }
 }
 
-public class ConfigurationHelperLoader
+public partial class ConfigurationHelperLoader
 {
     public string? BasePath { get; set; }
     public ConfigurationHelperConnectionStrings ConnectionStrings { get; set; } = new ConfigurationHelperConnectionStrings();

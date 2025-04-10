@@ -2,6 +2,15 @@ namespace FreeCICD;
 
 public partial class DataObjects
 {
+
+    public static partial class Endpoints
+    {
+        public static class SignalR
+        {
+            public const string Update = "api/Data/SignalRUpdate";
+        }
+    }
+
     public enum DeletePreference
     {
         Immediate,
@@ -389,7 +398,6 @@ public partial class DataObjects
         public string? CustomAuthenticationIcon { get; set; }
         public string? CustomAuthenticationName { get; set; }
         public string? DefaultCultureCode { get; set; }
-        public int DefaultAppointmentDuration { get; set; }
         public string? DefaultReplyToAddress { get; set; }
         public DeletePreference DeletePreference { get; set; } = DeletePreference.MarkAsDeleted;
         public int DeleteMarkedRecordsAfterDays { get; set; } = 90;

@@ -1,8 +1,9 @@
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace FreeCICD;
 
-public partial class DataAccess: IDisposable, IDataAccess
+public partial class DataAccess : IDisposable, IDataAccess
 {
     private int _accountLockoutMaxAttempts = 5;
     private int _accountLockoutMinutes = 10;
@@ -31,6 +32,8 @@ public partial class DataAccess: IDisposable, IDataAccess
 
     public DataAccess(string ConnectionString = "",  string LocalModeUrl = "", IServiceProvider? serviceProvider = null)
     {
+        PartialClassDataAccessAppConstructor(serviceProvider);
+
         _connectionString = ConnectionString;
         _localModeUrl = LocalModeUrl;
         _serviceProvider = serviceProvider;
