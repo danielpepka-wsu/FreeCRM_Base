@@ -94,12 +94,6 @@ public class Program
 
         builder.Services.AddTransient<IIISInfoProvider, IISInfoProvider>();
 
-        // Add the DevOps pre-caching background service.
-        builder.Services.AddHostedService<FreeCICD.Services.DevopsPrecacheService>();
-
-        // NEW: Add the Files pre-caching background service.
-        builder.Services.AddHostedService<FreeCICD.Services.FilesPrecacheService>();
-
         var app = builder.Build();
 
         // Configure the HTTP request pipeline.

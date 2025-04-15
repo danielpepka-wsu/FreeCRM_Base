@@ -1818,7 +1818,9 @@ public static class Helpers
             try {
                 output = DeserializeObject<T>(SerializeObject(obj));
             } catch (Exception ex) {
-                if (ex != null) ;
+                if (ex != null) {
+                    Console.WriteLine(ex.Message);
+                }
             }
         }
 

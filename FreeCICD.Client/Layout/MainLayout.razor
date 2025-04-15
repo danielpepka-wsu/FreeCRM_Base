@@ -601,7 +601,6 @@
                     .Build();
 
                 hubConnection.On<DataObjects.SignalRUpdate>("SignalRUpdate", async(update) => {
-                    Console.WriteLine("in signalr update");
                     await ProcessSignalRUpdate(update);
                 });
 

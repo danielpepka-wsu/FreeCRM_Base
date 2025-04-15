@@ -7,23 +7,31 @@ public partial class DataObjects
 {
     public static partial class Endpoints
     {
-        public static class ReleasePipelines
-        {
-            public const string CreatePipeline = "api/Data/CreateReleasePipeline";
-            public const string GetPipelines = "api/Data/GetReleasePipelinesList";
-            public const string GetYmlFileContent = "api/Data/GetReleasePipelinesYmlFileContent";
-            public const string UpdateYmlFile = "api/Data/UpdateReleasePipelineYmlFile";
-            public const string CreateVariableGroup = "api/Data/CreateDevOpsVariableGroup";
-            public const string UpdateVariableGroup = "api/Data/UpdateDevOpsVariableGroup";
-        }
-
         public static class DevOps
         {
-            public const string GetIISInfo = "api/Data/DevopsGetIISInfo";
-            public const string GetWsuEitOrgInfo = "api/Data/DevopsGetWsuEitOrgInfo";
-            public const string GetOrgInfoByPat = "api/Data/DevopsGetOrgInfoByPat";
-            public const string GetBranchCsProjFileList = "api/Data/DevopsGetBranchCsProjFileList";
+            public const string GetDevOpsBranches = "api/Data/GetDevOpsBranches";
+            public const string GetDevOpsFiles = "api/Data/GetDevOpsFiles";
+            public const string GetDevOpsProjects = "api/Data/GetDevOpsProjects";
+            public const string GetDevOpsRepos = "api/Data/GetDevOpsRepos";
+
+            public const string GetDevOpsPipelines = "api/Data/GetDevOpsPipelines";
+            public const string SaveDevOpsPipeline = "api/Data/SaveDevOpsPipeline";
+            public const string GetDevOpsIISInfo = "api/Data/GetDevOpsIISInfo";
+
+            public const string GetDevOpsYmlFileContent = "api/Data/GetDevOpsYmlFileContent";
         }
+    }
+
+    public static class StepNameList
+    {
+        public const string SelectPAT = "Select PAT";
+        public const string SelectProject = "Select Project";
+        public const string SelectRepository = "Select Repository";
+        public const string SelectBranch = "Select Branch";
+        public const string SelectPipelineSelection = "Pipeline Selection";
+        public const string SelectCsprojFile = "Select .csproj File";
+        public const string EnvironmentSettings = "Environment Settings";
+        public const string YAMLPreviewAndSave = "YAML Preview & Save";
     }
 
     // ========================================================
@@ -146,15 +154,11 @@ public partial class DataObjects
         public string? ResourceUrl { get; set; }
     }
 
-    public class DevopsFileStructure
-    {
-        public List<DevopsFileItem> Files { get; set; } = new();
-    }
 
     public class DevopsGitRepoBranchInfo
     {
         public string BranchName { get; set; } = string.Empty;
-        public DevopsFileStructure? FileStructure { get; set; }
+        public List<DevopsFileItem>? Files { get; set; }
         public DateTime? LastCommitDate { get; set; } = null;
         public string? ResourceUrl { get; set; }
     }
@@ -171,9 +175,7 @@ public partial class DataObjects
     {
         public DateTime CreationDate { get; set; } = DateTime.UtcNow;
         public string OrgName { get; set; } = string.Empty;
-        public List<DevopsProjectInfo> Projects { get; set; } = new();
         public string? ResourceUrl { get; set; }
-        public List<DataObjects.DevopsVariableGroup> DevopsVariableGroups { get; set; } = new();
 
     }
 

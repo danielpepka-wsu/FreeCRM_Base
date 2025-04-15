@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Caching.Memory;
+using Mysqlx.Crud;
 
 namespace FreeCICD.Server.Controllers;
 
@@ -25,178 +26,133 @@ public partial class DataController
 
     #region Git & Pipeline Endpoints (Authenticated)
 
-    // POST: api/Data/CreateReleasePipeline
-    [HttpPost($"~/{DataObjects.Endpoints.ReleasePipelines.CreatePipeline}")]
-    [Authorize(Policy = Policies.AppAdmin)]
-    public async Task<IActionResult> CreateReleasePipeline([FromBody] DataObjects.PipelineCreationRequest request)
-    {
-        var config = GetReleasePipelinesDevOpsConfig();
-        if (string.IsNullOrWhiteSpace(config.pat))
-            return BadRequest("PAT not configured");
-        try {
-            var createdPipeline = await da.CreatePipeline(request, config.projectId, config.repoId, config.branch, config.pat, config.orgName);
-            return Ok(createdPipeline);
-        } catch (Exception ex) {
-            return BadRequest(ex.Message);
-        }
-    }
 
-    // GET: api/Data/DevopsGetBranchCsProjFileList
-    [HttpGet($"~/{DataObjects.Endpoints.DevOps.GetBranchCsProjFileList}")]
-    [Authorize(Policy = Policies.AppAdmin)]
-    public async Task<ActionResult<DataObjects.DevopsOrgInfo>> GetBranchCsProjFileList([FromQuery] string repoId, [FromQuery] string projectId, [FromQuery] string branchName)
-    {
-        var config = GetReleasePipelinesDevOpsConfig();
-        var result = await da.GetGitFileList(projectId, repoId, branchName, config.pat, config.orgName);
-        var output = result.Files.Where(o => o.FileType == "csproj").ToList();
-        return Ok(output);
-    }
 
-    // GET: api/Data/DevopsGetWsuEitOrgInfo
-    [HttpGet($"~/{DataObjects.Endpoints.DevOps.GetWsuEitOrgInfo}")]
-    [Authorize(Policy = Policies.AppAdmin)]
-    public async Task<ActionResult<DataObjects.DevopsOrgInfo>> GetWsuEitOrgInfo()
-    {
-        var config = GetReleasePipelinesDevOpsConfig();
-        // Build a composite key using the endpoint identifier and the PAT
-        string cacheKey = $"DevopsOrgInfo_{config.pat}";
-        DataObjects.DevopsOrgInfo output;
-        if (_cache.TryGetValue(cacheKey, out DataObjects.DevopsOrgInfo cachedResult) &&
-            !string.IsNullOrWhiteSpace(cachedResult?.OrgName)) {
-            output = cachedResult;
-        } else {
-            output = await da.GetDevopsOrgInfo(config.pat, config.orgName);
-            _cache.Set(cacheKey, output, TimeSpan.FromMinutes(5));
-        }
-        return Ok(output);
-    }
 
-    // GET: api/Data/DevopsGetOrgInfoByPat
-    [HttpGet($"~/{DataObjects.Endpoints.DevOps.GetOrgInfoByPat}")]
+    //DataObjects.Endpoints.DevOps.GetDevOpsFiles 
+    //DataObjects.Endpoints.DevOps.GetDevOpsProjects 
+    //DataObjects.Endpoints.DevOps.GetDevOpsRepos 
+    //DataObjects.Endpoints.DevOps.GetDevOpsPipelines 
+    //DataObjects.Endpoints.DevOps.SaveDevOpsPipeline 
+    //DataObjects.Endpoints.DevOps.GetDevOpsIISInfo 
+
+    //DataObjects.Endpoints.DevOps.GetDevOpsBranches 
+
+    [HttpGet($"~/{DataObjects.Endpoints.DevOps.GetDevOpsBranches}")]
     [AllowAnonymous]
-    public async Task<ActionResult<DataObjects.DevopsOrgInfo>> GetOrgInfoByPat([FromQuery] string orgName, [FromQuery] string pat, [FromQuery] string? connectionId = null)
+    public async Task<ActionResult<List<DataObjects.DevopsGitRepoBranchInfo>>> GetDevOpsBranches([FromQuery] string projectId, [FromQuery] string repoId, [FromQuery] string? pat = null, [FromQuery] string? orgName = null, [FromQuery] string? connectionId = null)
     {
+        List<DataObjects.DevopsGitRepoBranchInfo> output;
+        if (CurrentUser.Enabled) {
+            var config = GetReleasePipelinesDevOpsConfig();
+            output = await da.GetDevOpsBranchesAsync(config.pat, config.orgName, projectId, repoId, connectionId);
+        } else if (!string.IsNullOrWhiteSpace(pat) && !string.IsNullOrWhiteSpace(orgName)) {
+            output = await da.GetDevOpsBranchesAsync(pat, orgName, projectId, repoId, connectionId);
+        } else {
+            return BadRequest("No PAT or OrgName provided and user is not logged in.");
+        }
 
-        // Build a composite key using the endpoint identifier and the PAT
-        string cacheKey = $"DevopsOrgInfo_{pat}";
-        DataObjects.DevopsOrgInfo output;
-        //if (_cache.TryGetValue(cacheKey, out DataObjects.DevopsOrgInfo cachedResult) &&
-        //    !string.IsNullOrWhiteSpace(cachedResult?.OrgName)) {
-        //    output = cachedResult;
-        //} else {
-            output = await da.GetDevopsOrgInfo(pat, orgName, connectionId );
-        //    _cache.Set(cacheKey, output, TimeSpan.FromMinutes(5));
-        //}
         return Ok(output);
     }
 
-    // GET: api/Data/GetReleasePipelinesYmlFileContent
-    [HttpGet($"~/{DataObjects.Endpoints.ReleasePipelines.GetYmlFileContent}")]
-    [Authorize(Policy = Policies.AppAdmin)]
-    public async Task<IActionResult> GetReleasePipelinesYmlFileContent([FromQuery] string filePath)
+    [HttpGet($"~/{DataObjects.Endpoints.DevOps.GetDevOpsFiles}")]
+    [AllowAnonymous]
+    public async Task<ActionResult<List<DataObjects.DevopsFileItem>>> GetDevOpsFiles([FromQuery] string projectId, [FromQuery] string repoId, [FromQuery] string branchName, [FromQuery] string? pat = null, [FromQuery] string? orgName = null, [FromQuery] string? connectionId = null)
     {
-        if (!filePath.ToLower().EndsWith(".yml")) {
-            return BadRequest("Not a yml file, dont use this endpoint for this type of request");
+        List<DataObjects.DevopsFileItem> output;
+        if (CurrentUser.Enabled) {
+            var config = GetReleasePipelinesDevOpsConfig();
+            output = await da.GetDevOpsFilesAsync(config.pat, config.orgName, projectId, repoId, branchName, connectionId);
+        } else if (!string.IsNullOrWhiteSpace(pat) && !string.IsNullOrWhiteSpace(orgName)) {
+            output = await da.GetDevOpsFilesAsync(pat, orgName, projectId, repoId, branchName, connectionId);
+        } else {
+            return BadRequest("No PAT or OrgName provided and user is not logged in.");
         }
-        var config = GetReleasePipelinesDevOpsConfig();
-        if (string.IsNullOrWhiteSpace(config.pat))
-            return BadRequest("PAT not configured");
-        try {
-            var content = await da.GetGitFileContent(config.projectId, config.repoId, config.branch, filePath, config.pat, config.orgName);
-            return Ok(content);
-        } catch (Exception ex) {
-            return BadRequest(ex.Message);
-        }
+
+        return Ok(output);
     }
 
-    [HttpPost($"~/{DataObjects.Endpoints.ReleasePipelines.CreateVariableGroup}")]
-    [Authorize(Policy = Policies.AppAdmin)]
-    public async Task<IActionResult> CreateDevopsVariableGroup([FromBody] DataObjects.DevopsVariableGroup newGroup)
+    [HttpGet($"~/{DataObjects.Endpoints.DevOps.GetDevOpsProjects}")]
+    [AllowAnonymous]
+    public async Task<ActionResult<List<DataObjects.DevopsProjectInfo>>> GetDevOpsProjects([FromQuery] string? pat = null, [FromQuery] string? orgName = null, [FromQuery] string? connectionId = null)
     {
-        var config = GetReleasePipelinesDevOpsConfig();
-        if (newGroup.Variables == null || newGroup.Variables.Count == 0)
-            newGroup.Variables = [new DataObjects.DevopsVariable() { Name = "test", Value = "test", IsReadOnly = false, IsSecret = false }];
-        try {
-            var createdGroup = await da.CreateVariableGroup(config.projectId, config.pat, config.orgName, newGroup);
-            return Ok(createdGroup);
-        } catch (Exception ex) {
-            return BadRequest(ex.Message);
+        List<DataObjects.DevopsProjectInfo> output;
+
+        if (CurrentUser.Enabled) {
+            var config = GetReleasePipelinesDevOpsConfig();
+            output = await da.GetDevOpsProjectsAsync(config.pat, config.orgName, connectionId);
+        } else if (!string.IsNullOrWhiteSpace(pat) && !string.IsNullOrWhiteSpace(orgName)) {            
+            output = await da.GetDevOpsProjectsAsync(pat, orgName, connectionId);
+        } else {
+            return BadRequest("No PAT or OrgName provided and user is not logged in.");
         }
+
+        return Ok(output);
     }
 
-    [HttpPost($"~/{DataObjects.Endpoints.ReleasePipelines.UpdateVariableGroup}")]
-    [Authorize(Policy = Policies.AppAdmin)]
-    public async Task<IActionResult> UpdateDevopsVariableGroup([FromBody] DataObjects.DevopsVariableGroup updatedGroup)
+    [HttpGet($"~/{DataObjects.Endpoints.DevOps.GetDevOpsRepos}")]
+    [AllowAnonymous]
+    public async Task<ActionResult<List<DataObjects.DevopsGitRepoInfo>>> GetDevOpsRepos([FromQuery] string projectId, [FromQuery] string? pat = null, [FromQuery] string? orgName = null, [FromQuery] string? connectionId = null)
     {
-        var config = GetReleasePipelinesDevOpsConfig();
-        try {
-            var result = await da.UpdateVariableGroup(config.projectId, config.pat, config.orgName, updatedGroup);
-            return Ok(result);
-        } catch (Exception ex) {
-            return BadRequest(ex.Message);
+        List<DataObjects.DevopsGitRepoInfo> output;
+
+        // check pat or login
+        
+        if (CurrentUser.Enabled) {
+            var config = GetReleasePipelinesDevOpsConfig();
+            output = await da.GetDevOpsReposAsync(config.pat, config.orgName, projectId, connectionId);
+        }else if (!string.IsNullOrWhiteSpace(pat) && !string.IsNullOrWhiteSpace(orgName)) { 
+            output = await da.GetDevOpsReposAsync(pat, orgName, projectId, connectionId);
+        } else {
+            return BadRequest("No PAT or OrgName provided and user is not logged in.");
         }
+
+        return Ok(output);
     }
 
+    //GetDevOpsPipelines
 
-
-    // GET: api/Data/DevopsGetIISInfo
-    [HttpGet($"~/{DataObjects.Endpoints.DevOps.GetIISInfo}")]
-    [Authorize(Policy = Policies.AppAdmin)]
-    public async Task<IActionResult> GetIISInfo()
+    [HttpGet($"~/{DataObjects.Endpoints.DevOps.GetDevOpsPipelines}")]
+    [AllowAnonymous]
+    public async Task<ActionResult<List<DataObjects.DevopsPipelineDefinition>>> GetDevOpsPipelines([FromQuery] string? projectId, [FromQuery] string? repoId, [FromQuery] string? pat = null, [FromQuery] string? orgName = null, [FromQuery] string? connectionId = null)
     {
-        Dictionary<string, DataObjects.IISInfo?> iisData = await _iisInfoProvider.GetIISInfoAsync();
-        return Ok(iisData);
-    }
+        List<DataObjects.DevopsPipelineDefinition> output;
 
-    // GET: api/Data/GetReleasePipelines
-    [HttpGet($"~/{DataObjects.Endpoints.ReleasePipelines.GetPipelines}")]
-    [Authorize(Policy = Policies.AppAdmin)]
-    public async Task<IActionResult> GetReleasePipelines()
-    {
-        var config = GetReleasePipelinesDevOpsConfig();
-        if (string.IsNullOrWhiteSpace(config.pat))
-            return BadRequest("PAT not configured");
-        try {
-            var pipelines = await da.GetPipelines(config.projectId, config.pat, config.orgName);
-            return Ok(pipelines);
-        } catch (Exception ex) {
-            return BadRequest(ex.Message);
+        // check pat or login
+
+        if (CurrentUser.Enabled) {
+            var config = GetReleasePipelinesDevOpsConfig();
+            output = await da.GetDevOpsPipelines(config.projectId, config.pat, config.orgName, connectionId); 
+        } else if (!string.IsNullOrWhiteSpace(pat) && !string.IsNullOrWhiteSpace(orgName) && !string.IsNullOrEmpty(projectId)) {
+            output = await da.GetDevOpsPipelines(projectId, pat, orgName, connectionId);
+        } else {
+            return BadRequest("No PAT or OrgName provided and user is not logged in.");
         }
-    }
 
-
-    // POST: api/Data/UpdateGitFileContent
-    [HttpPost("~/api/Data/UpdateReleasePipelineYmlFile")]
-    [Authorize(Policy = Policies.AppAdmin)]
-    public async Task<IActionResult> UpdateReleasePipelineYmlFile([FromQuery] string filePath, [FromBody] string fileContent)
-    {
-        var config = GetReleasePipelinesDevOpsConfig();
-        if (string.IsNullOrWhiteSpace(config.pat))
-            return BadRequest("PAT not configured");
-        try {
-            var result = await da.UpdateGitFileContent(config.projectId, config.repoId, config.branch, filePath, fileContent, config.pat, config.orgName);
-            return Ok(result);
-        } catch (Exception ex) {
-            return BadRequest(ex.Message);
-        }
+        return Ok(output);
     }
 
 
 
-    // PUT: api/Data/UpdatePipeline
-    [HttpPut("~/api/Data/UpdatePipeline")]
-    [Authorize(Policy = Policies.AppAdmin)]
-    public async Task<IActionResult> UpdatePipeline([FromBody] DataObjects.BuildDefinition pipelineDefinition)
+    
+    [HttpGet($"~/{DataObjects.Endpoints.DevOps.GetDevOpsYmlFileContent}")]
+    [AllowAnonymous]
+    public async Task<ActionResult<string>> GetDevOpsYmlFileContent(string? filePath, [FromQuery] string? projectId, [FromQuery] string repoId, [FromQuery] string branchName, [FromQuery] string? pat = null, [FromQuery] string? orgName = null, [FromQuery] string? connectionId = null)
     {
-        var config = GetReleasePipelinesDevOpsConfig();
-        if (string.IsNullOrWhiteSpace(config.pat))
-            return BadRequest("PAT not configured");
-        try {
-            var updatedPipeline = await da.UpdatePipeline(pipelineDefinition, config.projectId, config.pat, config.orgName);
-            return Ok(updatedPipeline);
-        } catch (Exception ex) {
-            return BadRequest(ex.Message);
+        string output = string.Empty;
+
+        // check pat or login
+
+        if (CurrentUser.Enabled) {
+            var config = GetReleasePipelinesDevOpsConfig();
+            output = await da.GetGitFile(filePath, config.projectId,config.repoId,config.branch, config.pat, config.orgName, connectionId);
+        } else if (!string.IsNullOrWhiteSpace(pat) && !string.IsNullOrWhiteSpace(orgName) && !string.IsNullOrEmpty(projectId)) {
+            output = await da.GetGitFile(filePath, projectId,repoId, branchName ,pat, orgName, connectionId);
+        } else {
+            return BadRequest("No PAT or OrgName provided and user is not logged in.");
         }
+
+        return Ok(output);
     }
     #endregion Git & Pipeline Endpoints
 }
