@@ -1,5 +1,6 @@
 using System.Runtime.Serialization;
 using System.Text.Json.Serialization;
+using static FreeCICD.DataObjects;
 
 namespace FreeCICD;
 
@@ -15,10 +16,12 @@ public partial class DataObjects
             public const string GetDevOpsRepos = "api/Data/GetDevOpsRepos";
 
             public const string GetDevOpsPipelines = "api/Data/GetDevOpsPipelines";
-            public const string SaveDevOpsPipeline = "api/Data/SaveDevOpsPipeline";
             public const string GetDevOpsIISInfo = "api/Data/GetDevOpsIISInfo";
 
             public const string GetDevOpsYmlFileContent = "api/Data/GetDevOpsYmlFileContent";
+
+            public const string CreateOrUpdateDevOpsPipeline = "api/Data/CreateOrUpdateDevOpsPipeline";
+            public const string PreviewDevOpsYmlFileContents = "api/Data/PreviewDevOpsYmlFileContents";
         }
     }
 
@@ -39,11 +42,10 @@ public partial class DataObjects
     // ========================================================
     public class EnvSetting
     {
-        public string EnvName { get; set; } = "";
+        public GlobalSettings.EnvironmentType EnvName { get; set; } = GlobalSettings.EnvironmentType.DEV;
         public string IISDeploymentType { get; set; } = "IISWebApplication";
         public string WebsiteName { get; set; } = "";
         public string VirtualPath { get; set; } = "";
-        public string ServerType { get; set; } = "Development";
         public string AppPoolName { get; set; } = "";
         public string VariableGroupName { get; set; } = "";
         public string BindingInfo { get; set; } = "";
@@ -128,6 +130,7 @@ public partial class DataObjects
         public string RepositoryName { get; set; } = string.Empty;
         public string YamlFileName { get; set; } = string.Empty;
         public string? ResourceUrl { get; set; } = string.Empty;
+        public string YmlFileContents { get; set; } = string.Empty;
     }
 
     public class DeploymentInfo
@@ -255,8 +258,27 @@ public partial class DataObjects
         public string Name { get; set; } = string.Empty;
         public string ProjectId { get; set; } = string.Empty;
         public string ProjectName { get; set; } = string.Empty;
+        public string ProjectPath { get; set; } = string.Empty;
         public string RepositoryId { get; set; } = string.Empty;
         public string YamlFilePath { get; set; } = string.Empty;
+        public string YmlFileContents { get; set; } = string.Empty;
+    }
+
+    public class DevOpsPipelineRequest
+    {
+        public string Pat { get; set; } = string.Empty;
+        public string OrgName { get; set; } = string.Empty;
+        public string ProjectId { get; set; } = string.Empty;
+        public string RepoId { get; set; } = string.Empty;
+        public string Branch { get; set; } = string.Empty;
+        public string YAMLFileName { get; set; } = string.Empty;
+        public int? PipelineId { get; set; } = null;          // 0 = create new
+        public string PipelineName { get; set; } = string.Empty;
+        public string CsProjFilePath { get; set; } = string.Empty;
+
+        public Dictionary<GlobalSettings.EnvironmentType, EnvSetting> EnvironmentSettings { get; set; }
+            = new Dictionary<GlobalSettings.EnvironmentType, EnvSetting>();
+        public string? ConnectionId { get; set; }
     }
 
     public class Site

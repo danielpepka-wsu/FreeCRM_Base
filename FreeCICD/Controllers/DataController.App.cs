@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Caching.Memory;
 using Mysqlx.Crud;
+using Radzen.Blazor;
 
 namespace FreeCICD.Server.Controllers;
 
@@ -154,5 +155,62 @@ public partial class DataController
 
         return Ok(output);
     }
+
+    /// <summary>
+    /// Shows a preview of the contents of the ylm file we are generating for a given DevopsPipelineRequest. The same request
+    /// can be used in the CreateOrUpdate DevOpsPipeline endpoint to create or update the pipeline.
+    /// </summary>
+    [HttpPost($"{DataObjects.Endpoints.DevOps.PreviewDevOpsYmlFileContents}")]
+    [AllowAnonymous]
+    public async Task<ActionResult<string>> PreviewDevOpsYmlFileContents([FromBody] DataObjects.DevOpsPipelineRequest request)
+    {
+        string output = string.Empty;
+
+        if (request == null) {
+            return BadRequest("Request body cannot be null.");
+        }
+
+        if (CurrentUser.Enabled) {
+            var config = GetReleasePipelinesDevOpsConfig();
+            output = await da.GenerateYmlFileContents(config.projectId, config.repoId, config.branch, request.PipelineId, request.PipelineName, request.ProjectId, request.RepoId, request.Branch, request.CsProjFilePath, request.EnvironmentSettings, config.pat, config.orgName, request.ConnectionId);
+        } else if (!string.IsNullOrWhiteSpace(request.Pat) && !string.IsNullOrWhiteSpace(request.OrgName)) {
+            output = await da.GenerateYmlFileContents(request.ProjectId, request.RepoId, request.Branch, request.PipelineId, request.PipelineName, request.ProjectId, request.RepoId, request.Branch, request.CsProjFilePath, request.EnvironmentSettings, request.Pat, request.OrgName, request.ConnectionId);
+        } else {
+            return BadRequest("No PAT or OrgName provided and user is not logged in.");
+        }
+
+        return Ok(output);
+    }
+
+    /// <summary>
+    /// Create or update an Azure DevOps pipeline and its YAML file + variable groups in one call.
+    /// </summary>
+    [HttpPost($"{DataObjects.Endpoints.DevOps.CreateOrUpdateDevOpsPipeline}")]
+    [AllowAnonymous]
+    public async Task<ActionResult<DataObjects.BuildDefinition>> CreateOrUpdateDevOpsPipeline([FromBody] DataObjects.DevOpsPipelineRequest request)
+    {
+        DataObjects.BuildDefinition output = new DataObjects.BuildDefinition();
+        if (request == null) {
+            return BadRequest("Request body cannot be null.");
+        }
+
+        try {            
+            if (CurrentUser.Enabled) {
+                var config = GetReleasePipelinesDevOpsConfig();
+                output = await da.CreateOrUpdateDevopsPipeline(config.projectId, config.repoId, config.branch, request.PipelineId, request.PipelineName, request.ProjectId, request.RepoId, request.Branch, request.CsProjFilePath, request.EnvironmentSettings ?? new(), config.pat, config.orgName, request.ConnectionId);
+            } else if (!string.IsNullOrWhiteSpace(request.Pat) && !string.IsNullOrWhiteSpace(request.OrgName)) {
+                output = await da.CreateOrUpdateDevopsPipeline(request.ProjectId, request.RepoId, request.Branch, request.PipelineId, request.PipelineName, request.ProjectId, request.RepoId, request.Branch, request.CsProjFilePath, request.EnvironmentSettings, request.Pat, request.OrgName, request.ConnectionId);
+            } else {
+                return BadRequest("No PAT or OrgName provided and user is not logged in.");
+            }
+        } catch (System.Exception ex) {
+            return BadRequest($"Error creating/updating pipeline: {ex.Message}");
+        }
+
+        return Ok(output);
+    }
+    
     #endregion Git & Pipeline Endpoints
 }
+
+
