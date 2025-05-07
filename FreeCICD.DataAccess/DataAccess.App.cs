@@ -1264,7 +1264,7 @@ public partial class DataAccess
 
 
             var devopsPipelinePath = $"Projects/{codeProject.ProjectName}";
-            var devopsYmlFilePath = $"projects/{codeProject.ProjectName}/{devopsPipelineName}.yml";
+            var devopsYmlFilePath = $"Projects/{codeProject.ProjectName}/{devopsPipelineName}.yml";
 
             // ok first we need to create the yml, file if it does not exist, so lets do that
             List<DataObjects.DevopsFileItem> files = await GetDevOpsFilesAsync(pat, orgName, devopsProjectId, devopsRepoId, devopsBranchName);
