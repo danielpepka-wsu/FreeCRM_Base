@@ -64,7 +64,7 @@ resources:
             - {{CODE_REPO_BRANCH}}
 
 variables:
-  - template: templates/common-variables.yml@TemplateRepo
+  - template: Templates/common-variables.yml@TemplateRepo
 
 {{PIPELINE_VARIABLES}}
 
@@ -85,7 +85,7 @@ stages:
         steps:
           - checkout: none
           - download: none
-          - template: templates/dump-env-variables-template.yml@TemplateRepo
+          - template: Templates/dump-env-variables-template.yml@TemplateRepo
 
   # -------------------------------------------------------------------
   # Build Stage: pass the runtime variables to the build template
@@ -98,7 +98,7 @@ stages:
         pool:
           name: '{{PIPELINE_POOL}}'
         steps:
-          - template: templates/build-template.yml@TemplateRepo
+          - template: Templates/build-template.yml@TemplateRepo
             parameters:
               buildProjectName: ""$(CI_ProjectName)""
               buildCsProjectPath: ""$(CI_BUILD_CsProjectPath)""

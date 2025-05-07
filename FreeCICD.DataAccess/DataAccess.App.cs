@@ -1177,8 +1177,8 @@ public partial class DataAccess
                 sb.AppendLine($"            deploy:");
                 sb.AppendLine($"              steps:");
                 sb.AppendLine($"                - checkout: none");
-                sb.AppendLine($"                - template: dump-env-variables-template.yml@TemplateRepo");
-                sb.AppendLine($"                - template: deploy-template.yml@TemplateRepo");
+                sb.AppendLine($"                - template: Templates/dump-env-variables-template.yml@TemplateRepo");
+                sb.AppendLine($"                - template: Templates/deploy-template.yml@TemplateRepo");
                 sb.AppendLine($"                  parameters:");
                 sb.AppendLine($"                    envFolderName: \"{env.EnvName}\"");
                 sb.AppendLine($"                    basePath: \"{basePath}\"");
@@ -1193,7 +1193,7 @@ public partial class DataAccess
                 if (!string.IsNullOrWhiteSpace(env.BindingInfo)) {
                 sb.AppendLine($"                    CustomBindings: \"$(CI_{env.EnvName.ToString()}_BindingInfo)\"");
                 }
-                sb.AppendLine($"                - template: clean-workspace-template.yml@TemplateRepo");
+                sb.AppendLine($"                - template: Templates/clean-workspace-template.yml@TemplateRepo");
                 sb.AppendLine();
             }
         }
