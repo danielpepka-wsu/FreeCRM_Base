@@ -7,7 +7,7 @@ public partial class DataAccess : IDisposable, IDataAccess
 {
     private int _accountLockoutMaxAttempts = 5;
     private int _accountLockoutMinutes = 10;
-    private string _appName = $"FreeFreeCICD minimal";
+    private string _appName = $"FreeCICD";
     private DataObjects.AuthenticationProviders? _authenticationProviders;
     private string _connectionString;
     private string _copyright = "Company Name";
