@@ -55,7 +55,7 @@
                         </div>
 
                         <div class="mb-3">
-                            <p>Or <a href="/login">Login</a> to use the PAT and Org Information stored in the appsettings.json file.</p>
+                            <p>Or <a href="@Helpers.BuildUrl("login")">Login</a> to use the PAT and Org Information stored in the appsettings.json file.</p>
                         </div>
                     </div>
 
@@ -338,7 +338,7 @@
                         <p>Select environments to configure (optional):</p>
                         @foreach(var envKey in GlobalSettings.App.EnvironmentOptions.Keys) {
                             <div class="form-check mb-2">
-                                <input type="checkbox" class="form-check-input" id="envCheck_@envKey" @onchange="@(e => EnvironmentChangedWizard(envKey, e))"  disabled="@_loading"/>
+                                <input type="checkbox" class="form-check-input" id="envCheck_@envKey" @onchange="@(e => EnvironmentChangedWizard(envKey, e))" disabled="@_loading" />
                                 <label class="form-check-label" for="envCheck_@envKey">@envKey Environment</label>
                             </div>
                             if(EnvSettings.Keys.Contains(envKey)) {
@@ -659,7 +659,7 @@
                 // no duplicates allowed
                 if(update?.ItemId != null) {
                     _loadingMessagesIds.Add(update.ItemId.Value);
-                    _loadingMessages.Insert(0,new LoadingMessage {
+                    _loadingMessages.Insert(0, new LoadingMessage {
                             Created = DateTime.UtcNow,
                             Message = update.Message,
                         }
@@ -728,46 +728,18 @@
     protected DataObjects.DevopsGitRepoBranchInfo? SelectedBranchInfo => SelectedRepoInfo?.GitBranches.FirstOrDefault(r => r.BranchName == SelectedBranch);
     protected DataObjects.DevopsPipelineDefinition? SelectedPipelineInfo => DevopsPipelineDefinitions?.FirstOrDefault(p => p.Id == SelectedPipelineId);
     protected DataObjects.DevOpsPipelineRequest? DevOpsPipelineRequest => new DataObjects.DevOpsPipelineRequest {
-            Pat = DevOpsPAT,
-            OrgName = OrgName,
-            ProjectId = SelectedProjectInfo?.ProjectId ?? "",
-            RepoId = SelectedRepoInfo?.RepoId ?? "",
-            Branch = SelectedBranch ?? "",
-            YAMLFileName = SelectedPipelineInfo?.YamlFileName ?? "",
-            PipelineId = SelectedPipelineId.GetValueOrDefault(0),
-            PipelineName = SelectedPipelineId > 0
-                                                                ? string.Empty
-                                                                : NewPipelineName ?? "",
-            EnvironmentSettings = EnvSettings.ToDictionary(kvp => kvp.Key, kvp => kvp.Value),
-            ConnectionId = Model.SignalrClientRegistration?.ConnectionId
-        };
-
-    // This defines the variables that will be used in the YAML file for naming the artifact, specifying the project name, and enabling
-    // the optional controller version and hello world endpoints via the namespace
-    protected Dictionary<string, string> VariablesFileDictionary = new Dictionary<string, string>
-        {
-        { "CI_ProjectName", "" },
-        { "CI_BUILD_CsProjectPath", "" },
-        { "CI_BUILD_Namespace", "" }
+        Pat = DevOpsPAT,
+        OrgName = OrgName,
+        ProjectId = SelectedProjectInfo?.ProjectId ?? "",
+        RepoId = SelectedRepoInfo?.RepoId ?? "",
+        Branch = SelectedBranch ?? "",
+        YAMLFileName = SelectedPipelineInfo?.YamlFileName ?? "",
+        PipelineId = SelectedPipelineId.GetValueOrDefault(0),
+        PipelineName = SelectedPipelineId > 0 ? string.Empty : NewPipelineName ?? "",
+        EnvironmentSettings = EnvSettings.ToDictionary(kvp => kvp.Key, kvp => kvp.Value),
+        CsProjectFile = SelectedCsprojPath ?? "",
+        ConnectionId = Model.SignalrClientRegistration?.ConnectionId
     };
-
-    // this defines the azure project, repo, and branch we will be using to build the yml
-    protected Dictionary<string, string> BuildPipelineDictionary = new Dictionary<string, string>
-        {
-        { "CODE_PROJECT_NAME", "" },
-        { "CODE_REPO_NAME", "" },
-        { "CODE_REPO_BRANCH", "" }
-    };
-    // This defines the variable group names for each environment. The values will be set based on the selected project name.
-    protected Dictionary<string, string> EnviornmentVariableGroupDictionary = new Dictionary<string, string>
-        {
-        { "DEV", "" },
-        { "PROD", "" }, 
-        { "CMS", "" }
-    };
-
-
-
 }
 
 @* App specific method definition code section *@
@@ -871,12 +843,12 @@
                         var response = await Helpers.GetOrPost<string>($"{DataObjects.Endpoints.DevOps.PreviewDevOpsYmlFileContents}", DevOpsPipelineRequest);
                         if(!string.IsNullOrWhiteSpace(response)) {
                             NewYamlContent = response;
-                            _loadingMessages.Insert(0,new LoadingMessage { Message = "Preview fetched successfully.", Created = DateTime.UtcNow });
+                            _loadingMessages.Insert(0, new LoadingMessage { Message = "Preview fetched successfully.", Created = DateTime.UtcNow });
                         } else {
-                            _loadingMessages.Insert(0,new LoadingMessage { Message = $"Error", Created = DateTime.UtcNow });
+                            _loadingMessages.Insert(0, new LoadingMessage { Message = $"Error", Created = DateTime.UtcNow });
                         }
                     } catch(Exception ex) {
-                        _loadingMessages.Insert(0,new LoadingMessage { Message = $"Exception: {ex.Message}", Created = DateTime.UtcNow });
+                        _loadingMessages.Insert(0, new LoadingMessage { Message = $"Exception: {ex.Message}", Created = DateTime.UtcNow });
                     } finally {
                         _loading = false;
                         StateHasChanged();
@@ -889,12 +861,12 @@
                 try {
                     var response = await Http.PostAsJsonAsync($"{DataObjects.Endpoints.DevOps.CreateOrUpdateDevOpsPipeline}", DevOpsPipelineRequest);
                     if(response.IsSuccessStatusCode) {
-                        _loadingMessages.Insert(0,new LoadingMessage { Message = "Pipeline created/updated successfully.", Created = DateTime.UtcNow });
+                        _loadingMessages.Insert(0, new LoadingMessage { Message = "Pipeline created/updated successfully.", Created = DateTime.UtcNow });
                     } else {
-                        _loadingMessages.Insert(0,new LoadingMessage { Message = $"Error: {response.ReasonPhrase}", Created = DateTime.UtcNow });
+                        _loadingMessages.Insert(0, new LoadingMessage { Message = $"Error: {response.ReasonPhrase}", Created = DateTime.UtcNow });
                     }
                 } catch(Exception ex) {
-                    _loadingMessages.Insert(0,new LoadingMessage { Message = $"Exception: {ex.Message}", Created = DateTime.UtcNow });
+                    _loadingMessages.Insert(0, new LoadingMessage { Message = $"Exception: {ex.Message}", Created = DateTime.UtcNow });
                 } finally {
                     _loading = false;
                     StateHasChanged();
@@ -965,25 +937,6 @@
             SelectedProjectId = e.Value?.ToString() ?? "";
             SelectedRepoId = "";
             SelectedBranch = "";
-            // reset all the choices
-            foreach(var key in BuildPipelineDictionary.Keys) {
-                BuildPipelineDictionary[key] = "";
-            }
-            BuildPipelineDictionary["CODE_PROJECT_NAME"] = SelectedProjectInfo?.ProjectName ?? "";
-
-            foreach(var key in VariablesFileDictionary.Keys) {
-                VariablesFileDictionary[key] = "";
-            }
-            VariablesFileDictionary["CI_ProjectName"] = SelectedProjectInfo?.ProjectName ?? "";
-
-
-            // repopulate the environment variable group names based on the selected project
-            foreach(var key in EnviornmentVariableGroupDictionary.Keys) {
-                EnviornmentVariableGroupDictionary[key] = "";
-            }
-            foreach(var envKey in EnviornmentVariableGroupDictionary.Keys) {
-                EnviornmentVariableGroupDictionary[envKey] = $"{SelectedProjectInfo?.ProjectName}_{GlobalSettings.App.VariableGroupNameDefault}_{envKey}";
-            }
 
             if(SelectedProjectInfo != null) {
                 List<DataObjects.DevopsGitRepoInfo>? result = await Http.GetFromJsonAsync<List<DataObjects.DevopsGitRepoInfo>>(DataObjects.Endpoints.DevOps.GetDevOpsRepos +
@@ -1023,8 +976,6 @@
         try {
             SelectedRepoId = e.Value?.ToString() ?? "";
             SelectedBranch = "";
-            BuildPipelineDictionary["CODE_REPO_BRANCH"] = "";
-            BuildPipelineDictionary["CODE_REPO_NAME"] = SelectedRepoInfo?.RepoName ?? "";
 
             if(SelectedRepoInfo != null) {
                 List<DataObjects.DevopsGitRepoBranchInfo>? result = await Http.GetFromJsonAsync<List<DataObjects.DevopsGitRepoBranchInfo>>(DataObjects.Endpoints.DevOps.GetDevOpsBranches +
@@ -1070,7 +1021,6 @@
         StateHasChanged();
         try {
             SelectedBranch = e.Value?.ToString() ?? "";
-            BuildPipelineDictionary["CODE_REPO_BRANCH"] = SelectedBranch;
 
             // now lookup the files so we can select the csproj
             if(SelectedBranchInfo != null) {

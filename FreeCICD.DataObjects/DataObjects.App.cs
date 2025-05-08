@@ -274,10 +274,9 @@ public partial class DataObjects
         public string YAMLFileName { get; set; } = string.Empty;
         public int? PipelineId { get; set; } = null;          // 0 = create new
         public string PipelineName { get; set; } = string.Empty;
-        public string CsProjFilePath { get; set; } = string.Empty;
-
+        public string CsProjectFile { get; set; } =string.Empty;
         public Dictionary<GlobalSettings.EnvironmentType, EnvSetting> EnvironmentSettings { get; set; }
-            = new Dictionary<GlobalSettings.EnvironmentType, EnvSetting>();
+            = new();
         public string? ConnectionId { get; set; }
     }
 

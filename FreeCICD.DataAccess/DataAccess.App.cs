@@ -45,8 +45,8 @@ public partial interface IDataAccess
     Task<List<DataObjects.DevopsPipelineDefinition>> GetDevOpsPipelines(string projectId, string pat, string orgName, string? connectionId = null);
 
     Task<string> GenerateYmlFileContents(string devopsProjectId, string devopsRepoId, string devopsBranch, int? devopsPipelineId, string? devopsPipelineName, string codeProjectId, string codeRepoId, string codeBranchName, string codeCsProjectFile, Dictionary<GlobalSettings.EnvironmentType, DataObjects.EnvSetting> environmentSettings, string pat, string orgName, string? connectionId = null);
-
-    Task<DataObjects.BuildDefinition> CreateOrUpdateDevopsPipeline(string devopsProjectId, string devopsRepoId, string devopsBranch, int? devopsPipelineId, string? devopsPipelineName, string codeProjectId, string codeRepoId, string codeBranchName, string codeCsProjectFile, Dictionary<GlobalSettings.EnvironmentType, DataObjects.EnvSetting> environmentSettings, string pat, string orgName, string? connectionId = null);
+    Task<DataObjects.BuildDefinition> CreateOrUpdateDevopsPipeline(string devopsProjectId, string devopsRepoId, string devopsBranchName, int? devopsPipelineId, string? devopsPipelineName, string codeProjectId, string codeRepoId, string codeBranchName, string codeCsProjectFile,  Dictionary<GlobalSettings.EnvironmentType, DataObjects.EnvSetting> environmentSettings, string pat, string orgName, string? connectionId = null);
+    
 
     Task<DataObjects.GitUpdateResult> CreateOrUpdateGitFile(string projectId, string repoId, string branch, string filePath, string fileContent, string pat, string orgName, string? connectionId = null);
     Task<string> GetGitFile(string filePath, string projectId, string repoId, string branch, string pat, string orgName, string? connectionId = null);
@@ -1097,7 +1097,7 @@ public partial class DataAccess
         var codeRepo = await GetDevOpsRepoAsync(pat, orgName, codeProjectId, codeRepoId);
         var codeBranch = await GetDevOpsBranchAsync(pat, orgName, codeProjectId, codeRepoId, codeBranchName);
 
-        var pipelineVariables = await GeneratePipelineVariableReplacementText(environmentSettings);
+        var pipelineVariables = await GeneratePipelineVariableReplacementText(codeProject.ProjectName, codeCsProjectFile, environmentSettings);
         var deployStages = await GeneratePipelineDeployStagesReplacementText(environmentSettings);
         // replace all the {{REPLACE THIS}} stuff with their valus
         output = output.Replace("{{DEVOPS_PROJECTNAME}}", $"{devopsProject.ProjectName}");
@@ -1112,11 +1112,24 @@ public partial class DataAccess
         await Task.CompletedTask;
         return output;
     }
-    public async Task<string> GeneratePipelineVariableReplacementText(Dictionary<GlobalSettings.EnvironmentType, DataObjects.EnvSetting> environmentSettings)
+    public async Task<string> GeneratePipelineVariableReplacementText(string projectName, string csProjectFile, Dictionary<GlobalSettings.EnvironmentType, DataObjects.EnvSetting> environmentSettings)
     {
         string output = string.Empty;
-        
+
+        // so we also need the variables for the pipeline like the csproj
+        var variableDictionary = new Dictionary<string, string>() { 
+            // now add one
+            { "CI_ProjectName", projectName ?? "" },
+            { "CI_BUILD_CsProjectPath", csProjectFile ?? "" },
+            { "CI_BUILD_Namespace", "" }
+        };
         var sb = new System.Text.StringBuilder();
+        foreach (var kv in variableDictionary) {
+            sb.AppendLine($"  - name: {kv.Key}");
+            sb.AppendLine($"    value: \"{kv.Value}\"");
+        }
+        
+
         foreach (var envKey in GlobalSettings.App.EnviormentTypeOrder) {
             // use the global list for ordering
             if (environmentSettings.ContainsKey(envKey)) { 
@@ -1201,7 +1214,7 @@ public partial class DataAccess
         await Task.CompletedTask;
         return output;
     }
-
+    
     public async Task<DataObjects.BuildDefinition> CreateOrUpdateDevopsPipeline(string devopsProjectId, string devopsRepoId, string devopsBranchName, int? devopsPipelineId, string? devopsPipelineName, string codeProjectId, string codeRepoId, string codeBranchName, string codeCsProjectFile, Dictionary<GlobalSettings.EnvironmentType, DataObjects.EnvSetting> environmentSettings, string pat, string orgName, string? connectionId = null)
     {
         DataObjects.BuildDefinition output = new DataObjects.BuildDefinition();
