@@ -4,344 +4,244 @@
 @implements IDisposable
 @inject HttpClient Http
 
-@if(Model.Loaded && Model.View == _pageName) {
-    if(!String.IsNullOrWhiteSpace(LogoUrl) && Model.Tenant.TenantSettings.LogoIncludedOnHomePage) {
+@if (Model.Loaded && Model.View == _pageName) {
+    if (!String.IsNullOrWhiteSpace(LogoUrl) && Model.Tenant.TenantSettings.LogoIncludedOnHomePage) {
         <div class="home-page-logo-container">
             <img src="@LogoUrl" class="logo-homepage" />
         </div>
     }
 
     <h1 class="page-title">
-        @if(!String.IsNullOrWhiteSpace(Model.Tenant.TenantSettings.AppIcon)) {
+        @if (!String.IsNullOrWhiteSpace(Model.Tenant.TenantSettings.AppIcon)) {
             <i>@((MarkupString)Model.Tenant.TenantSettings.AppIcon)</i>
         }
         <Language Tag="Welcome" ReplaceSpaces="true" /> @Model.User.FirstName
     </h1>
 
-    <div class="container-fluid">
-        <!-- Wizard Navigation Tabs -->
-        <ul class="nav nav-tabs wizard-navigation">
-            @for(int i = 0; i < StepNames.Length; i++) {
-                <li class="nav-item">
-                    <span class=@("nav-link " + (currentStep == i ? "active" : "") + " " + (i > currentStep ? "disabled-tab" : ""))>
-                        @StepNames[i]
-                    </span>
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            @for (int i = _hidePAT ? 1 : 0; i < StepNames.Length; i++) {
+                <li class="breadcrumb-item@(currentStep == i ? " active" : "")">
+                    @StepNames[i]
                 </li>
             }
-        </ul>
+        </ol>
+    </nav>
 
-        <!-- Wizard Step Content -->
-        <div class="wizard-tab-content">
-            @if(StepNames[currentStep] == DataObjects.StepNameList.SelectPAT) {
-                <div class="card">
-                    <div class="card-footer text-end">
-                        <button class="btn btn-primary"
-                                @onclick="PATandOrgNameChangedWizard"
-                                disabled="@(_loading || string.IsNullOrWhiteSpace(DevOpsPAT) || string.IsNullOrWhiteSpace(OrgName))">
-                            Next
-                        </button>
-                    </div>
+    <div class="card">
+        @{
+            switch (StepNames[currentStep]) {
+                case DataObjects.StepNameList.SelectPAT:
                     <div class="card-header">
                         Azure DevOps Credentials
+                        <div class="card-header-buttons text-end">
+                            <button class="btn btn-primary"
+                                    @onclick="PATandOrgNameChangedWizard"
+                                    disabled="@(_loading || string.IsNullOrWhiteSpace(DevOpsPAT) || string.IsNullOrWhiteSpace(OrgName))">
+                                Next
+                                <Icon Name="Next" />
+                            </button>
+                        </div>
                     </div>
-                    <div class="card-body">
+                    break;
+
+                case DataObjects.StepNameList.SelectProject:
+                    <div class="card-header">
+                        Select Project
+                        <div class="card-header-buttons text-end">
+                            <button class="btn btn-primary" @onclick="(e) => NextStep(DataObjects.StepNameList.SelectProject)" disabled="@(_loading || string.IsNullOrEmpty(SelectedProjectId))">
+                                Next
+                                <Icon Name="Next" />
+                            </button>
+                        </div>
+                    </div>
+                    break;
+
+                case DataObjects.StepNameList.SelectRepository:
+                    <div class="card-header">
+                        Select Repository
+                        <div class="card-header-buttons text-end">
+                            <button class="btn btn-secondary me-2" @onclick="PrevStep" disabled="@(_loading)">
+                                <Icon Name="Previous" />
+                                Back
+                            </button>
+                            <button class="btn btn-primary" @onclick="(e) => NextStep(DataObjects.StepNameList.SelectRepository)" disabled="@(_loading || string.IsNullOrEmpty(SelectedRepoId))">
+                                Next
+                                <Icon Name="Next" />
+                            </button>
+                        </div>
+                    </div>
+                    break;
+
+                case DataObjects.StepNameList.SelectBranch:
+                    <div class="card-header">
+                        Select Branch
+                        <div class="card-header-buttons text-end">
+                            <button class="btn btn-secondary me-2" @onclick="PrevStep" disabled="@(_loading)">
+                                <Icon Name="Previous" />
+                                Back
+                            </button>
+                            <button class="btn btn-primary" @onclick="(e) => NextStep(DataObjects.StepNameList.SelectBranch)" disabled="@(_loading || string.IsNullOrEmpty(SelectedBranch))">
+                                Next
+                                <Icon Name="Next" />
+                            </button>
+                        </div>
+                    </div>
+                    break;
+
+                case DataObjects.StepNameList.SelectCsprojFile:
+                    <div class="card-header">
+                        Select .csproj File
+                        <div class="card-header-buttons text-end">
+                            <button class="btn btn-secondary me-2" @onclick="PrevStep" disabled="@(_loading)">
+                                <Icon Name="Previous" />
+                                Back
+                            </button>
+                            <button class="btn btn-primary" @onclick="(e) => NextStep(DataObjects.StepNameList.SelectCsprojFile)" disabled="@(_loading)">
+                                Next
+                                <Icon Name="Next" />
+                            </button>
+                        </div>
+                    </div>
+                    break;
+
+                case DataObjects.StepNameList.EnvironmentSettings:
+                    <div class="card-header">
+                        Environment Settings
+                        <div class="card-header-buttons text-end">
+                            <button class="btn btn-secondary me-2" @onclick="PrevStep" disabled="@(_loading)">
+                                <Icon Name="Previous" />
+                                Back
+                            </button>
+                            <button class="btn btn-primary" @onclick="(e) => NextStep(DataObjects.StepNameList.EnvironmentSettings)" disabled="@(_loading)">
+                                Next
+                                <Icon Name="Next" />
+                            </button>
+                        </div>
+                    </div>
+                    break;
+
+                case DataObjects.StepNameList.SelectPipelineSelection:
+                    <div class="card-header">
+                        Pipeline Selection
+                        <div class="card-header-buttons text-end">
+                            <button class="btn btn-secondary me-2" @onclick="PrevStep" disabled="@(_loading)">
+                                <Icon Name="Previous" />
+                                Back
+                            </button>
+                            <button class="btn btn-primary" @onclick="(e) => NextStep(DataObjects.StepNameList.SelectPipelineSelection)" disabled="@(_loading || (SelectedPipelineId <= 0 && string.IsNullOrWhiteSpace(NewPipelineName)))">
+                                Next
+                                <Icon Name="Next" />
+                            </button>
+                        </div>
+                    </div>
+                    break;
+
+                case DataObjects.StepNameList.YAMLPreviewAndSave:
+                    <div class="card-header">
+                        YAML Preview & Save
+                        <div class="card-header-buttons text-end">
+                            <button class="btn btn-secondary me-2" @onclick="PrevStep" disabled="@(_loading)">
+                                <Icon Name="Previous" />
+                                Back
+                            </button>
+                            <button class="btn btn-success" @onclick="(e) => NextStep(DataObjects.StepNameList.YAMLPreviewAndSave)" disabled="@(_loading)">
+                                <Icon Name="Save" />
+                                Save YAML & Pipeline Changes
+                            </button>
+                        </div>
+                    </div>
+                    break;
+
+                case DataObjects.StepNameList.Completed:
+                    <div class="card-header">Completed</div>
+                    break;
+            }
+        }
+
+        <div class="card-body">
+            @{
+                switch (StepNames[currentStep]) {
+                    case DataObjects.StepNameList.SelectPAT:
                         <div class="mb-3">
                             <label for="patInput" class="form-label">Personal Access Token (PAT):</label>
-                            <input type="password" disabled="@(_loading)" id="patInput" class="form-control" @bind="DevOpsPAT" placeholder="Enter your Azure DevOps PAT" />
+                            <input type="password" disabled="@(_loading)" id="patInput" class="form-control" @bind="DevOpsPAT" @bind:event="oninput" placeholder="Enter your Azure DevOps PAT" />
                         </div>
                         <div class="mb-3">
                             <label for="orgNameInput" class="form-label">Organization Name:</label>
-                            <input type="text" disabled="@(_loading)" id="orgNameInput" class="form-control" @bind="OrgName" placeholder="Enter your Organization Name" />
+                            <input type="text" disabled="@(_loading)" id="orgNameInput" class="form-control" @bind="OrgName" @bind:event="oninput" placeholder="Enter your Organization Name" />
                         </div>
 
                         <div class="mb-3">
                             <p>Or <a href="@Helpers.BuildUrl("login")">Login</a> to use the PAT and Org Information stored in the appsettings.json file.</p>
                         </div>
-                    </div>
+                        break;
 
-                    @if(_loading) {
-                        <div class="d-flex flex-column justify-content-center align-items-center my-5">
-                            <div class="spinner-border text-primary" role="status" aria-label="Loading DevOps Info">
-                                <span class="visually-hidden">Loading DevOps Info</span>
-                            </div>
-                            <div class="mt-3">
-                                <p>Loading DevOps Info... please wait, this can take up to a minute.</p>
-                            </div>
-                        </div>
-                    }
-
-                    @if(_loadingMessages.Any()) {
-                        <div class="card my-3">
-                            <div class="card-header">
-                                <strong>Process Updates</strong>
-                            </div>
-                            <div class="card-body" style="max-height: 300px; overflow-y: auto;">
-                                <ul class="list-group list-group-flush">
-                                    @foreach(var message in _loadingMessages) {
-                                        <li class="list-group-item py-1">
-                                            @message
-                                        </li>
-                                    }
-                                </ul>
-                            </div>
-                        </div>
-                    }
-                </div>
-            } else if(StepNames[currentStep] == DataObjects.StepNameList.SelectProject) {
-                <div class="card">
-                    <div class="card-footer text-end">
-                        <button class="btn btn-primary" @onclick="(e) => NextStep(DataObjects.StepNameList.SelectProject)" disabled="@(_loading ||string.IsNullOrEmpty(SelectedProjectId))">Next</button>
-                    </div>
-                    <div class="card-header">Select Project</div>
-                    <div class="card-body">
+                    case DataObjects.StepNameList.SelectProject:
                         <label class="form-label">Project:</label>
                         <select class="form-select" @onchange="ProjectChangedWizard" disabled="@_loading">
                             <option value="">-- Select Project --</option>
-                            @if(DevopsProjectInfos != null) {
-                                @foreach(var proj in DevopsProjectInfos.OrderBy(o => (string.Empty + o.ProjectName).ToLower())) {
+                            @if (DevopsProjectInfos != null) {
+                                @foreach (var proj in DevopsProjectInfos.OrderBy(o => (string.Empty + o.ProjectName).ToLower())) {
                                     <option value="@proj.ProjectId" selected="@(proj.ProjectId == SelectedProjectInfo?.ProjectId ? "selected" : null)">@proj.ProjectName</option>
                                 }
                             }
                         </select>
-                    </div>
+                        break;
 
-                    @if(_loading) {
-                        <div class="d-flex flex-column justify-content-center align-items-center my-5">
-                            <div class="spinner-border text-primary" role="status" aria-label="Loading DevOps Info">
-                                <span class="visually-hidden">Loading DevOps Info</span>
-                            </div>
-                            <div class="mt-3">
-                                <p>Loading DevOps Info... please wait, this can take up to a minute.</p>
-                            </div>
-                        </div>
-                    }
-
-
-                    @if(_loadingMessages.Any()) {
-                        <div class="card my-3">
-                            <div class="card-header">
-                                <strong>Process Updates</strong>
-                            </div>
-                            <div class="card-body" style="max-height: 300px; overflow-y: auto;">
-                                <table class="table table-striped">
-                                    <thead>
-                                        <tr>
-                                            <th scope="col">Message</th>
-                                            <th scope="col">Created</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @foreach(var message in _loadingMessages) {
-                                            <tr>
-                                                <td>@message.Message</td>
-                                                <td>@message.Created</td>
-                                            </tr>
-                                        }
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    }
-                </div>
-            } else if(StepNames[currentStep] == DataObjects.StepNameList.SelectRepository) {
-                <div class="card">
-                    <div class="card-footer text-end">
-                        <button class="btn btn-secondary me-2" @onclick="PrevStep" disabled="@(_loading)">Back</button>
-                        <button class="btn btn-primary" @onclick="(e) => NextStep(DataObjects.StepNameList.SelectRepository)" disabled="@(_loading || string.IsNullOrEmpty(SelectedRepoId))">Next</button>
-                    </div>
-                    <div class="card-header">Select Repository</div>
-                    <div class="card-body">
+                    case DataObjects.StepNameList.SelectRepository:
                         <label class="form-label">Repository:</label>
                         <select class="form-select" @onchange="RepoChangedWizard" disabled="@_loading">
                             <option value="">-- Select Repository --</option>
-                            @if(SelectedProjectInfo != null) {
-                                @foreach(var repo in SelectedProjectInfo.GitRepos.OrderBy(o => (string.Empty + o.RepoName).ToLower())) {
+                            @if (SelectedProjectInfo != null) {
+                                @foreach (var repo in SelectedProjectInfo.GitRepos.OrderBy(o => (string.Empty + o.RepoName).ToLower())) {
                                     <option value="@repo.RepoId" selected="@(repo.RepoId == SelectedRepoInfo?.RepoId ? "selected" : null)">@repo.RepoName</option>
                                 }
                             }
                         </select>
-                    </div>
+                        break;
 
-
-                    @if(_loading) {
-                        <div class="d-flex flex-column justify-content-center align-items-center my-5">
-                            <div class="spinner-border text-primary" role="status" aria-label="Loading DevOps Info">
-                                <span class="visually-hidden">Loading DevOps Info</span>
-                            </div>
-                            <div class="mt-3">
-                                <p>Loading DevOps Info... please wait, this can take up to a minute.</p>
-                            </div>
-                        </div>
-                    }
-
-
-                    @if(_loadingMessages.Any()) {
-                        <div class="card my-3">
-                            <div class="card-header">
-                                <strong>Process Updates</strong>
-                            </div>
-                            <div class="card-body" style="max-height: 300px; overflow-y: auto;">
-                                <table class="table table-striped">
-                                    <thead>
-                                        <tr>
-                                            <th scope="col">Message</th>
-                                            <th scope="col">Created</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @foreach(var message in _loadingMessages) {
-                                            <tr>
-                                                <td>@message.Message</td>
-                                                <td>@message.Created</td>
-                                            </tr>
-                                        }
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    }
-                </div>
-            } else if(StepNames[currentStep] == DataObjects.StepNameList.SelectBranch) {
-                <div class="card">
-                    <div class="card-footer text-end">
-                        <button class="btn btn-secondary me-2" @onclick="PrevStep" disabled="@(_loading)">Back</button>
-                        <button class="btn btn-primary" @onclick="(e) => NextStep(DataObjects.StepNameList.SelectBranch)" disabled="@(_loading || string.IsNullOrEmpty(SelectedBranch))">Next</button>
-                    </div>
-                    <div class="card-header">Select Branch</div>
-                    <div class="card-body">
+                    case DataObjects.StepNameList.SelectBranch:
                         <label class="form-label">Branch:</label>
                         <select class="form-select" @onchange="BranchChangedWizard" disabled="@_loading">
                             <option value="">-- Select Branch --</option>
-                            @if(SelectedRepoInfo != null) {
-                                @foreach(var branch in SelectedRepoInfo.GitBranches.OrderBy(o => (string.Empty + o.BranchName).ToLower())) {
+                            @if (SelectedRepoInfo != null) {
+                                @foreach (var branch in SelectedRepoInfo.GitBranches.OrderBy(o => (string.Empty + o.BranchName).ToLower())) {
                                     <option value="@branch.BranchName" selected="@(branch.BranchName == SelectedBranchInfo?.BranchName ? "selected" : null)">@branch.BranchName</option>
                                 }
                             }
                         </select>
-                    </div>
+                        break;
 
-                    @if(_loading) {
-                        <div class="d-flex flex-column justify-content-center align-items-center my-5">
-                            <div class="spinner-border text-primary" role="status" aria-label="Loading DevOps Info">
-                                <span class="visually-hidden">Loading DevOps Info</span>
-                            </div>
-                            <div class="mt-3">
-                                <p>Loading DevOps Info... please wait, this can take up to a minute.</p>
-                            </div>
-                        </div>
-                    }
-
-                    @if(_loadingMessages.Any()) {
-                        <div class="card my-3">
-                            <div class="card-header">
-                                <strong>Process Updates</strong>
-                            </div>
-                            <div class="card-body" style="max-height: 300px; overflow-y: auto;">
-                                <table class="table table-striped">
-                                    <thead>
-                                        <tr>
-                                            <th scope="col">Message</th>
-                                            <th scope="col">Created</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @foreach(var message in _loadingMessages) {
-                                            <tr>
-                                                <td>@message.Message</td>
-                                                <td>@message.Created</td>
-                                            </tr>
-                                        }
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    }
-                </div>
-            } else if(StepNames[currentStep] == DataObjects.StepNameList.SelectCsprojFile) {
-                <div class="card">
-                    <div class="card-footer text-end">
-                        <button class="btn btn-secondary me-2" @onclick="PrevStep" disabled="@(_loading)">Back</button>
-
-                        <button class="btn btn-primary" @onclick="(e) => NextStep(DataObjects.StepNameList.SelectCsprojFile)" disabled="@(_loading)">Next</button>
-                    </div>
-                    <div class="card-header">Select .csproj File</div>
-                    <div class="card-body">
-                        @if(SelectedBranchInfo == null || SelectedBranchInfo.Files == null || SelectedBranchInfo.Files.Count() == 0) {
+                    case DataObjects.StepNameList.SelectCsprojFile:
+                        if (SelectedBranchInfo == null || SelectedBranchInfo.Files == null || SelectedBranchInfo.Files.Count() == 0) {
                             <p>No file structure available for the selected branch.</p>
                         } else {
                             var csprojFiles = SelectedBranchInfo.Files
                             .Where(f => f.FileType.EndsWith(".csproj", StringComparison.OrdinalIgnoreCase))
                             .ToList();
-                            if(csprojFiles.Count == 0) {
+                            if (csprojFiles.Count == 0) {
                                 <p>No .csproj files found in this branch.</p>
                             } else {
                                 <label class="form-label">Choose a .csproj file:</label>
                                 <select class="form-select" @onchange="CsProjectFileChangedWizard" disabled="@_loading">
                                     <option value="">-- Select .csproj file --</option>
-                                    @foreach(var file in csprojFiles.OrderBy(f => f.Path)) {
+                                    @foreach (var file in csprojFiles.OrderBy(f => f.Path)) {
                                         <option value="@file.Path" selected="@(file.Path == SelectedCsprojPath ? "selected" : null)">@file.Path</option>
                                     }
                                 </select>
                             }
                         }
-                    </div>
+                        break;
 
-
-                    @if(_loading) {
-                        <div class="d-flex flex-column justify-content-center align-items-center my-5">
-                            <div class="spinner-border text-primary" role="status" aria-label="Loading DevOps Info">
-                                <span class="visually-hidden">Loading DevOps Info</span>
-                            </div>
-                            <div class="mt-3">
-                                <p>Loading DevOps Info... please wait, this can take up to a minute.</p>
-                            </div>
-                        </div>
-
-
-                    }
-
-
-                    @if(_loadingMessages.Any()) {
-                        <div class="card my-3">
-                            <div class="card-header">
-                                <strong>Process Updates</strong>
-                            </div>
-                            <div class="card-body" style="max-height: 300px; overflow-y: auto;">
-                                <table class="table table-striped">
-                                    <thead>
-                                        <tr>
-                                            <th scope="col">Message</th>
-                                            <th scope="col">Created</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @foreach(var message in _loadingMessages) {
-                                            <tr>
-                                                <td>@message.Message</td>
-                                                <td>@message.Created</td>
-                                            </tr>
-                                        }
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    }
-                </div>
-            } else if(StepNames[currentStep] == DataObjects.StepNameList.EnvironmentSettings) {
-                <div class="card">
-                    <div class="card-footer text-end">
-                        <button class="btn btn-secondary me-2" @onclick="PrevStep" disabled="@(_loading)">Back</button>
-                        <button class="btn btn-primary" @onclick="(e) => NextStep(DataObjects.StepNameList.EnvironmentSettings)" disabled="@(_loading)">Next</button>
-                    </div>
-                    <div class="card-header">Environment Settings</div>
-                    <div class="card-body">
+                    case DataObjects.StepNameList.EnvironmentSettings:
                         <p>Select environments to configure (optional):</p>
-                        @foreach(var envKey in GlobalSettings.App.EnvironmentOptions.Keys) {
+                        foreach (var envKey in GlobalSettings.App.EnvironmentOptions.Keys) {
                             <div class="form-check mb-2">
                                 <input type="checkbox" class="form-check-input" id="envCheck_@envKey" @onchange="@(e => EnvironmentChangedWizard(envKey, e))" disabled="@_loading" />
                                 <label class="form-check-label" for="envCheck_@envKey">@envKey Environment</label>
                             </div>
-                            if(EnvSettings.Keys.Contains(envKey)) {
+                            if (EnvSettings.Keys.Contains(envKey)) {
                                 var envSetting = EnvSettings[envKey];
                                 <div class="border p-2 mb-3">
                                     <h6>@envKey Environment Settings</h6>
@@ -352,85 +252,44 @@
                                     </select>
 
                                     <label class="form-label">Website Name:</label>
-                                    <input type="text" class="form-control" @bind="envSetting.WebsiteName" disabled="@_loading" />
-                                    @if(envSetting.IISDeploymentType == "IISWebApplication") {
+                                    <input type="text" class="form-control" @bind="envSetting.WebsiteName" @bind:event="oninput" disabled="@_loading" />
+
+                                    @if (envSetting.IISDeploymentType == "IISWebApplication") {
                                         <label class="form-label">Virtual Path:</label>
-                                        <input type="text" class="form-control" @bind="envSetting.VirtualPath" placeholder="Enter virtual path" disabled="@_loading" />
+                                        <input type="text" class="form-control" @bind="envSetting.VirtualPath" @bind:event="oninput" placeholder="Enter virtual path" disabled="@_loading" />
                                     }
+
                                     <label class="form-label">App Pool Name:</label>
-                                    <input type="text" class="form-control" @bind="envSetting.AppPoolName" disabled="@_loading" />
+                                    <input type="text" class="form-control" @bind="envSetting.AppPoolName" @bind:event="oninput" disabled="@_loading" />
+
                                     <label class="form-label">Variable Group Name:</label>
-                                    <input type="text" class="form-control" @bind="envSetting.VariableGroupName" placeholder="Enter variable group name" disabled="@_loading" />
+                                    <input type="text" class="form-control" @bind="envSetting.VariableGroupName" @bind:event="oninput" placeholder="Enter variable group name" disabled="@_loading" />
                                 </div>
                             }
                         }
-                    </div>
+                        break;
 
-                    @if(_loading) {
-                        <div class="d-flex flex-column justify-content-center align-items-center my-5">
-                            <div class="spinner-border text-primary" role="status" aria-label="Loading DevOps Info">
-                                <span class="visually-hidden">Loading DevOps Info</span>
-                            </div>
-                            <div class="mt-3">
-                                <p>Loading DevOps Info... please wait, this can take up to a minute.</p>
-                            </div>
-                        </div>
-                    }
-
-                    @if(_loadingMessages.Any()) {
-                        <div class="card my-3">
-                            <div class="card-header">
-                                <strong>Process Updates</strong>
-                            </div>
-                            <div class="card-body" style="max-height: 300px; overflow-y: auto;">
-                                <table class="table table-striped">
-                                    <thead>
-                                        <tr>
-                                            <th scope="col">Message</th>
-                                            <th scope="col">Created</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @foreach(var message in _loadingMessages) {
-                                            <tr>
-                                                <td>@message.Message</td>
-                                                <td>@message.Created</td>
-                                            </tr>
-                                        }
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    }
-                </div>
-            } else if(StepNames[currentStep] == DataObjects.StepNameList.SelectPipelineSelection) {
-                <div class="card">
-                    <div class="card-footer text-end">
-                        <button class="btn btn-secondary me-2" @onclick="PrevStep" disabled="@(_loading)">Back</button>
-                        <button class="btn btn-primary" @onclick="(e) => NextStep(DataObjects.StepNameList.SelectPipelineSelection)" disabled="@(_loading || ( SelectedPipelineId <= 0 && string.IsNullOrWhiteSpace(NewPipelineName)))">Next</button>
-                    </div>
-                    <div class="card-header">Pipeline Selection</div>
-                    <div class="card-body">
+                    case DataObjects.StepNameList.SelectPipelineSelection:
                         <label class="form-label">Select Existing Pipeline:</label>
-                        <select class="form-select" @onchange="@(e => PipelineChangedWizard(e) )" disabled="@_loading">
+                        <select class="form-select" @onchange="@(e => PipelineChangedWizard(e))" disabled="@_loading">
                             <option value="">-- Select Pipeline or Create New --</option>
-                            @foreach(var group in DevopsPipelineDefinitions.GroupBy(p => p.Path).OrderBy(g => g.Key)) {
+                            @foreach (var group in DevopsPipelineDefinitions.GroupBy(p => p.Path).OrderBy(g => g.Key)) {
                                 <optgroup label="@group.Key">
-                                    @foreach(var pipe in group.OrderBy(p => p.Name)) {
+                                    @foreach (var pipe in group.OrderBy(p => p.Name)) {
                                         <option value="@pipe.Id" selected="@(pipe.Id == SelectedPipelineInfo?.Id ? "selected" : null)">@pipe.Name</option>
                                     }
                                 </optgroup>
                             }
                         </select>
 
-                        @if(SelectedPipelineId <= 0 || SelectedPipelineId == null) {
+                        @if (SelectedPipelineId <= 0 || SelectedPipelineId == null) {
                             <div class="mt-3">
                                 <label class="form-label">New Pipeline Name:</label>
-                                <input type="text" class="form-control" @bind="NewPipelineName" placeholder="Enter pipeline name" />
+                                <input type="text" class="form-control" @bind="NewPipelineName" @bind:event="oninput" placeholder="Enter pipeline name" />
                             </div>
                         } else {
                             DataObjects.DevopsPipelineDefinition? pipeline = DevopsPipelineDefinitions?.FirstOrDefault(p => p.Id == SelectedPipelineId);
-                            if(pipeline != null) {
+                            if (pipeline != null) {
                                 <div class="mt-3">
                                     <p><strong>Pipeline Name:</strong> @pipeline.Name</p>
                                     <p><strong>Pipeline Id:</strong> @pipeline.Id</p>
@@ -438,60 +297,14 @@
                                 </div>
                             }
                         }
-                    </div>
+                        break;
 
-                    @if(_loading) {
-                        <div class="d-flex flex-column justify-content-center align-items-center my-5">
-                            <div class="spinner-border text-primary" role="status" aria-label="Loading DevOps Info">
-                                <span class="visually-hidden">Loading DevOps Info</span>
-                            </div>
-                            <div class="mt-3">
-                                <p>Loading DevOps Info... please wait, this can take up to a minute.</p>
-                            </div>
-                        </div>
-
-                        @if(_loadingMessages.Any()) {
-                            <div class="card my-3">
-                                <div class="card-header">
-                                    <strong>Process Updates</strong>
-                                </div>
-                                <div class="card-body" style="max-height: 300px; overflow-y: auto;">
-                                    <table class="table table-striped">
-                                        <thead>
-                                            <tr>
-                                                <th scope="col">Message</th>
-                                                <th scope="col">Created</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            @foreach(var message in _loadingMessages) {
-                                                <tr>
-                                                    <td>@message.Message</td>
-                                                    <td>@message.Created</td>
-                                                </tr>
-                                            }
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        }
-                    }
-                </div>
-            } else if(StepNames[currentStep] == DataObjects.StepNameList.YAMLPreviewAndSave) {
-                <div class="card">
-                    <div class="card-footer text-end">
-                        <button class="btn btn-secondary me-2" @onclick="PrevStep" disabled="@(_loading)">Back</button>
-                        <button class="btn btn-primary" @onclick="(e) => NextStep(DataObjects.StepNameList.YAMLPreviewAndSave)" disabled="@(_loading)">
-                            Save YAML & Pipeline Changes
-                        </button>
-                    </div>
-                    <div class="card-header">YAML Preview & Save</div>
-                    <div class="card-body">
-                        <div class="row">
+                    case DataObjects.StepNameList.YAMLPreviewAndSave:
+                        <div class="row yaml-preview">
                             <!-- Preview of current (existing) YAML and new YAML -->
                             <div class="col">
                                 <h5>Existing YAML</h5>
-                                @if(string.IsNullOrWhiteSpace(ExistingYamlContent)) {
+                                @if (string.IsNullOrWhiteSpace(ExistingYamlContent)) {
                                     <p>No existing content. This might be a new pipeline.</p>
                                 } else {
                                     <pre>@ExistingYamlContent</pre>
@@ -499,86 +312,79 @@
                             </div>
                             <div class="col">
                                 <h5>New YAML</h5>
-                                @if(string.IsNullOrWhiteSpace(NewYamlContent)) {
+                                @if (string.IsNullOrWhiteSpace(NewYamlContent)) {
                                     <p>No new content. There might be an error.</p>
                                 } else {
                                     <pre>@NewYamlContent</pre>
                                 }
                             </div>
                         </div>
+                        break;
+
+                    case DataObjects.StepNameList.Completed:
+                        <p>
+                            The YAML Pipeline has been created. Remember to edit your variable groups before triggering a deployment.
+                        </p>
+                        break;
+                }
+            }
+
+            @if (_loading) {
+                <div class="d-flex flex-column justify-content-center align-items-center my-5">
+                    <div class="spinner-border text-primary" role="status" aria-label="Loading DevOps Info">
+                        <span class="visually-hidden">Loading DevOps Info</span>
                     </div>
+                    <div class="mt-3">Loading DevOps Info... please wait, this can take up to a minute.</div>
+                </div>
+            } else if (_loadingMessages.Any()) {
+                <div class="update-messages-header">Update Information</div>
 
-                    @if(_loading) {
-                        <div class="d-flex flex-column justify-content-center align-items-center my-5">
-                            <div class="spinner-border text-primary" role="status" aria-label="Loading DevOps Info">
-                                <span class="visually-hidden">Loading DevOps Info</span>
-                            </div>
-                            <div class="mt-3">
-                                <p>Loading DevOps Info... please wait, this can take up to a minute.</p>
-                            </div>
-                        </div>
-                    }
-
-                    @if(_loadingMessages.Any()) {
-                        <div class="card my-3">
-                            <div class="card-header">
-                                <strong>Process Updates</strong>
-                            </div>
-                            <div class="card-body" style="max-height: 300px; overflow-y: auto;">
-                                <table class="table table-striped">
-                                    <thead>
-                                        <tr>
-                                            <th scope="col">Message</th>
-                                            <th scope="col">Created</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @foreach(var message in _loadingMessages) {
-                                            <tr>
-                                                <td>@message.Message</td>
-                                                <td>@message.Created</td>
-                                            </tr>
-                                        }
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    }
-
+                <div class="update-messages">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr class="table-dark">
+                                <th scope="col">Message</th>
+                                <th scope="col">Created</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var message in _loadingMessages) {
+                                <tr>
+                                    <td>@message.Message</td>
+                                    <td>@message.Created</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
                 </div>
             }
         </div>
     </div>
 }
 
-@* Page structure code section *@
 @code {
-    protected class LoadingMessage
-    {
-        public DateTime Created { get; set; } = DateTime.Now;
-        public string Message { get; set; } = string.Empty;
-    }
     [Parameter] public string? TenantCode { get; set; }
 
+    protected bool _hidePAT = false;
     protected bool _loadedData = false;
     protected bool _loading = false;
     private List<Guid> _loadingMessagesIds = new List<Guid>();
     private List<LoadingMessage> _loadingMessages = new List<LoadingMessage>();
     protected string _pageName = "home";
 
-
-    private void ClearLoadingMessages()
+    protected class LoadingMessage
     {
+        public DateTime Created { get; set; } = DateTime.Now;
+        public string Message { get; set; } = string.Empty;
+    }
+
+    private void ClearLoadingMessages() {
         _loadingMessagesIds = new List<Guid>();
         _loadingMessages = new List<LoadingMessage>();
         StateHasChanged();
     }
-    protected System.Timers.Timer _timer = new System.Timers.Timer();
 
-    public void Dispose()
-    {
-        _timer.Dispose();
-
+    public void Dispose() {
         Model.OnChange -= OnDataModelUpdated;
         Model.OnSignalRUpdate -= SignalRUpdate;
 
@@ -586,18 +392,18 @@
         Model.Subscribers_OnSignalRUpdate.Remove(_pageName);
     }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if(firstRender) {
+    protected override async Task OnAfterRenderAsync(bool firstRender) {
+        if (firstRender) {
             Model.TenantCodeFromUrl = TenantCode;
             Model.OnChange += OnDataModelUpdated;
         }
 
-        if(Model.Loaded) {
-            if(Model.LoggedIn) {
-                if(!_loadedData) {
+        if (Model.Loaded) {
+            if (Model.LoggedIn) {
+                if (!_loadedData) {
                     _loadedData = true;
                     await Helpers.ValidateUrl(TenantCode, true);
+                    _hidePAT = true;
                     currentStep = 1; // skip the PAT and orgname step if we are logged in
                     // ok so now we are logged in, that means we dont need to collect a PAT or ORGNAME
                     // so for now just go and lookup the projectnames and other orginfo
@@ -609,7 +415,7 @@
                     StateHasChanged();
                 }
             } else {
-                if(!_loadedData) {
+                if (!_loadedData) {
                     _loadedData = true;
                     await Helpers.ValidateUrl(TenantCode, true);
                     _loading = true;
@@ -624,45 +430,42 @@
         }
     }
 
-    protected override void OnInitialized()
-    {
-        if(!Model.Subscribers_OnChange.Contains(_pageName)) {
+    protected override void OnInitialized() {
+        if (!Model.Subscribers_OnChange.Contains(_pageName)) {
             Model.Subscribers_OnChange.Add(_pageName);
             Model.OnChange += OnDataModelUpdated;
         }
 
-        if(!Model.Subscribers_OnSignalRUpdate.Contains(_pageName)) {
+        if (!Model.Subscribers_OnSignalRUpdate.Contains(_pageName)) {
             Model.Subscribers_OnSignalRUpdate.Add(_pageName);
             Model.OnSignalRUpdate += SignalRUpdate;
         }
 
-        _timer = new System.Timers.Timer();
-        _timer.Interval = 1000;
-        _timer.Elapsed += TimerExecuted;
-        _timer.AutoReset = true;
-        //_timer.Start();
+        //_timer = new System.Timers.Timer();
+        //_timer.Interval = 1000;
+        //_timer.Elapsed += TimerExecuted;
+        //_timer.AutoReset = true;
+        ////_timer.Start();
 
         Model.View = _pageName;
     }
 
-    protected void OnDataModelUpdated()
-    {
-        if(Model.View == _pageName) {
+    protected void OnDataModelUpdated() {
+        if (Model.View == _pageName) {
             StateHasChanged();
         }
     }
 
-    protected async void SignalRUpdate(DataObjects.SignalRUpdate update)
-    {
-        if(update.UpdateType == DataObjects.SignalRUpdateType.LoadingDevOpsInfoStatusUpdate && update.ItemId != null) {
-            if(_loadingMessagesIds != null && !_loadingMessagesIds.Any(m => m == update.ItemId)) {
+    protected async void SignalRUpdate(DataObjects.SignalRUpdate update) {
+        if (update.UpdateType == DataObjects.SignalRUpdateType.LoadingDevOpsInfoStatusUpdate && update.ItemId != null) {
+            if (_loadingMessagesIds != null && !_loadingMessagesIds.Any(m => m == update.ItemId)) {
                 // no duplicates allowed
-                if(update?.ItemId != null) {
+                if (update?.ItemId != null) {
                     _loadingMessagesIds.Add(update.ItemId.Value);
                     _loadingMessages.Insert(0, new LoadingMessage {
-                            Created = DateTime.UtcNow,
-                            Message = update.Message,
-                        }
+                        Created = DateTime.UtcNow,
+                        Message = update.Message,
+                    }
                     );
                 }
                 StateHasChanged();
@@ -675,7 +478,7 @@
         get {
             string output = "";
 
-            if(Model.Tenant.TenantSettings.Logo.HasValue && Model.Tenant.TenantSettings.Logo != Guid.Empty) {
+            if (Model.Tenant.TenantSettings.Logo.HasValue && Model.Tenant.TenantSettings.Logo != Guid.Empty) {
                 output = Model.ApplicationUrl + "File/View/" + ((Guid)Model.Tenant.TenantSettings.Logo).ToString();
             }
 
@@ -683,9 +486,8 @@
         }
     }
 
-    protected void TimerExecuted(Object? source, System.Timers.ElapsedEventArgs e)
-    {
-        Console.WriteLine("Timer Executed");
+    protected void TimerExecuted(Object? source, System.Timers.ElapsedEventArgs e) {
+        //Console.WriteLine("Timer Executed");
     }
 }
 
@@ -720,7 +522,8 @@
         DataObjects.StepNameList.SelectCsprojFile,
         DataObjects.StepNameList.EnvironmentSettings,
         DataObjects.StepNameList.SelectPipelineSelection,
-        DataObjects.StepNameList.YAMLPreviewAndSave
+        DataObjects.StepNameList.YAMLPreviewAndSave,
+        DataObjects.StepNameList.Completed,
     ];
 
     protected DataObjects.DevopsProjectInfo? SelectedProjectInfo => DevopsProjectInfos?.FirstOrDefault(p => p.ProjectId == SelectedProjectId);
@@ -745,20 +548,19 @@
 @* App specific method definition code section *@
 @code {
 
-    private async Task NextStep(string? stepName = "")
-    {
-        Console.WriteLine("Test");
+    private async Task NextStep(string? stepName = "") {
+        //Console.WriteLine("Test");
         ClearLoadingMessages();
-        if(currentStep < StepNames.Length - 1) {
+        if (currentStep < StepNames.Length - 1) {
             currentStep++;
             StateHasChanged();
         }
 
         // we are checking against the stepname passed in, not based on the current step,
         // so this switch is actually based off of where we were when clicked, not what page is activly showing
-        switch(stepName) {
+        switch (stepName) {
             case DataObjects.StepNameList.SelectProject:
-                if(!string.IsNullOrWhiteSpace(SelectedProjectId)) {
+                if (!string.IsNullOrWhiteSpace(SelectedProjectId)) {
                     // after select the project id we can lookup the pipeline info.
                     _loading = true;
                     try {
@@ -770,7 +572,7 @@
                         );
 
                         DevopsPipelineDefinitions = results?.ToList() ?? new List<DataObjects.DevopsPipelineDefinition>();
-                    } catch(Exception ex) {
+                    } catch (Exception ex) {
                         Console.WriteLine($"Error loading DevOps Info: {ex.Message}");
                     } finally {
                         _loading = false;
@@ -779,39 +581,39 @@
                     // people can see 200ms delay, so delay that so you at least get a chance to glance at the message before it dissapears.
                     await Task.Delay(600);
 
-                    ClearLoadingMessages();
+                    //ClearLoadingMessages();
                 }
                 break;
             case DataObjects.StepNameList.SelectRepository:
-                if(string.IsNullOrWhiteSpace(SelectedRepoId)) {
+                if (string.IsNullOrWhiteSpace(SelectedRepoId)) {
                     // do nothing, this is being updated from the dropdown changing
                 }
                 break;
             case DataObjects.StepNameList.SelectBranch:
-                if(string.IsNullOrWhiteSpace(SelectedBranch)) {
+                if (string.IsNullOrWhiteSpace(SelectedBranch)) {
                     // do nothing, this is being updated from the dropdown changing
                 }
                 break;
             case DataObjects.StepNameList.SelectCsprojFile:
-                if(string.IsNullOrWhiteSpace(SelectedCsprojPath)) {
+                if (string.IsNullOrWhiteSpace(SelectedCsprojPath)) {
                     // do nothing, this is being updated from the dropdown changing
                 }
                 break;
             case DataObjects.StepNameList.EnvironmentSettings:
-                if(EnvSettings == null || EnvSettings.Count() == 0) {
+                if (EnvSettings == null || EnvSettings.Count() == 0) {
                     // do nothing, this step just collects information, nothing needs to be triggered
                 }
                 break;
             case DataObjects.StepNameList.SelectPipelineSelection:
                 // ok so we have collected everything there is to collect.
                 // Now go fetch the current pipeline info (if any exists) and the new pipeline content that is being proposed.
-                if(!string.IsNullOrWhiteSpace(NewPipelineName) || SelectedPipelineId != null) {
+                if (!string.IsNullOrWhiteSpace(NewPipelineName) || SelectedPipelineId != null) {
                     // now we should post the collected data to the server and collect the existing yml (if any) and the new yml
                     // this should be done in a new api endpoint
                     ExistingYamlContent = string.Empty;
 
                     var pipeline = DevopsPipelineDefinitions.FirstOrDefault(p => p.Id == SelectedPipelineId);
-                    if(pipeline != null && !string.IsNullOrEmpty(pipeline.YamlFileName)) {
+                    if (pipeline != null && !string.IsNullOrEmpty(pipeline.YamlFileName)) {
                         var filePath = pipeline.YamlFileName;
 
                         try {
@@ -827,7 +629,7 @@
                             ExistingYamlContent = await Http.GetStringAsync(DataObjects.Endpoints.DevOps.GetDevOpsYmlFileContent + "?filePath=" + Uri.EscapeDataString(filePath));
                             // ok so now that we have selected a pipeline we can show its existing?
                             Console.WriteLine("Loaded pipeline YAML successfully.");
-                        } catch(Exception ex) {
+                        } catch (Exception ex) {
                             ExistingYamlContent = "";
                             Console.WriteLine("Error loading pipeline YAML: " + ex.Message);
                         }
@@ -841,55 +643,58 @@
 
                     try {
                         var response = await Helpers.GetOrPost<string>($"{DataObjects.Endpoints.DevOps.PreviewDevOpsYmlFileContents}", DevOpsPipelineRequest);
-                        if(!string.IsNullOrWhiteSpace(response)) {
+                        if (!string.IsNullOrWhiteSpace(response)) {
                             NewYamlContent = response;
                             _loadingMessages.Insert(0, new LoadingMessage { Message = "Preview fetched successfully.", Created = DateTime.UtcNow });
                         } else {
                             _loadingMessages.Insert(0, new LoadingMessage { Message = $"Error", Created = DateTime.UtcNow });
                         }
-                    } catch(Exception ex) {
+                    } catch (Exception ex) {
                         _loadingMessages.Insert(0, new LoadingMessage { Message = $"Exception: {ex.Message}", Created = DateTime.UtcNow });
                     } finally {
                         _loading = false;
                         StateHasChanged();
                     }
-
-                    StateHasChanged();
                 }
                 break;
             case DataObjects.StepNameList.YAMLPreviewAndSave:
                 try {
                     var response = await Http.PostAsJsonAsync($"{DataObjects.Endpoints.DevOps.CreateOrUpdateDevOpsPipeline}", DevOpsPipelineRequest);
-                    if(response.IsSuccessStatusCode) {
+                    if (response.IsSuccessStatusCode) {
                         _loadingMessages.Insert(0, new LoadingMessage { Message = "Pipeline created/updated successfully.", Created = DateTime.UtcNow });
                     } else {
                         _loadingMessages.Insert(0, new LoadingMessage { Message = $"Error: {response.ReasonPhrase}", Created = DateTime.UtcNow });
                     }
-                } catch(Exception ex) {
+                } catch (Exception ex) {
                     _loadingMessages.Insert(0, new LoadingMessage { Message = $"Exception: {ex.Message}", Created = DateTime.UtcNow });
                 } finally {
                     _loading = false;
+
+                    // Set the step to the completed step.
+                    if (currentStep < StepNames.Length - 1) {
+                        currentStep++;
+                    }
+
                     StateHasChanged();
                 }
                 break;
             // This step doesn't need a doesn't need a next button.... instead we just have a save button in its place
+
             default:
                 break;
         }
     }
 
 
-    private void PrevStep()
-    {
+    private void PrevStep() {
         ClearLoadingMessages();
-        if(currentStep > 0) {
+        if (currentStep > 0) {
             currentStep--;
             StateHasChanged();
         }
     }
 
-    private async Task PATandOrgNameChangedWizard()
-    {
+    private async Task PATandOrgNameChangedWizard() {
         ClearLoadingMessages();
         _loading = true;
         StateHasChanged();
@@ -902,7 +707,7 @@
                     "&pat=" + Uri.EscapeDataString(DevOpsPAT)
                 );
 
-                if(result != null && result.Any()) {
+                if (result != null && result.Any()) {
                     DevopsProjectInfos = result.ToList();
                     // now move to the next step
 
@@ -912,10 +717,10 @@
 
                     DevopsProjectInfos = new List<DataObjects.DevopsProjectInfo>();
                 }
-            } catch(Exception ex) {
+            } catch (Exception ex) {
                 Console.WriteLine($"Error loading DevOps Info: {ex.Message}");
             }
-        } catch(Exception ex) {
+        } catch (Exception ex) {
             Console.WriteLine("Error in PATandOrgNameChangedWizard: " + ex.Message);
         } finally {
             _loading = false;
@@ -926,8 +731,7 @@
     }
 
     // Event handler wrappers for wizard selections that call the existing methods.
-    private async Task ProjectChangedWizard(ChangeEventArgs e)
-    {
+    private async Task ProjectChangedWizard(ChangeEventArgs e) {
         ClearLoadingMessages();
         _loading = true;
         StateHasChanged();
@@ -938,7 +742,7 @@
             SelectedRepoId = "";
             SelectedBranch = "";
 
-            if(SelectedProjectInfo != null) {
+            if (SelectedProjectInfo != null) {
                 List<DataObjects.DevopsGitRepoInfo>? result = await Http.GetFromJsonAsync<List<DataObjects.DevopsGitRepoInfo>>(DataObjects.Endpoints.DevOps.GetDevOpsRepos +
                     "?connectionId=" + Uri.EscapeDataString((string.Empty + Model?.SignalrClientRegistration?.ConnectionId).Trim()) +
                     "&projectId=" + Uri.EscapeDataString($"{SelectedProjectInfo.ProjectId}") +
@@ -946,10 +750,10 @@
                     "&pat=" + Uri.EscapeDataString(DevOpsPAT)
                 );
 
-                if(result != null && result.Any()) {
-                    if(DevopsProjectInfos != null) {
-                        foreach(var item in DevopsProjectInfos) {
-                            if(item.ProjectId == SelectedProjectId) {
+                if (result != null && result.Any()) {
+                    if (DevopsProjectInfos != null) {
+                        foreach (var item in DevopsProjectInfos) {
+                            if (item.ProjectId == SelectedProjectId) {
                                 item.GitRepos = result;
                             } else {
                                 item.GitRepos = new List<DataObjects.DevopsGitRepoInfo>();
@@ -958,7 +762,7 @@
                     }
                 }
             }
-        } catch(Exception ex) {
+        } catch (Exception ex) {
             Console.WriteLine("Error in ProjectChangedWizard: " + ex.Message);
         } finally {
             _loading = false;
@@ -968,8 +772,7 @@
         }
     }
 
-    private async Task RepoChangedWizard(ChangeEventArgs e)
-    {
+    private async Task RepoChangedWizard(ChangeEventArgs e) {
         ClearLoadingMessages();
         _loading = true;
         StateHasChanged();
@@ -977,7 +780,7 @@
             SelectedRepoId = e.Value?.ToString() ?? "";
             SelectedBranch = "";
 
-            if(SelectedRepoInfo != null) {
+            if (SelectedRepoInfo != null) {
                 List<DataObjects.DevopsGitRepoBranchInfo>? result = await Http.GetFromJsonAsync<List<DataObjects.DevopsGitRepoBranchInfo>>(DataObjects.Endpoints.DevOps.GetDevOpsBranches +
                     "?connectionId=" + Uri.EscapeDataString((string.Empty + Model?.SignalrClientRegistration?.ConnectionId).Trim()) +
                     "&projectId=" + Uri.EscapeDataString($"{SelectedProjectInfo?.ProjectId}") +
@@ -986,14 +789,14 @@
                     "&pat=" + Uri.EscapeDataString(DevOpsPAT)
                 );
 
-                if(result != null && result.Any()) {
+                if (result != null && result.Any()) {
                     // blank out the repos of selected ones.
-                    if(DevopsProjectInfos != null) {
+                    if (DevopsProjectInfos != null) {
 
-                        foreach(var project in DevopsProjectInfos) {
-                            if(project.ProjectId == SelectedProjectId) {
-                                foreach(var repo in project.GitRepos) {
-                                    if(repo.RepoId == SelectedRepoInfo?.RepoId) {
+                        foreach (var project in DevopsProjectInfos) {
+                            if (project.ProjectId == SelectedProjectId) {
+                                foreach (var repo in project.GitRepos) {
+                                    if (repo.RepoId == SelectedRepoInfo?.RepoId) {
                                         repo.GitBranches = result;
                                     } else {
                                         repo.GitBranches = new List<DataObjects.DevopsGitRepoBranchInfo>();
@@ -1004,7 +807,7 @@
                     }
                 }
             }
-        } catch(Exception ex) {
+        } catch (Exception ex) {
             Console.WriteLine("Error in RepoChangedWizard: " + ex.Message);
         } finally {
             _loading = false;
@@ -1014,8 +817,7 @@
         }
     }
 
-    private async Task BranchChangedWizard(ChangeEventArgs e)
-    {
+    private async Task BranchChangedWizard(ChangeEventArgs e) {
         ClearLoadingMessages();
         _loading = true;
         StateHasChanged();
@@ -1023,7 +825,7 @@
             SelectedBranch = e.Value?.ToString() ?? "";
 
             // now lookup the files so we can select the csproj
-            if(SelectedBranchInfo != null) {
+            if (SelectedBranchInfo != null) {
                 // string projectId,  string repoId,  string branchName,string? pat = null, string? orgName = null,  string? connectionId = null
                 List<DataObjects.DevopsFileItem>? result = await Http.GetFromJsonAsync<List<DataObjects.DevopsFileItem>>(DataObjects.Endpoints.DevOps.GetDevOpsFiles +
                     "?connectionId=" + Uri.EscapeDataString((string.Empty + Model?.SignalrClientRegistration?.ConnectionId).Trim()) +
@@ -1034,15 +836,15 @@
                     "&pat=" + Uri.EscapeDataString(DevOpsPAT)
                 );
 
-                if(result != null && result.Any()) {
+                if (result != null && result.Any()) {
                     // blank out the repos of selected ones.
-                    if(DevopsProjectInfos != null) {
-                        foreach(var project in DevopsProjectInfos) {
-                            if(project.ProjectId == SelectedProjectId) {
-                                foreach(var repo in project.GitRepos) {
-                                    if(repo.RepoId == SelectedRepoInfo?.RepoId) {
-                                        foreach(var branch in repo.GitBranches) {
-                                            if(branch.BranchName == SelectedBranchInfo?.BranchName) {
+                    if (DevopsProjectInfos != null) {
+                        foreach (var project in DevopsProjectInfos) {
+                            if (project.ProjectId == SelectedProjectId) {
+                                foreach (var repo in project.GitRepos) {
+                                    if (repo.RepoId == SelectedRepoInfo?.RepoId) {
+                                        foreach (var branch in repo.GitBranches) {
+                                            if (branch.BranchName == SelectedBranchInfo?.BranchName) {
                                                 branch.Files = result.ToList();
                                             } else {
                                                 branch.Files = new List<DataObjects.DevopsFileItem>();
@@ -1055,7 +857,7 @@
                     }
                 }
             }
-        } catch(Exception ex) {
+        } catch (Exception ex) {
             Console.WriteLine("Error in BranchChangedWizard: " + ex.Message);
         } finally {
             _loading = false;
@@ -1067,15 +869,14 @@
 
 
 
-    private async Task CsProjectFileChangedWizard(ChangeEventArgs e)
-    {
+    private async Task CsProjectFileChangedWizard(ChangeEventArgs e) {
         ClearLoadingMessages();
         _loading = true;
         StateHasChanged();
         try {
             // This method is called when the user selects a .csproj file.
             SelectedCsprojPath = e?.Value?.ToString() ?? "";
-        } catch(Exception ex) {
+        } catch (Exception ex) {
             Console.WriteLine("Error in BranchChangedWizard: " + ex.Message);
         } finally {
             _loading = false;
@@ -1084,8 +885,7 @@
         }
     }
 
-    private async Task EnvironmentChangedWizard(GlobalSettings.EnvironmentType envKey, ChangeEventArgs e)
-    {
+    private async Task EnvironmentChangedWizard(GlobalSettings.EnvironmentType envKey, ChangeEventArgs e) {
         ClearLoadingMessages();
         _loading = true;
         StateHasChanged();
@@ -1095,25 +895,25 @@
             bool isChecked = e.Value != null && bool.TryParse(e.Value.ToString(), out bool result) && result;
 
             // if we just checked it, then we need to create it
-            if(isChecked) {
+            if (isChecked) {
                 string websiteNameDefault = GlobalSettings.App.EnvironmentOptions[envKey]?.Hostname ?? string.Empty;
                 var setting = new DataObjects.EnvSetting {
-                        EnvName = envKey,
-                        IISDeploymentType = "IISWebApplication",
-                        WebsiteName = "" + websiteNameDefault,
-                        VirtualPath = "/" + SelectedProjectInfo?.ProjectName?.ToLower(),
-                        AppPoolName = "" + websiteNameDefault + "." + SelectedProjectInfo?.ProjectName?.ToLower(),
-                        VariableGroupName = $"{SelectedProjectInfo?.ProjectName}_{GlobalSettings.App.VariableGroupNameDefault}_{envKey}"
-                    };
+                    EnvName = envKey,
+                    IISDeploymentType = "IISWebApplication",
+                    WebsiteName = "" + websiteNameDefault,
+                    VirtualPath = "/" + SelectedProjectInfo?.ProjectName?.ToLower(),
+                    AppPoolName = "" + websiteNameDefault + "." + SelectedProjectInfo?.ProjectName?.ToLower(),
+                    VariableGroupName = $"{SelectedProjectInfo?.ProjectName}_{GlobalSettings.App.VariableGroupNameDefault}_{envKey}"
+                };
 
                 EnvSettings[envKey] = setting;
             } else {
                 // we just unchecked it and need to clear it out
-                if(EnvSettings.ContainsKey(envKey)) {
+                if (EnvSettings.ContainsKey(envKey)) {
                     EnvSettings.Remove(envKey);
                 }
             }
-        } catch(Exception ex) {
+        } catch (Exception ex) {
             Console.WriteLine("Error in BranchChangedWizard: " + ex.Message);
         } finally {
             _loading = false;
@@ -1122,23 +922,22 @@
         }
     }
 
-    private async Task EnvironmentDeploymentTypeChangedWizard(GlobalSettings.EnvironmentType envKey, ChangeEventArgs e)
-    {
+    private async Task EnvironmentDeploymentTypeChangedWizard(GlobalSettings.EnvironmentType envKey, ChangeEventArgs e) {
         ClearLoadingMessages();
         _loading = true;
         StateHasChanged();
         try {
             // Convert the event args value to a string.
             string deploymentType = e.Value?.ToString() ?? "";
-            if(EnvSettings.ContainsKey(envKey)) {
+            if (EnvSettings.ContainsKey(envKey)) {
                 EnvSettings[envKey].IISDeploymentType = deploymentType;
-                if(deploymentType == "IISWebApplication") {
+                if (deploymentType == "IISWebApplication") {
                     EnvSettings[envKey].VirtualPath = "/" + SelectedProjectInfo?.ProjectName?.ToLower();
                 } else {
                     EnvSettings[envKey].VirtualPath = "";
                 }
             }
-        } catch(Exception ex) {
+        } catch (Exception ex) {
             Console.WriteLine("Error in BranchChangedWizard: " + ex.Message);
         } finally {
             _loading = false;
@@ -1147,16 +946,15 @@
         }
     }
 
-    private async Task PipelineChangedWizard(ChangeEventArgs e)
-    {
+    private async Task PipelineChangedWizard(ChangeEventArgs e) {
         try {
             ExistingYamlContent = string.Empty;
             NewYamlContent = string.Empty;
             SelectedPipelineId = 0;
-            if(int.TryParse(e.Value?.ToString(), out int pid)) {
+            if (int.TryParse(e.Value?.ToString(), out int pid)) {
                 SelectedPipelineId = pid;
             }
-        } catch(Exception ex) {
+        } catch (Exception ex) {
             Console.WriteLine("Error in OnPipelineChanged: " + ex.Message);
         } finally {
             _loading = false;
@@ -1165,8 +963,7 @@
         }
     }
 
-    private async Task NavigateToStep(int i)
-    {
+    private async Task NavigateToStep(int i) {
         currentStep = i;
         await Task.CompletedTask;
         StateHasChanged();

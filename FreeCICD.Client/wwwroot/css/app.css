@@ -1310,3 +1310,39 @@ label.unbold {
 .monaco-editor-container .monaco-diff-editor {
     min-height:100px;
 }
+
+.breadcrumb-item:not(.active) {
+    opacity:0.4;
+}
+
+.breadcrumb-item.active {
+    color: var(--bs-link-color);
+}
+
+.card-header {
+    font-size:1.6em;
+    font-weight:bold;
+}
+
+.card-header .card-header-buttons {
+    display: inline-block;
+    float: right;
+}
+
+.update-messages {
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.update-messages-header {
+    font-size:1.3em;
+    font-weight:bold;
+    margin-top:1.5em;
+    padding-top:1em;
+    border-top:solid 1px var(--bs-border-color);
+}
+
+.yaml-preview {
+    max-height: 500px;
+    overflow-y: auto;
+}

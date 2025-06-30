@@ -33,7 +33,7 @@
     <HeadOutlet @rendermode="new InteractiveWebAssemblyRenderMode(prerender: false)" />
 </head>
 
-<body id="body-element" data-bs-theme="" class="loading">
+<body id="body-element" data-bs-theme="" class="">
     <Routes @rendermode="new InteractiveWebAssemblyRenderMode(prerender: false)" />
     <script src="https://cdn.jsdelivr.net/npm/@@thumbmarkjs/thumbmarkjs/dist/thumbmark.umd.js"></script>
     <script src="@(applicationUrl + "_content/Blazor.Bootstrap/blazor.bootstrap.js?v=" + appVersion)"></script>
@@ -269,6 +269,15 @@
                 return false;
             } else {
                 return !!(e.offsetWidth || e.offsetHeight || e.getClientRects().length );
+            }
+        }
+
+        function isVisibleByElementId(elementId) {
+            let e = document.getElementById(elementId);
+            if (e == undefined || e == null) {
+                return false;
+            } else {
+                return isVisible(e);
             }
         }
 

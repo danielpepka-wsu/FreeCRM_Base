@@ -45,8 +45,8 @@ public partial interface IDataAccess
     Task<List<DataObjects.DevopsPipelineDefinition>> GetDevOpsPipelines(string projectId, string pat, string orgName, string? connectionId = null);
 
     Task<string> GenerateYmlFileContents(string devopsProjectId, string devopsRepoId, string devopsBranch, int? devopsPipelineId, string? devopsPipelineName, string codeProjectId, string codeRepoId, string codeBranchName, string codeCsProjectFile, Dictionary<GlobalSettings.EnvironmentType, DataObjects.EnvSetting> environmentSettings, string pat, string orgName, string? connectionId = null);
-    Task<DataObjects.BuildDefinition> CreateOrUpdateDevopsPipeline(string devopsProjectId, string devopsRepoId, string devopsBranchName, int? devopsPipelineId, string? devopsPipelineName, string codeProjectId, string codeRepoId, string codeBranchName, string codeCsProjectFile,  Dictionary<GlobalSettings.EnvironmentType, DataObjects.EnvSetting> environmentSettings, string pat, string orgName, string? connectionId = null);
-    
+    Task<DataObjects.BuildDefinition> CreateOrUpdateDevopsPipeline(string devopsProjectId, string devopsRepoId, string devopsBranchName, int? devopsPipelineId, string? devopsPipelineName, string codeProjectId, string codeRepoId, string codeBranchName, string codeCsProjectFile, Dictionary<GlobalSettings.EnvironmentType, DataObjects.EnvSetting> environmentSettings, string pat, string orgName, string? connectionId = null);
+
 
     Task<DataObjects.GitUpdateResult> CreateOrUpdateGitFile(string projectId, string repoId, string branch, string filePath, string fileContent, string pat, string orgName, string? connectionId = null);
     Task<string> GetGitFile(string filePath, string projectId, string repoId, string branch, string pat, string orgName, string? connectionId = null);
@@ -427,7 +427,7 @@ public partial class DataAccess
                 try {
                     projects = (await projectClient.GetProjects()).ToList();
                     projects = projects.Where(o => !GlobalSettings.App.AzureDevOpsProjectNameStartsWithIgnoreValues.Any(v => (string.Empty + o.Name).ToLower().StartsWith((string.Empty + v).ToLower()))).ToList();
-                    Console.WriteLine($"Found {projects.Count} projects in organization:");
+                    //Console.WriteLine($"Found {projects.Count} projects in organization:");
                 } catch (Exception ex) {
                     Console.WriteLine($"Error fetching projects for organization: {ex.Message}");
                 }
@@ -489,7 +489,7 @@ public partial class DataAccess
                     Console.WriteLine("  Git Repositories:");
                     var repo = await gitClient.GetRepositoryAsync(projectId, repoId);
                     dynamic repoResource = repo.Links.Links["web"];
-                    
+
                     var repoInfo = new DataObjects.DevopsGitRepoInfo {
                         RepoName = repo.Name,
                         RepoId = repo.Id.ToString(),
@@ -767,7 +767,7 @@ public partial class DataAccess
                 }
             } else {
 
-            
+
 
                 var changes = new List<GitChange>
                 {
@@ -964,7 +964,7 @@ public partial class DataAccess
                 Message = "Start of lookup of pipeline"
             });
         }
-        if(pipelineId == 0) {
+        if (pipelineId == 0) {
             // no pipeline yet
             output.Name = "No pipeline yet";
         } else {
@@ -1128,11 +1128,11 @@ public partial class DataAccess
             sb.AppendLine($"  - name: {kv.Key}");
             sb.AppendLine($"    value: \"{kv.Value}\"");
         }
-        
+
 
         foreach (var envKey in GlobalSettings.App.EnviormentTypeOrder) {
             // use the global list for ordering
-            if (environmentSettings.ContainsKey(envKey)) { 
+            if (environmentSettings.ContainsKey(envKey)) {
                 var env = environmentSettings[envKey];
                 //add a comment at the start of the yml section
                 sb.AppendLine($"# Environment: {env.EnvName}");
@@ -1164,7 +1164,7 @@ public partial class DataAccess
         string output = string.Empty;
         var sb = new System.Text.StringBuilder();
         foreach (var envKey in GlobalSettings.App.EnviormentTypeOrder) {
-            if (environmentSettings.ContainsKey(envKey)) {           
+            if (environmentSettings.ContainsKey(envKey)) {
                 var env = environmentSettings[envKey];
                 var envSetting = GlobalSettings.App.EnvironmentOptions[envKey];
 
@@ -1204,7 +1204,7 @@ public partial class DataAccess
                 sb.AppendLine($"                    DotNetVersion: \"{dotNetVersion}\"");
                 sb.AppendLine($"                    AppPoolIdentity: \"{appPoolIdentity}\"");
                 if (!string.IsNullOrWhiteSpace(env.BindingInfo)) {
-                sb.AppendLine($"                    CustomBindings: \"$(CI_{env.EnvName.ToString()}_BindingInfo)\"");
+                    sb.AppendLine($"                    CustomBindings: \"$(CI_{env.EnvName.ToString()}_BindingInfo)\"");
                 }
                 sb.AppendLine($"                - template: Templates/clean-workspace-template.yml@TemplateRepo");
                 sb.AppendLine();
@@ -1214,12 +1214,12 @@ public partial class DataAccess
         await Task.CompletedTask;
         return output;
     }
-    
+
     public async Task<DataObjects.BuildDefinition> CreateOrUpdateDevopsPipeline(string devopsProjectId, string devopsRepoId, string devopsBranchName, int? devopsPipelineId, string? devopsPipelineName, string codeProjectId, string codeRepoId, string codeBranchName, string codeCsProjectFile, Dictionary<GlobalSettings.EnvironmentType, DataObjects.EnvSetting> environmentSettings, string pat, string orgName, string? connectionId = null)
     {
         DataObjects.BuildDefinition output = new DataObjects.BuildDefinition();
         try {
-            
+
             // ok first lookup the existing info
             var devopsProject = await GetDevOpsProjectAsync(pat, orgName, devopsProjectId);
             var devopsPipeline = await GetDevOpsPipeline(devopsProjectId, devopsPipelineId ?? 0, pat, orgName);
@@ -1247,7 +1247,7 @@ public partial class DataAccess
                         var newVariableGroup = await CreateVariableGroup(devopsProjectId, pat, orgName, new DataObjects.DevopsVariableGroup {
                             Name = env.VariableGroupName,
                             Description = $"Variable group for project {codeProject.ProjectName}",
-                            Variables = new List<DataObjects.DevopsVariable> { 
+                            Variables = new List<DataObjects.DevopsVariable> {
                                 new DataObjects.DevopsVariable {
                                     Name = $"BasePath",
                                     Value = env.VirtualPath,
@@ -1283,7 +1283,7 @@ public partial class DataAccess
             List<DataObjects.DevopsFileItem> files = await GetDevOpsFilesAsync(pat, orgName, devopsProjectId, devopsRepoId, devopsBranchName);
 
             await CreateOrUpdateGitFile(devopsProject.ProjectId, devopsRepo.RepoId, devopsBranch.BranchName, devopsYmlFilePath, $"{ymlFileContents}", pat, orgName, connectionId);
-            
+
 
             string ymlFilePathTrimmed = (string.Empty + devopsYmlFilePath).TrimStart('/', '\\');
             using (var connection = CreateConnection(pat, orgName)) {
@@ -1298,8 +1298,8 @@ public partial class DataAccess
                 };
 
                 if (devopsPipelineId > 0) {
-                    
-                     try {
+
+                    try {
                         var buildClient = connection.GetClient<BuildHttpClient>();
 
                         var fullDefinition = await buildClient.GetDefinitionAsync(devopsProjectId, devopsPipelineId.Value);
@@ -1331,7 +1331,7 @@ public partial class DataAccess
                             Queue = agentPoolQueue,
                             Project = new TeamProjectReference {
                                 Id = new Guid(devopsProject.ProjectId),
-                                
+
                             },
                             Repository = new BuildRepository {
                                 Id = devopsRepo.RepoId,

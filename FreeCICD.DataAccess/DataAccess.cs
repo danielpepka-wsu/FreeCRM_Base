@@ -20,7 +20,7 @@ public partial class DataAccess : IDisposable, IDataAccess
     private HttpResponse? _httpResponse;
     private string _localModeUrl = "";
     private bool _open;
-    private DateOnly _released = DateOnly.FromDateTime(Convert.ToDateTime("3/6/2025"));
+    private DateOnly _released = DateOnly.FromDateTime(Convert.ToDateTime("6/30/2025"));
     private IServiceProvider? _serviceProvider;
     private string _uniqueId = Guid.NewGuid().ToString().Replace("-", "").ToLower();
 

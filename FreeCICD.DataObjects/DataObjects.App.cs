@@ -35,6 +35,7 @@ public partial class DataObjects
         public const string SelectCsprojFile = "Select .csproj File";
         public const string EnvironmentSettings = "Environment Settings";
         public const string YAMLPreviewAndSave = "YAML Preview & Save";
+        public const string Completed = "Completed";
     }
 
     // ========================================================
@@ -274,7 +275,7 @@ public partial class DataObjects
         public string YAMLFileName { get; set; } = string.Empty;
         public int? PipelineId { get; set; } = null;          // 0 = create new
         public string PipelineName { get; set; } = string.Empty;
-        public string CsProjectFile { get; set; } =string.Empty;
+        public string CsProjectFile { get; set; } = string.Empty;
         public Dictionary<GlobalSettings.EnvironmentType, EnvSetting> EnvironmentSettings { get; set; }
             = new();
         public string? ConnectionId { get; set; }
