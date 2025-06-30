@@ -34,7 +34,7 @@ namespace BlazorWASMScriptLoader
                     ret = MetadataReference.CreateFromImage(bytes);
                 }
             } catch (Exception ex) {
-                Console.WriteLine($"metadataReference not loaded: {assembly} {ex.Message}");
+                //Console.WriteLine($"metadataReference not loaded: {assembly} {ex.Message}");
             }
             if (ret == null) throw new Exception("ReferenceMetadata not found. If using .Net 8, <WasmEnableWebcil>false</WasmEnableWebcil> must be set in the project .csproj file.");
             MetadataReferenceCache[assemblyName] = ret;

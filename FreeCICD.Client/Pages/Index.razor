@@ -573,7 +573,7 @@
 
                         DevopsPipelineDefinitions = results?.ToList() ?? new List<DataObjects.DevopsPipelineDefinition>();
                     } catch (Exception ex) {
-                        Console.WriteLine($"Error loading DevOps Info: {ex.Message}");
+                        //Console.WriteLine($"Error loading DevOps Info: {ex.Message}");
                     } finally {
                         _loading = false;
                         StateHasChanged();
@@ -628,10 +628,10 @@
                             );
                             ExistingYamlContent = await Http.GetStringAsync(DataObjects.Endpoints.DevOps.GetDevOpsYmlFileContent + "?filePath=" + Uri.EscapeDataString(filePath));
                             // ok so now that we have selected a pipeline we can show its existing?
-                            Console.WriteLine("Loaded pipeline YAML successfully.");
+                            //Console.WriteLine("Loaded pipeline YAML successfully.");
                         } catch (Exception ex) {
                             ExistingYamlContent = "";
-                            Console.WriteLine("Error loading pipeline YAML: " + ex.Message);
+                            //Console.WriteLine("Error loading pipeline YAML: " + ex.Message);
                         }
 
                     } else {
@@ -718,10 +718,10 @@
                     DevopsProjectInfos = new List<DataObjects.DevopsProjectInfo>();
                 }
             } catch (Exception ex) {
-                Console.WriteLine($"Error loading DevOps Info: {ex.Message}");
+                //Console.WriteLine($"Error loading DevOps Info: {ex.Message}");
             }
         } catch (Exception ex) {
-            Console.WriteLine("Error in PATandOrgNameChangedWizard: " + ex.Message);
+            //Console.WriteLine("Error in PATandOrgNameChangedWizard: " + ex.Message);
         } finally {
             _loading = false;
             await Task.CompletedTask;
@@ -763,7 +763,7 @@
                 }
             }
         } catch (Exception ex) {
-            Console.WriteLine("Error in ProjectChangedWizard: " + ex.Message);
+            //Console.WriteLine("Error in ProjectChangedWizard: " + ex.Message);
         } finally {
             _loading = false;
             await Task.CompletedTask;
@@ -808,7 +808,7 @@
                 }
             }
         } catch (Exception ex) {
-            Console.WriteLine("Error in RepoChangedWizard: " + ex.Message);
+            //Console.WriteLine("Error in RepoChangedWizard: " + ex.Message);
         } finally {
             _loading = false;
             await Task.CompletedTask;
@@ -858,7 +858,7 @@
                 }
             }
         } catch (Exception ex) {
-            Console.WriteLine("Error in BranchChangedWizard: " + ex.Message);
+            //Console.WriteLine("Error in BranchChangedWizard: " + ex.Message);
         } finally {
             _loading = false;
             await Task.CompletedTask;
@@ -877,7 +877,7 @@
             // This method is called when the user selects a .csproj file.
             SelectedCsprojPath = e?.Value?.ToString() ?? "";
         } catch (Exception ex) {
-            Console.WriteLine("Error in BranchChangedWizard: " + ex.Message);
+            //Console.WriteLine("Error in BranchChangedWizard: " + ex.Message);
         } finally {
             _loading = false;
             await Task.CompletedTask;
@@ -914,7 +914,7 @@
                 }
             }
         } catch (Exception ex) {
-            Console.WriteLine("Error in BranchChangedWizard: " + ex.Message);
+            //Console.WriteLine("Error in BranchChangedWizard: " + ex.Message);
         } finally {
             _loading = false;
             await Task.CompletedTask;
@@ -938,7 +938,7 @@
                 }
             }
         } catch (Exception ex) {
-            Console.WriteLine("Error in BranchChangedWizard: " + ex.Message);
+            //Console.WriteLine("Error in BranchChangedWizard: " + ex.Message);
         } finally {
             _loading = false;
             await Task.CompletedTask;
@@ -955,7 +955,7 @@
                 SelectedPipelineId = pid;
             }
         } catch (Exception ex) {
-            Console.WriteLine("Error in OnPipelineChanged: " + ex.Message);
+            //Console.WriteLine("Error in OnPipelineChanged: " + ex.Message);
         } finally {
             _loading = false;
             await Task.CompletedTask;

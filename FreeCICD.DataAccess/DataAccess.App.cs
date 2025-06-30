@@ -191,7 +191,7 @@ public partial class DataAccess
 
                 output = branchInfo;
             } catch (Exception ex) {
-                Console.WriteLine($"Error fetching branches for repo '{repoId}': {ex.Message}");
+                //Console.WriteLine($"Error fetching branches for repo '{repoId}': {ex.Message}");
             }
         }
 
@@ -251,12 +251,12 @@ public partial class DataAccess
 
                             output.Add(branchInfo);
                         } catch (Exception ex) {
-                            Console.WriteLine($"Error processing branch '{branch?.Name}' in repo '{repo?.Name}': {ex.Message}");
+                            //Console.WriteLine($"Error processing branch '{branch?.Name}' in repo '{repo?.Name}': {ex.Message}");
                         }
                     }
                 }
             } catch (Exception ex) {
-                Console.WriteLine($"Error fetching branches for repo '{repoId}': {ex.Message}");
+                //Console.WriteLine($"Error fetching branches for repo '{repoId}': {ex.Message}");
             }
         }
 
@@ -356,7 +356,7 @@ public partial class DataAccess
                     }
                 }
             } catch (Exception exFile) {
-                Console.WriteLine($"Error fetching file structure for branch '{branch?.Name}' in repo '{repo?.Name}': {exFile.Message}");
+                //Console.WriteLine($"Error fetching file structure for branch '{branch?.Name}' in repo '{repo?.Name}': {exFile.Message}");
             }
         }
 
@@ -400,7 +400,7 @@ public partial class DataAccess
                 }
                 output = projInfo;
             } catch (Exception ex) {
-                Console.WriteLine($"Error fetching project '{projectId}': {ex.Message}");
+                //Console.WriteLine($"Error fetching project '{projectId}': {ex.Message}");
             }
         }
 
@@ -429,7 +429,7 @@ public partial class DataAccess
                     projects = projects.Where(o => !GlobalSettings.App.AzureDevOpsProjectNameStartsWithIgnoreValues.Any(v => (string.Empty + o.Name).ToLower().StartsWith((string.Empty + v).ToLower()))).ToList();
                     //Console.WriteLine($"Found {projects.Count} projects in organization:");
                 } catch (Exception ex) {
-                    Console.WriteLine($"Error fetching projects for organization: {ex.Message}");
+                    //Console.WriteLine($"Error fetching projects for organization: {ex.Message}");
                 }
 
                 var projectTasks = projects.Select(async project => {
@@ -461,7 +461,7 @@ public partial class DataAccess
                 var projectInfos = await Task.WhenAll(projectTasks);
                 output.AddRange(projectInfos);
             } catch (Exception ex) {
-                Console.WriteLine($"Error during DevOps connection processing: {ex.Message}");
+                //Console.WriteLine($"Error during DevOps connection processing: {ex.Message}");
             }
         }
 
@@ -486,7 +486,7 @@ public partial class DataAccess
                 var gitClient = connection.GetClient<GitHttpClient>();
                 var gitRepos = await gitClient.GetRepositoriesAsync(projectId);
                 if (gitRepos.Count > 0) {
-                    Console.WriteLine("  Git Repositories:");
+                    //Console.WriteLine("  Git Repositories:");
                     var repo = await gitClient.GetRepositoryAsync(projectId, repoId);
                     dynamic repoResource = repo.Links.Links["web"];
 
@@ -497,7 +497,7 @@ public partial class DataAccess
 
                     repoInfo.ResourceUrl = repoResource.Href;
 
-                    Console.WriteLine($"    - {repo.Name}");
+                    //Console.WriteLine($"    - {repo.Name}");
 
                     if (!string.IsNullOrWhiteSpace(connectionId)) {
                         await SignalRUpdate(new DataObjects.SignalRUpdate {
@@ -510,10 +510,10 @@ public partial class DataAccess
 
                     output = repoInfo;
                 } else {
-                    Console.WriteLine("  No Git repositories found.");
+                    //Console.WriteLine("  No Git repositories found.");
                 }
             } catch (Exception ex) {
-                Console.WriteLine($"Error fetching Git repositories for project '{projectId}': {ex.Message}");
+                //Console.WriteLine($"Error fetching Git repositories for project '{projectId}': {ex.Message}");
             }
         }
 
@@ -540,7 +540,7 @@ public partial class DataAccess
                 var gitRepos = await gitClient.GetRepositoriesAsync(projectId);
 
                 if (gitRepos.Count > 0) {
-                    Console.WriteLine("  Git Repositories:");
+                    //Console.WriteLine("  Git Repositories:");
                     var repoTasks = gitRepos.Select(async repo => {
                         var repoInfo = new DataObjects.DevopsGitRepoInfo {
                             RepoName = repo.Name,
@@ -551,7 +551,7 @@ public partial class DataAccess
                         dynamic repoResource = r.Links.Links["web"];
                         repoInfo.ResourceUrl = repoResource.Href;
 
-                        Console.WriteLine($"    - {repo.Name}");
+                        //Console.WriteLine($"    - {repo.Name}");
 
                         if (!string.IsNullOrWhiteSpace(connectionId)) {
                             await SignalRUpdate(new DataObjects.SignalRUpdate {
@@ -568,10 +568,10 @@ public partial class DataAccess
                     var repos = await Task.WhenAll(repoTasks);
                     output.AddRange(repos);
                 } else {
-                    Console.WriteLine("  No Git repositories found.");
+                    //Console.WriteLine("  No Git repositories found.");
                 }
             } catch (Exception ex) {
-                Console.WriteLine($"Error fetching Git repositories for project '{projectId}': {ex.Message}");
+                //Console.WriteLine($"Error fetching Git repositories for project '{projectId}': {ex.Message}");
             }
         }
 
@@ -1060,7 +1060,7 @@ public partial class DataAccess
 
                         pipelines.Add(pipeline);
                     } catch (Exception innerEx) {
-                        Console.WriteLine($"Error retrieving full definition for pipeline {defRef.Id}: {innerEx.Message}");
+                        //Console.WriteLine($"Error retrieving full definition for pipeline {defRef.Id}: {innerEx.Message}");
                     }
                 }
                 return pipelines;
@@ -1352,7 +1352,7 @@ public partial class DataAccess
             return output;
 
         } catch (Exception ex) {
-            Console.WriteLine($"Error creating or updating DevOps pipeline: {ex.Message}");
+            //Console.WriteLine($"Error creating or updating DevOps pipeline: {ex.Message}");
         } finally {
             await Task.CompletedTask;
         }

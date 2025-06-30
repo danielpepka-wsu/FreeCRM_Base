@@ -34,10 +34,10 @@ public partial class DataAccess
 
             var result = await client.PostAsync(baseURL + "api/Data/SignalRUpdate/",
             new StringContent(updateData, System.Text.Encoding.UTF8, "application/json"));
-            Console.WriteLine($"SignalRUpdate: {result.StatusCode}");
+            //Console.WriteLine($"SignalRUpdate: {result.StatusCode}");
         } catch (Exception ex) {
-            Console.WriteLine($"SignalRUpdate Error: {ex.Message}");
+            //Console.WriteLine($"SignalRUpdate Error: {ex.Message}");
         }
-        Console.WriteLine("");
+        //Console.WriteLine("");
     }
 }

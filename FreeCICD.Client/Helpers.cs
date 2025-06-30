@@ -1812,7 +1812,7 @@ public static class Helpers
                 output = DeserializeObject<T>(SerializeObject(obj));
             } catch (Exception ex) {
                 if (ex != null) {
-                    Console.WriteLine(ex.Message);
+                    //Console.WriteLine(ex.Message);
                 }
             }
         }

@@ -179,7 +179,7 @@ public partial class DataController
 
                     await _signalR.Clients.All.SendAsync("SignalRUpdate", update);
                 } catch (Exception ex) {
-                    Console.WriteLine($"SignalRUpdate Error: {ex.Message}");
+                    //Console.WriteLine($"SignalRUpdate Error: {ex.Message}");
                 }
             }else if (update.TenantId.HasValue) {
                 await _signalR.Clients.Group(((Guid)update.TenantId).ToString()).SendAsync("SignalRUpdate", update);
