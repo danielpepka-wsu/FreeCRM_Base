@@ -248,15 +248,22 @@
                                     <label class="form-label">IIS Deployment Type:</label>
                                     <select class="form-select" @onchange="@(e => EnvironmentDeploymentTypeChangedWizard(envKey, e))" disabled="@_loading">
                                         <option value="IISWebsite" selected="@(envSetting.IISDeploymentType == "IISWebsite" ? "selected" : null)">IISWebsite</option>
+                                        <option value="IISWebsiteAuth" selected="@(envSetting.IISDeploymentType == "IISWebsiteAuth" ? "selected" : null)">IISWebsiteAuth</option>
                                         <option value="IISWebApplication" selected="@(envSetting.IISDeploymentType == "IISWebApplication" ? "selected" : null)">IISWebApplication</option>
+                                        <option value="IISWebApplicationAuth" selected="@(envSetting.IISDeploymentType == "IISWebApplicationAuth" ? "selected" : null)">IISWebApplicationAuth</option>
                                     </select>
 
                                     <label class="form-label">Website Name:</label>
                                     <input type="text" class="form-control" @bind="envSetting.WebsiteName" @bind:event="oninput" disabled="@_loading" />
 
-                                    @if (envSetting.IISDeploymentType == "IISWebApplication") {
+                                    @if (envSetting.IISDeploymentType == "IISWebApplication" || envSetting.IISDeploymentType == "IISWebApplicationAuth") {
                                         <label class="form-label">Virtual Path:</label>
                                         <input type="text" class="form-control" @bind="envSetting.VirtualPath" @bind:event="oninput" placeholder="Enter virtual path" disabled="@_loading" />
+                                    }
+
+                                    @if (envSetting.IISDeploymentType.Contains("Auth")) {
+                                        <label class="form-label">Auth User:</label>
+                                        <input type="text" class="form-control" @bind="envSetting.AuthUser" @bind:event="oninput" placeholder="Enter the Auth User" disabled="@_loading" />
                                     }
 
                                     <label class="form-label">App Pool Name:</label>
@@ -379,9 +386,9 @@
     }
 
     private void ClearLoadingMessages() {
-        _loadingMessagesIds = new List<Guid>();
-        _loadingMessages = new List<LoadingMessage>();
-        StateHasChanged();
+        // _loadingMessagesIds = new List<Guid>();
+        // _loadingMessages = new List<LoadingMessage>();
+        // StateHasChanged();
     }
 
     public void Dispose() {
@@ -931,7 +938,7 @@
             string deploymentType = e.Value?.ToString() ?? "";
             if (EnvSettings.ContainsKey(envKey)) {
                 EnvSettings[envKey].IISDeploymentType = deploymentType;
-                if (deploymentType == "IISWebApplication") {
+                if (deploymentType == "IISWebApplication" || deploymentType == "IISWebApplicationAuth") {
                     EnvSettings[envKey].VirtualPath = "/" + SelectedProjectInfo?.ProjectName?.ToLower();
                 } else {
                     EnvSettings[envKey].VirtualPath = "";

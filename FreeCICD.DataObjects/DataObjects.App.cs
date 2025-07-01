@@ -50,6 +50,7 @@ public partial class DataObjects
         public string AppPoolName { get; set; } = "";
         public string VariableGroupName { get; set; } = "";
         public string BindingInfo { get; set; } = "";
+        public string AuthUser { get;set; } = "";
     }
 
     public class Application

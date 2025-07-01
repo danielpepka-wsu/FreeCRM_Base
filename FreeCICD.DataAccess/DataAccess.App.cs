@@ -1129,12 +1129,14 @@ public partial class DataAccess
             sb.AppendLine($"    value: \"{kv.Value}\"");
         }
 
+        string authUsername = String.Empty;
 
         foreach (var envKey in GlobalSettings.App.EnviormentTypeOrder) {
             // use the global list for ordering
             if (environmentSettings.ContainsKey(envKey)) {
                 var env = environmentSettings[envKey];
                 //add a comment at the start of the yml section
+                sb.AppendLine("");
                 sb.AppendLine($"# Environment: {env.EnvName}");
                 sb.AppendLine($"  - name: CI_{envKey}_IISDeploymentType");
                 sb.AppendLine($"    value: \"{env.IISDeploymentType}\"");
@@ -1151,7 +1153,18 @@ public partial class DataAccess
                     sb.AppendLine($"    value: >");
                     sb.AppendLine($"      {env.BindingInfo}");
                 }
+
+                if (String.IsNullOrEmpty(authUsername) && !String.IsNullOrWhiteSpace(env.AuthUser)) {
+                    authUsername = env.AuthUser;
+                }
             }
+        }
+
+        if (!String.IsNullOrWhiteSpace(authUsername)) {
+            sb.AppendLine("");
+            sb.AppendLine("# username used for app pool configuration and/or to set file and folder permissions.");
+            sb.AppendLine("  - name: CI_AuthUsername");
+            sb.AppendLine("    value: \"" + authUsername + "\"");
         }
         output = sb.ToString();
 
