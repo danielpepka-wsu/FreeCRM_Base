@@ -1261,25 +1261,25 @@ public partial class DataAccess
                             Name = env.VariableGroupName,
                             Description = $"Variable group for project {codeProject.ProjectName}",
                             Variables = new List<DataObjects.DevopsVariable> {
-                                new DataObjects.DevopsVariable {
-                                    Name = $"BasePath",
-                                    Value = env.VirtualPath,
-                                    IsSecret = false,
-                                    IsReadOnly = false
-                                },
-                                new DataObjects.DevopsVariable {
-                                    Name = $"ConnectionStrings.AppData",
-                                    Value = $"\"AppData\": \"Data Source=localhost;Initial Catalog={devopsProject.ProjectName};TrustServerCertificate=True;Integrated Security=true;MultipleActiveResultSets=True;\"",
-                                    IsSecret = false,
-                                    IsReadOnly = false
-                                },
-                                new DataObjects.DevopsVariable {
-                                    Name = $"LocalModelUrl",
-                                    Value = string.Empty,
-                                    IsSecret = false,
-                                    IsReadOnly = false
-                                }
+                            new DataObjects.DevopsVariable {
+                                Name = $"BasePath",
+                                Value = env.VirtualPath,
+                                IsSecret = false,
+                                IsReadOnly = false
+                            },
+                            new DataObjects.DevopsVariable {
+                                Name = $"ConnectionStrings.AppData",
+                                Value = $"\"AppData\": \"Data Source=localhost;Initial Catalog={devopsProject.ProjectName};TrustServerCertificate=True;Integrated Security=true;MultipleActiveResultSets=True;\"",
+                                IsSecret = false,
+                                IsReadOnly = false
+                            },
+                            new DataObjects.DevopsVariable {
+                                Name = $"LocalModelUrl",
+                                Value = string.Empty,
+                                IsSecret = false,
+                                IsReadOnly = false
                             }
+                        }
                         });
                     }
                 }
@@ -1318,6 +1318,17 @@ public partial class DataAccess
                         var fullDefinition = await buildClient.GetDefinitionAsync(devopsProjectId, devopsPipelineId.Value);
                         var ymlFilePathFromDefinition = fullDefinition.Path;
 
+                        fullDefinition.Triggers?.Clear();
+                        
+                        var trigger = new ContinuousIntegrationTrigger {
+
+                            SettingsSourceType = 2, // 2 means use the YAML file as the source for CI triggers
+                            BatchChanges = true,
+                            MaxConcurrentBuildsPerBranch = 1
+
+                        };
+
+                        fullDefinition.Triggers?.Add(trigger);
 
                         fullDefinition.Repository.Id = devopsRepoId;
                         fullDefinition.Repository.DefaultBranch = devopsBranchName;
@@ -1351,9 +1362,20 @@ public partial class DataAccess
                                 Type = "TfsGit",
                                 DefaultBranch = devopsBranch.BranchName,
                             },
+                           
                             Process = new YamlProcess { YamlFilename = ymlFilePathTrimmed },
                             QueueStatus = DefinitionQueueStatus.Enabled
                         };
+                        var trigger = new ContinuousIntegrationTrigger {
+
+                            SettingsSourceType = 2, // 2 means use the YAML file as the source for CI triggers
+                            BatchChanges = true,
+                            MaxConcurrentBuildsPerBranch = 1
+
+                        };
+                        
+                        definition.Triggers.Add(trigger);
+
                         var createdDefinition = await buildClient.CreateDefinitionAsync(definition);
                         output = MapBuildDefinition(createdDefinition);
                     } catch (Exception ex) {
