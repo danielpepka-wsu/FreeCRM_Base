@@ -238,7 +238,7 @@
                         <p>Select environments to configure (optional):</p>
                         foreach (var envKey in GlobalSettings.App.EnvironmentOptions.Keys) {
                             <div class="form-check mb-2">
-                                <input type="checkbox" class="form-check-input" id="envCheck_@envKey" @onchange="@(e => EnvironmentChangedWizard(envKey, e))" disabled="@_loading" />
+                                <input type="checkbox" class="form-check-input" checked="@(EnvSettings.ContainsKey(envKey))" id="envCheck_@envKey" @onchange="@(e => EnvironmentChangedWizard(envKey, e))" disabled="@_loading" />
                                 <label class="form-check-label" for="envCheck_@envKey">@envKey Environment</label>
                             </div>
                             if (EnvSettings.Keys.Contains(envKey)) {
