@@ -1342,6 +1342,9 @@ public partial class DataAccess
                         fullDefinition.Repository.Properties[RepositoryProperties.CleanOptions] =
                             ((int)RepositoryCleanOptions.AllBuildDir).ToString();
 
+                        // set it to be a shallow fetch
+                        fullDefinition.Repository.Properties[RepositoryProperties.FetchDepth] = "1";
+
                         var result = await buildClient.UpdateDefinitionAsync(fullDefinition, devopsProjectId);
                         output = MapBuildDefinition(result);
                         // todo update output
@@ -1378,6 +1381,9 @@ public partial class DataAccess
                         // target repository‑level clean options:
                         definition.Repository.Properties[RepositoryProperties.CleanOptions] =
                             ((int)RepositoryCleanOptions.AllBuildDir).ToString();
+
+
+                        definition.Repository.Properties[RepositoryProperties.FetchDepth] = "1";
 
                         var trigger = new ContinuousIntegrationTrigger {
 
