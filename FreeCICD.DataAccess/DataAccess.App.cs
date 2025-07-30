@@ -1,4 +1,4 @@
-using Microsoft.CodeAnalysis;
+﻿using Microsoft.CodeAnalysis;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.TeamFoundation.Build.WebApi;
 using Microsoft.TeamFoundation.Common;
@@ -1338,6 +1338,10 @@ public partial class DataAccess
                         fullDefinition.Queue = agentPoolQueue;
                         fullDefinition.QueueStatus = DefinitionQueueStatus.Enabled;
 
+                        // target repository‑level clean options:
+                        fullDefinition.Repository.Properties[RepositoryProperties.CleanOptions] =
+                            ((int)RepositoryCleanOptions.AllBuildDir).ToString();
+
                         var result = await buildClient.UpdateDefinitionAsync(fullDefinition, devopsProjectId);
                         output = MapBuildDefinition(result);
                         // todo update output
@@ -1349,6 +1353,9 @@ public partial class DataAccess
                     // need to create
                     try {
                         var buildClient = connection.GetClient<BuildHttpClient>();
+
+
+
                         var definition = new Microsoft.TeamFoundation.Build.WebApi.BuildDefinition {
                             Name = devopsPipelineName,
                             Path = devopsPipelinePath,
@@ -1366,6 +1373,12 @@ public partial class DataAccess
                             Process = new YamlProcess { YamlFilename = ymlFilePathTrimmed },
                             QueueStatus = DefinitionQueueStatus.Enabled
                         };
+
+
+                        // target repository‑level clean options:
+                        definition.Repository.Properties[RepositoryProperties.CleanOptions] =
+                            ((int)RepositoryCleanOptions.AllBuildDir).ToString();
+
                         var trigger = new ContinuousIntegrationTrigger {
 
                             SettingsSourceType = 2, // 2 means use the YAML file as the source for CI triggers
