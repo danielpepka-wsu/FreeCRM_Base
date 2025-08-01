@@ -326,9 +326,31 @@
                         break;
 
                     case DataObjects.StepNameList.Completed:
-                        <p>
-                            The YAML Pipeline has been created. Remember to edit your variable groups before triggering a deployment.
-                        </p>
+                        <div class="mb-3">
+                            <p>
+                                The YAML Pipeline has been created. Remember to edit your variable groups before triggering a deployment.
+                            </p>
+                            <div class="mt-3">
+                                <h5>Resources Created / Accessible</h5>
+                                <ul>
+                                    @if (SelectedProjectInfo != null && !string.IsNullOrWhiteSpace(SelectedProjectInfo.ResourceUrl)) {
+                                        <li>
+                                            <a target="_blank" href="@SelectedProjectInfo.ResourceUrl">Project: @SelectedProjectInfo.ProjectName</a>
+                                        </li>
+                                    }
+                                    @if (SelectedBranchInfo != null && !string.IsNullOrWhiteSpace(SelectedBranchInfo.ResourceUrl)) {
+                                        <li>
+                                            <a target="_blank" href="@SelectedBranchInfo.ResourceUrl">Branch: @SelectedBranchInfo.BranchName</a>
+                                        </li>
+                                    }
+                                    @if (LastSavedPipelineDefinition != null && !string.IsNullOrWhiteSpace(LastSavedPipelineDefinition.ResourceUrl)) {
+                                        <li>
+                                            <a target="_blank" href="@LastSavedPipelineDefinition.ResourceUrl">Pipeline: @LastSavedPipelineDefinition.Name</a>
+                                        </li>
+                                    }
+                                </ul>
+                            </div>
+                        </div>
                         break;
                 }
             }
@@ -511,6 +533,9 @@
     private string ExistingYamlContent = string.Empty;
     private string NewYamlContent { get; set; } = string.Empty;
 
+    // Captured result of the save/create pipeline operation
+    private DataObjects.BuildDefinition? LastSavedPipelineDefinition { get; set; } = null;
+
     // PAT and organization name for anonymous usage when not logged in.
     private string DevOpsPAT { get; set; } = string.Empty;
     private string OrgName { get; set; } = string.Empty;
@@ -662,8 +687,10 @@
                 break;
             case DataObjects.StepNameList.YAMLPreviewAndSave:
                 try {
-                    var createOrUpdateResult = await Helpers.GetOrPost<string>($"{DataObjects.Endpoints.DevOps.CreateOrUpdateDevOpsPipeline}", DevOpsPipelineRequest);
-                    if (!string.IsNullOrWhiteSpace(createOrUpdateResult)) {
+                    // todo - track that this is loading.. and ensure the page is updated correctly
+                    var createOrUpdateResult = await Helpers.GetOrPost<DataObjects.BuildDefinition>($"{DataObjects.Endpoints.DevOps.CreateOrUpdateDevOpsPipeline}", DevOpsPipelineRequest);
+                    if (createOrUpdateResult != null && createOrUpdateResult.Id > 0) {
+                        LastSavedPipelineDefinition = createOrUpdateResult;
                         _loadingMessages.Insert(0, new LoadingMessage { Message = "Pipeline created/updated successfully.", Created = DateTime.UtcNow });
                     } else {
                         _loadingMessages.Insert(0, new LoadingMessage { Message = $"Error", Created = DateTime.UtcNow });
@@ -798,7 +825,7 @@
                                 foreach (var repo in project.GitRepos) {
                                     if (repo.RepoId == SelectedRepoInfo?.RepoId) {
                                         repo.GitBranches = result;
-                                    } else {
+                                            } else {
                                         repo.GitBranches = new List<DataObjects.DevopsGitRepoBranchInfo>();
                                     }
                                 }
