@@ -307,22 +307,19 @@
                         break;
 
                     case DataObjects.StepNameList.YAMLPreviewAndSave:
-                        <div class="row yaml-preview">
-                            <!-- Preview of current (existing) YAML and new YAML -->
-                            <div class="col-6">
-                                <h5>Existing YAML</h5>
-                                @if (string.IsNullOrWhiteSpace(ExistingYamlContent)) {
-                                    <p>No existing content. This might be a new pipeline.</p>
+                       
+
+                        <div class="row yaml-diff mt-4">
+                            <div class="col-12">
+                                <h5>YAML Diff</h5>
+                                @if (string.IsNullOrWhiteSpace(ExistingYamlContent) && string.IsNullOrWhiteSpace(NewYamlContent)) {
+                                    <p>Nothing to diff.</p>
                                 } else {
-                                    <pre>@ExistingYamlContent</pre>
-                                }
-                            </div>
-                            <div class="col-6">
-                                <h5>New YAML</h5>
-                                @if (string.IsNullOrWhiteSpace(NewYamlContent)) {
-                                    <p>No new content. There might be an error.</p>
-                                } else {
-                                    <pre>@NewYamlContent</pre>
+                                    <MonacoEditor Id="yaml-diff-editor"
+                                                  Language="@MonacoEditor.MonacoLanguage.yaml"
+                                                  ReadOnly="true"
+                                                  ValueToDiff="@ExistingYamlContent"
+                                                  @bind-Value="NewYamlContent" />
                                 }
                             </div>
                         </div>
