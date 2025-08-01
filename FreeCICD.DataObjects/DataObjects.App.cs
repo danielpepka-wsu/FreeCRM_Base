@@ -192,7 +192,7 @@ public partial class DataObjects
         public string QueueStatus { get; set; } = string.Empty;
         public string RepoGuid { get; set; } = string.Empty;
         public string RepositoryName { get; set; } = string.Empty;
-        public string YamlFileName { get; set; } = string.Empty;
+        public string? YamlFileName { get; set; } = string.Empty;
         public string Path { get; set; } = string.Empty;
         public string? ResourceUrl { get; set; }
     }

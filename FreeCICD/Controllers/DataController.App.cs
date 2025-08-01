@@ -197,9 +197,9 @@ public partial class DataController
         try {            
             if (CurrentUser.Enabled) {
                 var config = GetReleasePipelinesDevOpsConfig();
-                output = await da.CreateOrUpdateDevopsPipeline(config.projectId, config.repoId, config.branch, request.PipelineId, request.PipelineName, request.ProjectId, request.RepoId, request.Branch, request.CsProjectFile, request.EnvironmentSettings ?? new(), config.pat, config.orgName, request.ConnectionId);
+                output = await da.CreateOrUpdateDevopsPipeline(config.projectId, config.repoId, config.branch, request.PipelineId, request.PipelineName, request.YAMLFileName, request.ProjectId, request.RepoId, request.Branch, request.CsProjectFile, request.EnvironmentSettings ?? new(), config.pat, config.orgName, request.ConnectionId);
             } else if (!string.IsNullOrWhiteSpace(request.Pat) && !string.IsNullOrWhiteSpace(request.OrgName)) {
-                output = await da.CreateOrUpdateDevopsPipeline(request.ProjectId, request.RepoId, request.Branch, request.PipelineId, request.PipelineName, request.ProjectId, request.RepoId, request.Branch, request.CsProjectFile, request.EnvironmentSettings, request.Pat, request.OrgName, request.ConnectionId);
+                output = await da.CreateOrUpdateDevopsPipeline(request.ProjectId, request.RepoId, request.Branch, request.PipelineId, request.PipelineName, request.YAMLFileName, request.ProjectId, request.RepoId, request.Branch, request.CsProjectFile, request.EnvironmentSettings, request.Pat, request.OrgName, request.ConnectionId);
             } else {
                 return BadRequest("No PAT or OrgName provided and user is not logged in.");
             }

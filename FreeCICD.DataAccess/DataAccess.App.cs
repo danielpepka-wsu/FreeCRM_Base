@@ -45,7 +45,7 @@ public partial interface IDataAccess
     Task<List<DataObjects.DevopsPipelineDefinition>> GetDevOpsPipelines(string projectId, string pat, string orgName, string? connectionId = null);
 
     Task<string> GenerateYmlFileContents(string devopsProjectId, string devopsRepoId, string devopsBranch, int? devopsPipelineId, string? devopsPipelineName, string codeProjectId, string codeRepoId, string codeBranchName, string codeCsProjectFile, Dictionary<GlobalSettings.EnvironmentType, DataObjects.EnvSetting> environmentSettings, string pat, string orgName, string? connectionId = null);
-    Task<DataObjects.BuildDefinition> CreateOrUpdateDevopsPipeline(string devopsProjectId, string devopsRepoId, string devopsBranchName, int? devopsPipelineId, string? devopsPipelineName, string codeProjectId, string codeRepoId, string codeBranchName, string codeCsProjectFile, Dictionary<GlobalSettings.EnvironmentType, DataObjects.EnvSetting> environmentSettings, string pat, string orgName, string? connectionId = null);
+    Task<DataObjects.BuildDefinition> CreateOrUpdateDevopsPipeline(string devopsProjectId, string devopsRepoId, string devopsBranchName, int? devopsPipelineId, string? devopsPipelineName, string? devopsPipelineYmlFileName, string codeProjectId, string codeRepoId, string codeBranchName, string codeCsProjectFile, Dictionary<GlobalSettings.EnvironmentType, DataObjects.EnvSetting> environmentSettings, string pat, string orgName, string? connectionId = null);
 
 
     Task<DataObjects.GitUpdateResult> CreateOrUpdateGitFile(string projectId, string repoId, string branch, string filePath, string fileContent, string pat, string orgName, string? connectionId = null);
@@ -1228,7 +1228,7 @@ public partial class DataAccess
         return output;
     }
 
-    public async Task<DataObjects.BuildDefinition> CreateOrUpdateDevopsPipeline(string devopsProjectId, string devopsRepoId, string devopsBranchName, int? devopsPipelineId, string? devopsPipelineName, string codeProjectId, string codeRepoId, string codeBranchName, string codeCsProjectFile, Dictionary<GlobalSettings.EnvironmentType, DataObjects.EnvSetting> environmentSettings, string pat, string orgName, string? connectionId = null)
+    public async Task<DataObjects.BuildDefinition> CreateOrUpdateDevopsPipeline(string devopsProjectId, string devopsRepoId, string devopsBranchName, int? devopsPipelineId, string? devopsPipelineName, string? devopsPipelineYmlFileName, string codeProjectId, string codeRepoId, string codeBranchName, string codeCsProjectFile, Dictionary<GlobalSettings.EnvironmentType, DataObjects.EnvSetting> environmentSettings, string pat, string orgName, string? connectionId = null)
     {
         DataObjects.BuildDefinition output = new DataObjects.BuildDefinition();
         try {
@@ -1249,6 +1249,10 @@ public partial class DataAccess
             var projectVariableGroups = await GetProjectVariableGroupsAsync(pat, orgName, devopsProjectId, connectionId);
 
 
+            // fallback: if we're editing an existing pipeline but no name was provided, use the existing pipeline's name
+            if (devopsPipelineId.HasValue && devopsPipelineId.Value > 0 && string.IsNullOrWhiteSpace(devopsPipelineName)) {
+                devopsPipelineName = devopsPipeline.Name;
+            }
 
             foreach (var envKey in GlobalSettings.App.EnviormentTypeOrder) {
                 if (environmentSettings.ContainsKey(envKey)) {
@@ -1288,15 +1292,17 @@ public partial class DataAccess
             // ok so here we can generate the yml file contents and use it to update stuff
             string ymlFileContents = await GenerateYmlFileContents(devopsProjectId, devopsRepoId, devopsBranchName, devopsPipelineId, devopsPipelineName, codeProjectId, codeRepoId, codeBranchName, codeCsProjectFile, environmentSettings, pat, orgName);
 
-
             var devopsPipelinePath = $"Projects/{codeProject.ProjectName}";
-            var devopsYmlFilePath = $"Projects/{codeProject.ProjectName}/{devopsPipelineName}.yml";
+            
+            // so if we are passed in a file path use it, otherwise stick to the default which is based on the pipeline name.
+            // If we are creating a new pipeline the filename is typically null, updating an existing one it should be passed in.
+            var devopsYmlFilePath = devopsPipelineYmlFileName;
+            if (string.IsNullOrWhiteSpace(devopsYmlFilePath)) {
+                devopsYmlFilePath = $"Projects/{codeProject.ProjectName}/{devopsPipelineName}.yml";
+            }
 
             // ok first we need to create the yml, file if it does not exist, so lets do that
-            List<DataObjects.DevopsFileItem> files = await GetDevOpsFilesAsync(pat, orgName, devopsProjectId, devopsRepoId, devopsBranchName);
-
             await CreateOrUpdateGitFile(devopsProject.ProjectId, devopsRepo.RepoId, devopsBranch.BranchName, devopsYmlFilePath, $"{ymlFileContents}", pat, orgName, connectionId);
-
 
             string ymlFilePathTrimmed = (string.Empty + devopsYmlFilePath).TrimStart('/', '\\');
             using (var connection = CreateConnection(pat, orgName)) {
@@ -1316,7 +1322,6 @@ public partial class DataAccess
                         var buildClient = connection.GetClient<BuildHttpClient>();
 
                         var fullDefinition = await buildClient.GetDefinitionAsync(devopsProjectId, devopsPipelineId.Value);
-                        var ymlFilePathFromDefinition = fullDefinition.Path;
 
                         fullDefinition.Triggers?.Clear();
                         

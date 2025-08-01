@@ -36,8 +36,8 @@
                         Azure DevOps Credentials
                         <div class="card-header-buttons text-end">
                             <button class="btn btn-primary"
-                                    @onclick="PATandOrgNameChangedWizard"
-                                    disabled="@(_loading || string.IsNullOrWhiteSpace(DevOpsPAT) || string.IsNullOrWhiteSpace(OrgName))">
+                            @onclick="PATandOrgNameChangedWizard"
+                            disabled="@(_loading || string.IsNullOrWhiteSpace(DevOpsPAT) || string.IsNullOrWhiteSpace(OrgName))">
                                 Next
                                 <Icon Name="Next" />
                             </button>
@@ -309,7 +309,7 @@
                     case DataObjects.StepNameList.YAMLPreviewAndSave:
                         <div class="row yaml-preview">
                             <!-- Preview of current (existing) YAML and new YAML -->
-                            <div class="col">
+                            <div class="col-6">
                                 <h5>Existing YAML</h5>
                                 @if (string.IsNullOrWhiteSpace(ExistingYamlContent)) {
                                     <p>No existing content. This might be a new pipeline.</p>
@@ -543,6 +543,7 @@
         ProjectId = SelectedProjectInfo?.ProjectId ?? "",
         RepoId = SelectedRepoInfo?.RepoId ?? "",
         Branch = SelectedBranch ?? "",
+        // so.. if the pipeline is selected this should be populated... but it isnt?
         YAMLFileName = SelectedPipelineInfo?.YamlFileName ?? "",
         PipelineId = SelectedPipelineId.GetValueOrDefault(0),
         PipelineName = SelectedPipelineId > 0 ? string.Empty : NewPipelineName ?? "",
@@ -624,7 +625,8 @@
                         var filePath = pipeline.YamlFileName;
 
                         try {
-                            string? results = await Http.GetFromJsonAsync<string>(DataObjects.Endpoints.DevOps.GetDevOpsYmlFileContent +
+                            //REPLACE WITH HELPERS METHOD
+                            string? results = await Helpers.GetOrPost<string>(DataObjects.Endpoints.DevOps.GetDevOpsYmlFileContent +
                                 "?connectionId=" + Uri.EscapeDataString((string.Empty + Model?.SignalrClientRegistration?.ConnectionId).Trim()) +
                                 "&filePath=" + Uri.EscapeDataString($"{filePath}") +
                                 "&projectId=" + Uri.EscapeDataString($"{SelectedProjectInfo?.ProjectId}") +
@@ -633,7 +635,8 @@
                                 "&orgName=" + Uri.EscapeDataString(OrgName) +
                                 "&pat=" + Uri.EscapeDataString(DevOpsPAT)
                             );
-                            ExistingYamlContent = await Http.GetStringAsync(DataObjects.Endpoints.DevOps.GetDevOpsYmlFileContent + "?filePath=" + Uri.EscapeDataString(filePath));
+                            ExistingYamlContent = results;
+                            //ExistingYamlContent = await Http.GetStringAsync(DataObjects.Endpoints.DevOps.GetDevOpsYmlFileContent + "?filePath=" + Uri.EscapeDataString(filePath));
                             // ok so now that we have selected a pipeline we can show its existing?
                             //Console.WriteLine("Loaded pipeline YAML successfully.");
                         } catch (Exception ex) {
@@ -649,7 +652,8 @@
                     NewYamlContent = string.Empty;
 
                     try {
-                        var response = await Helpers.GetOrPost<string>($"{DataObjects.Endpoints.DevOps.PreviewDevOpsYmlFileContents}", DevOpsPipelineRequest);
+                        var postObject = DevOpsPipelineRequest;
+                        var response = await Helpers.GetOrPost<string>($"{DataObjects.Endpoints.DevOps.PreviewDevOpsYmlFileContents}", postObject);
                         if (!string.IsNullOrWhiteSpace(response)) {
                             NewYamlContent = response;
                             _loadingMessages.Insert(0, new LoadingMessage { Message = "Preview fetched successfully.", Created = DateTime.UtcNow });
@@ -666,11 +670,13 @@
                 break;
             case DataObjects.StepNameList.YAMLPreviewAndSave:
                 try {
-                    var response = await Http.PostAsJsonAsync($"{DataObjects.Endpoints.DevOps.CreateOrUpdateDevOpsPipeline}", DevOpsPipelineRequest);
-                    if (response.IsSuccessStatusCode) {
+                    //REPLACE WITH HELPERS METHOD
+                    var postRequest = DevOpsPipelineRequest;
+                    var createOrUpdateResult = await Helpers.GetOrPost<string>($"{DataObjects.Endpoints.DevOps.CreateOrUpdateDevOpsPipeline}", postRequest);
+                    if (!string.IsNullOrWhiteSpace(createOrUpdateResult)) {
                         _loadingMessages.Insert(0, new LoadingMessage { Message = "Pipeline created/updated successfully.", Created = DateTime.UtcNow });
                     } else {
-                        _loadingMessages.Insert(0, new LoadingMessage { Message = $"Error: {response.ReasonPhrase}", Created = DateTime.UtcNow });
+                        _loadingMessages.Insert(0, new LoadingMessage { Message = $"Error", Created = DateTime.UtcNow });
                     }
                 } catch (Exception ex) {
                     _loadingMessages.Insert(0, new LoadingMessage { Message = $"Exception: {ex.Message}", Created = DateTime.UtcNow });
@@ -708,7 +714,8 @@
         try {
             try {
                 //string? registrationId = null, [FromQuery] string? connectionId = null)
-                var result = await Http.GetFromJsonAsync<List<DataObjects.DevopsProjectInfo>>(DataObjects.Endpoints.DevOps.GetDevOpsProjects +
+                //REPLACE WITH HELPERS METHOD
+                List<DataObjects.DevopsProjectInfo>? result = await Helpers.GetOrPost<List<DataObjects.DevopsProjectInfo>>(DataObjects.Endpoints.DevOps.GetDevOpsProjects +
                     "?connectionId=" + Uri.EscapeDataString((string.Empty + Model?.SignalrClientRegistration?.ConnectionId).Trim()) +
                     "&orgName=" + Uri.EscapeDataString(OrgName) +
                     "&pat=" + Uri.EscapeDataString(DevOpsPAT)
@@ -750,7 +757,8 @@
             SelectedBranch = "";
 
             if (SelectedProjectInfo != null) {
-                List<DataObjects.DevopsGitRepoInfo>? result = await Http.GetFromJsonAsync<List<DataObjects.DevopsGitRepoInfo>>(DataObjects.Endpoints.DevOps.GetDevOpsRepos +
+                //REPLACE WITH HELPERS METHOD
+                List<DataObjects.DevopsGitRepoInfo>? result = await Helpers.GetOrPost<List<DataObjects.DevopsGitRepoInfo>>(DataObjects.Endpoints.DevOps.GetDevOpsRepos +
                     "?connectionId=" + Uri.EscapeDataString((string.Empty + Model?.SignalrClientRegistration?.ConnectionId).Trim()) +
                     "&projectId=" + Uri.EscapeDataString($"{SelectedProjectInfo.ProjectId}") +
                     "&orgName=" + Uri.EscapeDataString(OrgName) +
@@ -788,7 +796,8 @@
             SelectedBranch = "";
 
             if (SelectedRepoInfo != null) {
-                List<DataObjects.DevopsGitRepoBranchInfo>? result = await Http.GetFromJsonAsync<List<DataObjects.DevopsGitRepoBranchInfo>>(DataObjects.Endpoints.DevOps.GetDevOpsBranches +
+                //REPLACE WITH HELPERS METHOD
+                List<DataObjects.DevopsGitRepoBranchInfo>? result = await Helpers.GetOrPost<List<DataObjects.DevopsGitRepoBranchInfo>>(DataObjects.Endpoints.DevOps.GetDevOpsBranches +
                     "?connectionId=" + Uri.EscapeDataString((string.Empty + Model?.SignalrClientRegistration?.ConnectionId).Trim()) +
                     "&projectId=" + Uri.EscapeDataString($"{SelectedProjectInfo?.ProjectId}") +
                     "&repoId=" + Uri.EscapeDataString($"{SelectedRepoInfo?.RepoId}") +
@@ -834,7 +843,8 @@
             // now lookup the files so we can select the csproj
             if (SelectedBranchInfo != null) {
                 // string projectId,  string repoId,  string branchName,string? pat = null, string? orgName = null,  string? connectionId = null
-                List<DataObjects.DevopsFileItem>? result = await Http.GetFromJsonAsync<List<DataObjects.DevopsFileItem>>(DataObjects.Endpoints.DevOps.GetDevOpsFiles +
+                //REPLACE WITH HELPERS METHOD
+                List<DataObjects.DevopsFileItem>? result = await Helpers.GetOrPost<List<DataObjects.DevopsFileItem>>(DataObjects.Endpoints.DevOps.GetDevOpsFiles +
                     "?connectionId=" + Uri.EscapeDataString((string.Empty + Model?.SignalrClientRegistration?.ConnectionId).Trim()) +
                     "&projectId=" + Uri.EscapeDataString($"{SelectedProjectInfo?.ProjectId}") +
                     "&repoId=" + Uri.EscapeDataString($"{SelectedRepoInfo?.RepoId}") +
@@ -873,8 +883,6 @@
             StateHasChanged();
         }
     }
-
-
 
     private async Task CsProjectFileChangedWizard(ChangeEventArgs e) {
         ClearLoadingMessages();
