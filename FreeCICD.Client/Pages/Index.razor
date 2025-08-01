@@ -317,7 +317,7 @@
                                     <pre>@ExistingYamlContent</pre>
                                 }
                             </div>
-                            <div class="col">
+                            <div class="col-6">
                                 <h5>New YAML</h5>
                                 @if (string.IsNullOrWhiteSpace(NewYamlContent)) {
                                     <p>No new content. There might be an error.</p>
@@ -386,6 +386,7 @@
     }
 
     private void ClearLoadingMessages() {
+        // Previously used to reset loading message state; retention disabled.
         // _loadingMessagesIds = new List<Guid>();
         // _loadingMessages = new List<LoadingMessage>();
         // StateHasChanged();
@@ -411,12 +412,11 @@
                     _loadedData = true;
                     await Helpers.ValidateUrl(TenantCode, true);
                     _hidePAT = true;
-                    currentStep = 1; // skip the PAT and orgname step if we are logged in
-                    // ok so now we are logged in, that means we dont need to collect a PAT or ORGNAME
-                    // so for now just go and lookup the projectnames and other orginfo
+                    currentStep = 1; // Bypass the PAT and organization name step for authenticated users.
                     _loading = true;
                     DevOpsPAT = "user is logged in, doesn't matter what this value is";
                     OrgName = "user is logged in, this value is ignored, put anything here";
+                    // User is authenticated; proceed to retrieve project and organization data.
                     await PATandOrgNameChangedWizard();
                     _loading = false;
                     StateHasChanged();
@@ -428,7 +428,7 @@
                     _loading = true;
                     OrgName = string.Empty;
                     DevOpsPAT = string.Empty;
-                    currentStep = 0; // skip the PAT and orgname step if we are logged in
+                    currentStep = 0; // Ensure PAT and organization name collection is presented for unauthenticated users.
                     _loading = false;
 
                     StateHasChanged();
@@ -448,11 +448,12 @@
             Model.OnSignalRUpdate += SignalRUpdate;
         }
 
-        //_timer = new System.Timers.Timer();
-        //_timer.Interval = 1000;
-        //_timer.Elapsed += TimerExecuted;
-        //_timer.AutoReset = true;
-        ////_timer.Start();
+        // Timer initialization is currently disabled.
+        // _timer = new System.Timers.Timer();
+        // _timer.Interval = 1000;
+        // _timer.Elapsed += TimerExecuted;
+        // _timer.AutoReset = true;
+        // _timer.Start();
 
         Model.View = _pageName;
     }
@@ -466,14 +467,12 @@
     protected async void SignalRUpdate(DataObjects.SignalRUpdate update) {
         if (update.UpdateType == DataObjects.SignalRUpdateType.LoadingDevOpsInfoStatusUpdate && update.ItemId != null) {
             if (_loadingMessagesIds != null && !_loadingMessagesIds.Any(m => m == update.ItemId)) {
-                // no duplicates allowed
                 if (update?.ItemId != null) {
                     _loadingMessagesIds.Add(update.ItemId.Value);
                     _loadingMessages.Insert(0, new LoadingMessage {
                         Created = DateTime.UtcNow,
                         Message = update.Message,
-                    }
-                    );
+                    });
                 }
                 StateHasChanged();
             }
@@ -494,6 +493,7 @@
     }
 
     protected void TimerExecuted(Object? source, System.Timers.ElapsedEventArgs e) {
+        // Placeholder for timer execution logic.
         //Console.WriteLine("Timer Executed");
     }
 }
@@ -514,11 +514,11 @@
     private string ExistingYamlContent = string.Empty;
     private string NewYamlContent { get; set; } = string.Empty;
 
-    // This is the PAT and OrgName that will be used when not logged in, allows annonymous access site usage
+    // PAT and organization name for anonymous usage when not logged in.
     private string DevOpsPAT { get; set; } = string.Empty;
     private string OrgName { get; set; } = string.Empty;
 
-    // Environment selection state used in the UI (for checkboxes)
+    // State for environment configuration checkboxes.
     private Dictionary<GlobalSettings.EnvironmentType, DataObjects.EnvSetting> EnvSettings = new();
 
     private string[] StepNames = [
@@ -543,7 +543,6 @@
         ProjectId = SelectedProjectInfo?.ProjectId ?? "",
         RepoId = SelectedRepoInfo?.RepoId ?? "",
         Branch = SelectedBranch ?? "",
-        // so.. if the pipeline is selected this should be populated... but it isnt?
         YAMLFileName = SelectedPipelineInfo?.YamlFileName ?? "",
         PipelineId = SelectedPipelineId.GetValueOrDefault(0),
         PipelineName = SelectedPipelineId > 0 ? string.Empty : NewPipelineName ?? "",
@@ -557,19 +556,19 @@
 @code {
 
     private async Task NextStep(string? stepName = "") {
-        //Console.WriteLine("Test");
+        // Navigation state update and preparation.
         ClearLoadingMessages();
         if (currentStep < StepNames.Length - 1) {
             currentStep++;
             StateHasChanged();
         }
 
-        // we are checking against the stepname passed in, not based on the current step,
-        // so this switch is actually based off of where we were when clicked, not what page is activly showing
+        // The logic below uses the provided stepName argument (the originating step)
+        // rather than the updated currentStep; therefore actions correspond to the step
+        // from which navigation was initiated.
         switch (stepName) {
             case DataObjects.StepNameList.SelectProject:
                 if (!string.IsNullOrWhiteSpace(SelectedProjectId)) {
-                    // after select the project id we can lookup the pipeline info.
                     _loading = true;
                     try {
                         List<DataObjects.DevopsPipelineDefinition>? results = await Helpers.GetOrPost<List<DataObjects.DevopsPipelineDefinition>>(DataObjects.Endpoints.DevOps.GetDevOpsPipelines +
@@ -580,44 +579,44 @@
                         );
 
                         DevopsPipelineDefinitions = results?.ToList() ?? new List<DataObjects.DevopsPipelineDefinition>();
+
+                        // Automatically select the pipeline if only one is available.
+                        if (DevopsPipelineDefinitions != null && DevopsPipelineDefinitions.Count == 1) {
+                            SelectedPipelineId = DevopsPipelineDefinitions[0].Id;
+                        }
                     } catch (Exception ex) {
-                        //Console.WriteLine($"Error loading DevOps Info: {ex.Message}");
+                        // Error loading DevOps information: ex.Message (suppressed)
                     } finally {
                         _loading = false;
                         StateHasChanged();
                     }
-                    // people can see 200ms delay, so delay that so you at least get a chance to glance at the message before it dissapears.
-                    await Task.Delay(600);
 
-                    //ClearLoadingMessages();
+                    // Allow a brief pause so status messages are perceptible.
+                    await Task.Delay(800);
                 }
                 break;
             case DataObjects.StepNameList.SelectRepository:
                 if (string.IsNullOrWhiteSpace(SelectedRepoId)) {
-                    // do nothing, this is being updated from the dropdown changing
+                    // No action required; selection is driven by dropdown change.
                 }
                 break;
             case DataObjects.StepNameList.SelectBranch:
                 if (string.IsNullOrWhiteSpace(SelectedBranch)) {
-                    // do nothing, this is being updated from the dropdown changing
+                    // No action required; selection is driven by dropdown change.
                 }
                 break;
             case DataObjects.StepNameList.SelectCsprojFile:
                 if (string.IsNullOrWhiteSpace(SelectedCsprojPath)) {
-                    // do nothing, this is being updated from the dropdown changing
+                    // No action required; selection is driven by dropdown change.
                 }
                 break;
             case DataObjects.StepNameList.EnvironmentSettings:
                 if (EnvSettings == null || EnvSettings.Count() == 0) {
-                    // do nothing, this step just collects information, nothing needs to be triggered
+                    // No triggered behavior required for this step unless environments are configured.
                 }
                 break;
             case DataObjects.StepNameList.SelectPipelineSelection:
-                // ok so we have collected everything there is to collect.
-                // Now go fetch the current pipeline info (if any exists) and the new pipeline content that is being proposed.
                 if (!string.IsNullOrWhiteSpace(NewPipelineName) || SelectedPipelineId != null) {
-                    // now we should post the collected data to the server and collect the existing yml (if any) and the new yml
-                    // this should be done in a new api endpoint
                     ExistingYamlContent = string.Empty;
 
                     var pipeline = DevopsPipelineDefinitions.FirstOrDefault(p => p.Id == SelectedPipelineId);
@@ -625,7 +624,6 @@
                         var filePath = pipeline.YamlFileName;
 
                         try {
-                            //REPLACE WITH HELPERS METHOD
                             string? results = await Helpers.GetOrPost<string>(DataObjects.Endpoints.DevOps.GetDevOpsYmlFileContent +
                                 "?connectionId=" + Uri.EscapeDataString((string.Empty + Model?.SignalrClientRegistration?.ConnectionId).Trim()) +
                                 "&filePath=" + Uri.EscapeDataString($"{filePath}") +
@@ -636,11 +634,9 @@
                                 "&pat=" + Uri.EscapeDataString(DevOpsPAT)
                             );
                             ExistingYamlContent = results;
-                            //ExistingYamlContent = await Http.GetStringAsync(DataObjects.Endpoints.DevOps.GetDevOpsYmlFileContent + "?filePath=" + Uri.EscapeDataString(filePath));
-                            // ok so now that we have selected a pipeline we can show its existing?
-                            //Console.WriteLine("Loaded pipeline YAML successfully.");
                         } catch (Exception ex) {
                             ExistingYamlContent = "";
+                            // Error retrieving existing pipeline YAML: ex.Message (suppressed)
                             //Console.WriteLine("Error loading pipeline YAML: " + ex.Message);
                         }
 
@@ -652,8 +648,7 @@
                     NewYamlContent = string.Empty;
 
                     try {
-                        var postObject = DevOpsPipelineRequest;
-                        var response = await Helpers.GetOrPost<string>($"{DataObjects.Endpoints.DevOps.PreviewDevOpsYmlFileContents}", postObject);
+                        var response = await Helpers.GetOrPost<string>($"{DataObjects.Endpoints.DevOps.PreviewDevOpsYmlFileContents}", DevOpsPipelineRequest);
                         if (!string.IsNullOrWhiteSpace(response)) {
                             NewYamlContent = response;
                             _loadingMessages.Insert(0, new LoadingMessage { Message = "Preview fetched successfully.", Created = DateTime.UtcNow });
@@ -670,9 +665,7 @@
                 break;
             case DataObjects.StepNameList.YAMLPreviewAndSave:
                 try {
-                    //REPLACE WITH HELPERS METHOD
-                    var postRequest = DevOpsPipelineRequest;
-                    var createOrUpdateResult = await Helpers.GetOrPost<string>($"{DataObjects.Endpoints.DevOps.CreateOrUpdateDevOpsPipeline}", postRequest);
+                    var createOrUpdateResult = await Helpers.GetOrPost<string>($"{DataObjects.Endpoints.DevOps.CreateOrUpdateDevOpsPipeline}", DevOpsPipelineRequest);
                     if (!string.IsNullOrWhiteSpace(createOrUpdateResult)) {
                         _loadingMessages.Insert(0, new LoadingMessage { Message = "Pipeline created/updated successfully.", Created = DateTime.UtcNow });
                     } else {
@@ -683,7 +676,6 @@
                 } finally {
                     _loading = false;
 
-                    // Set the step to the completed step.
                     if (currentStep < StepNames.Length - 1) {
                         currentStep++;
                     }
@@ -691,7 +683,6 @@
                     StateHasChanged();
                 }
                 break;
-            // This step doesn't need a doesn't need a next button.... instead we just have a save button in its place
 
             default:
                 break;
@@ -712,52 +703,46 @@
         _loading = true;
         StateHasChanged();
         try {
-            try {
-                //string? registrationId = null, [FromQuery] string? connectionId = null)
-                //REPLACE WITH HELPERS METHOD
-                List<DataObjects.DevopsProjectInfo>? result = await Helpers.GetOrPost<List<DataObjects.DevopsProjectInfo>>(DataObjects.Endpoints.DevOps.GetDevOpsProjects +
-                    "?connectionId=" + Uri.EscapeDataString((string.Empty + Model?.SignalrClientRegistration?.ConnectionId).Trim()) +
-                    "&orgName=" + Uri.EscapeDataString(OrgName) +
-                    "&pat=" + Uri.EscapeDataString(DevOpsPAT)
-                );
+            // Retrieve projects based on current authentication context.
+            List<DataObjects.DevopsProjectInfo>? result = await Helpers.GetOrPost<List<DataObjects.DevopsProjectInfo>>(DataObjects.Endpoints.DevOps.GetDevOpsProjects +
+                "?connectionId=" + Uri.EscapeDataString((string.Empty + Model?.SignalrClientRegistration?.ConnectionId).Trim()) +
+                "&orgName=" + Uri.EscapeDataString(OrgName) +
+                "&pat=" + Uri.EscapeDataString(DevOpsPAT)
+            );
 
-                if (result != null && result.Any()) {
-                    DevopsProjectInfos = result.ToList();
-                    // now move to the next step
+            if (result != null && result.Any()) {
+                DevopsProjectInfos = result.ToList();
+                currentStep = 1;
+                StateHasChanged();
 
-                    currentStep = 1;
-                    StateHasChanged();
-                } else {
-
-                    DevopsProjectInfos = new List<DataObjects.DevopsProjectInfo>();
+                if (DevopsProjectInfos.Count == 1) {
+                    SelectedProjectId = DevopsProjectInfos[0].ProjectId;
+                    await ProjectChangedWizard(new ChangeEventArgs { Value = SelectedProjectId });
                 }
-            } catch (Exception ex) {
-                //Console.WriteLine($"Error loading DevOps Info: {ex.Message}");
+            } else {
+                DevopsProjectInfos = new List<DataObjects.DevopsProjectInfo>();
             }
         } catch (Exception ex) {
-            //Console.WriteLine("Error in PATandOrgNameChangedWizard: " + ex.Message);
+            // Error occurred while updating project data: ex.Message (suppressed)
         } finally {
             _loading = false;
             await Task.CompletedTask;
-
             StateHasChanged();
         }
     }
 
-    // Event handler wrappers for wizard selections that call the existing methods.
+    // Event handlers for wizard dropdown updates.
     private async Task ProjectChangedWizard(ChangeEventArgs e) {
         ClearLoadingMessages();
         _loading = true;
         StateHasChanged();
         try {
-
-            // reset everything
+            // Reset dependent selections following project change.
             SelectedProjectId = e.Value?.ToString() ?? "";
             SelectedRepoId = "";
             SelectedBranch = "";
 
             if (SelectedProjectInfo != null) {
-                //REPLACE WITH HELPERS METHOD
                 List<DataObjects.DevopsGitRepoInfo>? result = await Helpers.GetOrPost<List<DataObjects.DevopsGitRepoInfo>>(DataObjects.Endpoints.DevOps.GetDevOpsRepos +
                     "?connectionId=" + Uri.EscapeDataString((string.Empty + Model?.SignalrClientRegistration?.ConnectionId).Trim()) +
                     "&projectId=" + Uri.EscapeDataString($"{SelectedProjectInfo.ProjectId}") +
@@ -775,14 +760,18 @@
                             }
                         }
                     }
+
+                    if (result.Count == 1) {
+                        SelectedRepoId = result[0].RepoId;
+                        await RepoChangedWizard(new ChangeEventArgs { Value = SelectedRepoId });
+                    }
                 }
             }
         } catch (Exception ex) {
-            //Console.WriteLine("Error in ProjectChangedWizard: " + ex.Message);
+            // Error in ProjectChangedWizard: ex.Message (suppressed)
         } finally {
             _loading = false;
             await Task.CompletedTask;
-
             StateHasChanged();
         }
     }
@@ -796,7 +785,6 @@
             SelectedBranch = "";
 
             if (SelectedRepoInfo != null) {
-                //REPLACE WITH HELPERS METHOD
                 List<DataObjects.DevopsGitRepoBranchInfo>? result = await Helpers.GetOrPost<List<DataObjects.DevopsGitRepoBranchInfo>>(DataObjects.Endpoints.DevOps.GetDevOpsBranches +
                     "?connectionId=" + Uri.EscapeDataString((string.Empty + Model?.SignalrClientRegistration?.ConnectionId).Trim()) +
                     "&projectId=" + Uri.EscapeDataString($"{SelectedProjectInfo?.ProjectId}") +
@@ -806,9 +794,8 @@
                 );
 
                 if (result != null && result.Any()) {
-                    // blank out the repos of selected ones.
+                    // Clear branch lists for non-selected repositories to avoid stale data.
                     if (DevopsProjectInfos != null) {
-
                         foreach (var project in DevopsProjectInfos) {
                             if (project.ProjectId == SelectedProjectId) {
                                 foreach (var repo in project.GitRepos) {
@@ -821,14 +808,18 @@
                             }
                         }
                     }
+
+                    if (result.Count == 1) {
+                        SelectedBranch = result[0].BranchName;
+                        await BranchChangedWizard(new ChangeEventArgs { Value = SelectedBranch });
+                    }
                 }
             }
         } catch (Exception ex) {
-            //Console.WriteLine("Error in RepoChangedWizard: " + ex.Message);
+            // Error in RepoChangedWizard: ex.Message (suppressed)
         } finally {
             _loading = false;
             await Task.CompletedTask;
-
             StateHasChanged();
         }
     }
@@ -840,10 +831,8 @@
         try {
             SelectedBranch = e.Value?.ToString() ?? "";
 
-            // now lookup the files so we can select the csproj
             if (SelectedBranchInfo != null) {
-                // string projectId,  string repoId,  string branchName,string? pat = null, string? orgName = null,  string? connectionId = null
-                //REPLACE WITH HELPERS METHOD
+                // Expected query parameters include projectId, repoId, branchName, optional pat, orgName, and connectionId.
                 List<DataObjects.DevopsFileItem>? result = await Helpers.GetOrPost<List<DataObjects.DevopsFileItem>>(DataObjects.Endpoints.DevOps.GetDevOpsFiles +
                     "?connectionId=" + Uri.EscapeDataString((string.Empty + Model?.SignalrClientRegistration?.ConnectionId).Trim()) +
                     "&projectId=" + Uri.EscapeDataString($"{SelectedProjectInfo?.ProjectId}") +
@@ -854,7 +843,6 @@
                 );
 
                 if (result != null && result.Any()) {
-                    // blank out the repos of selected ones.
                     if (DevopsProjectInfos != null) {
                         foreach (var project in DevopsProjectInfos) {
                             if (project.ProjectId == SelectedProjectId) {
@@ -872,14 +860,19 @@
                             }
                         }
                     }
+
+                    // If only one .csproj file exists, select it automatically.
+                    var csprojFiles = result.Where(f => f.FileType.EndsWith(".csproj", StringComparison.OrdinalIgnoreCase)).ToList();
+                    if (csprojFiles.Count == 1) {
+                        SelectedCsprojPath = csprojFiles[0].Path;
+                    }
                 }
             }
         } catch (Exception ex) {
-            //Console.WriteLine("Error in BranchChangedWizard: " + ex.Message);
+            // Error in BranchChangedWizard: ex.Message (suppressed)
         } finally {
             _loading = false;
             await Task.CompletedTask;
-
             StateHasChanged();
         }
     }
@@ -889,10 +882,10 @@
         _loading = true;
         StateHasChanged();
         try {
-            // This method is called when the user selects a .csproj file.
+            // Handler invoked when a .csproj file is selected.
             SelectedCsprojPath = e?.Value?.ToString() ?? "";
         } catch (Exception ex) {
-            //Console.WriteLine("Error in BranchChangedWizard: " + ex.Message);
+            // Error in CsProjectFileChangedWizard: ex.Message (suppressed)
         } finally {
             _loading = false;
             await Task.CompletedTask;
@@ -905,12 +898,11 @@
         _loading = true;
         StateHasChanged();
         try {
-            // Convert the event args value to a boolean.
-            // Note: For checkboxes, you might consider using @bind for simpler two-way binding.
+            // Interpret the event argument as a boolean; consider using @bind for checkboxes to simplify binding.
             bool isChecked = e.Value != null && bool.TryParse(e.Value.ToString(), out bool result) && result;
 
-            // if we just checked it, then we need to create it
             if (isChecked) {
+                // Initialize settings when an environment is enabled.
                 string websiteNameDefault = GlobalSettings.App.EnvironmentOptions[envKey]?.Hostname ?? string.Empty;
                 var setting = new DataObjects.EnvSetting {
                     EnvName = envKey,
@@ -923,13 +915,13 @@
 
                 EnvSettings[envKey] = setting;
             } else {
-                // we just unchecked it and need to clear it out
+                // Remove settings when the environment is disabled.
                 if (EnvSettings.ContainsKey(envKey)) {
                     EnvSettings.Remove(envKey);
                 }
             }
         } catch (Exception ex) {
-            //Console.WriteLine("Error in BranchChangedWizard: " + ex.Message);
+            // Error in EnvironmentChangedWizard: ex.Message (suppressed)
         } finally {
             _loading = false;
             await Task.CompletedTask;
@@ -942,7 +934,7 @@
         _loading = true;
         StateHasChanged();
         try {
-            // Convert the event args value to a string.
+            // Extract deployment type from event arguments.
             string deploymentType = e.Value?.ToString() ?? "";
             if (EnvSettings.ContainsKey(envKey)) {
                 EnvSettings[envKey].IISDeploymentType = deploymentType;
@@ -953,7 +945,7 @@
                 }
             }
         } catch (Exception ex) {
-            //Console.WriteLine("Error in BranchChangedWizard: " + ex.Message);
+            // Error in EnvironmentDeploymentTypeChangedWizard: ex.Message (suppressed)
         } finally {
             _loading = false;
             await Task.CompletedTask;
@@ -970,7 +962,7 @@
                 SelectedPipelineId = pid;
             }
         } catch (Exception ex) {
-            //Console.WriteLine("Error in OnPipelineChanged: " + ex.Message);
+            // Error in PipelineChangedWizard: ex.Message (suppressed)
         } finally {
             _loading = false;
             await Task.CompletedTask;
