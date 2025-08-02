@@ -307,8 +307,6 @@
                         break;
 
                     case DataObjects.StepNameList.YAMLPreviewAndSave:
-                       
-
                         <div class="row yaml-diff mt-4">
                             <div class="col-12">
                                 <h5>YAML Diff</h5>
@@ -316,10 +314,10 @@
                                     <p>Nothing to diff.</p>
                                 } else {
                                     <MonacoEditor Id="yaml-diff-editor"
-                                                  Language="@MonacoEditor.MonacoLanguage.yaml"
-                                                  ReadOnly="true"
-                                                  ValueToDiff="@ExistingYamlContent"
-                                                  @bind-Value="NewYamlContent" />
+                                    Language="@MonacoEditor.MonacoLanguage.yaml"
+                                    ReadOnly="true"
+                                    ValueToDiff="@ExistingYamlContent"
+                                    @bind-Value="NewYamlContent" />
                                 }
                             </div>
                         </div>
@@ -343,11 +341,20 @@
                                             <a target="_blank" href="@SelectedBranchInfo.ResourceUrl">Branch: @SelectedBranchInfo.BranchName</a>
                                         </li>
                                     }
-                                    @if (LastSavedPipelineDefinition != null && !string.IsNullOrWhiteSpace(LastSavedPipelineDefinition.ResourceUrl)) {
+                                    @if (LastSavedPipelineDefinition == null || string.IsNullOrWhiteSpace(LastSavedPipelineDefinition.ResourceUrl)) {
+                                            <li>
+                                                <div class="d-flex align-items-center">
+                                                    <div class="spinner-border spinner-border-sm me-2" role="status" aria-label="Saving pipeline info">
+                                                        <span class="visually-hidden">Saving pipeline info</span>
+                                                    </div>
+                                                    <span>Saving Pipeline...</span>
+                                                </div>
+                                            </li>
+                                    } else {
                                         <li>
                                             <a target="_blank" href="@LastSavedPipelineDefinition.ResourceUrl">Pipeline: @LastSavedPipelineDefinition.Name</a>
                                         </li>
-                                    }
+                                    }                                    
                                 </ul>
                             </div>
                         </div>
@@ -687,7 +694,7 @@
                 break;
             case DataObjects.StepNameList.YAMLPreviewAndSave:
                 try {
-                    // todo - track that this is loading.. and ensure the page is updated correctly
+                    LastSavedPipelineDefinition = null;
                     var createOrUpdateResult = await Helpers.GetOrPost<DataObjects.BuildDefinition>($"{DataObjects.Endpoints.DevOps.CreateOrUpdateDevOpsPipeline}", DevOpsPipelineRequest);
                     if (createOrUpdateResult != null && createOrUpdateResult.Id > 0) {
                         LastSavedPipelineDefinition = createOrUpdateResult;
@@ -825,7 +832,7 @@
                                 foreach (var repo in project.GitRepos) {
                                     if (repo.RepoId == SelectedRepoInfo?.RepoId) {
                                         repo.GitBranches = result;
-                                            } else {
+                                    } else {
                                         repo.GitBranches = new List<DataObjects.DevopsGitRepoBranchInfo>();
                                     }
                                 }
