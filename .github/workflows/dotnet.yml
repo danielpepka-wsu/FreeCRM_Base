@@ -1,31 +1,101 @@
-name: .NET (Windows)
+name: .NET (Windows + Remove Modules)
 
 on:
   push:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
+  workflow_dispatch:
+    inputs:
+      selections:
+        description: "Comma-separated highest→lowest selections to remove (e.g., 6,5,4)"
+        required: false
+        default: "6,5,4,3,2,1"
 
 jobs:
   build:
-    runs-on: windows-latest   # <-- swapped to Windows VM
+    runs-on: windows-latest
+
+    # Pick selections: if manual dispatch, use the provided input; else default.
+    # Also set the path to your console EXEs here.
+    env:
+      SELECTIONS: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.selections || '6,5,4,3,2,1' }}
+      REMOVE_EXE: .\RemoveModulesFromFreeCRM.exe
+      RENAME_EXE: .\RenameFreeCRM.exe  # if you need it; otherwise you can delete this env var
 
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: 9.0.x
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
 
-    - name: Restore dependencies
-      run: dotnet restore
-      shell: pwsh   # PowerShell Core (default on Windows-latest anyway)
+      - name: Restore
+        run: dotnet restore
+        shell: pwsh
 
-    - name: Build
-      run: dotnet build --no-restore
-      shell: pwsh
+      - name: Build
+        run: dotnet build --no-restore
+        shell: pwsh
 
-    - name: Test
-      run: dotnet test --no-build --verbosity normal
-      shell: pwsh
+      - name: Test
+        run: dotnet test --no-build --verbosity normal
+        shell: pwsh
+
+      # OPTIONAL: If you need to run the rename utility once before removals, uncomment:
+      # - name: Run rename utility (optional)
+      #   shell: pwsh
+      #   run: |
+      #     if (Test-Path $env:RENAME_EXE) {
+      #       Write-Host "Running $env:RENAME_EXE ..."
+      #       & $env:RENAME_EXE
+      #       if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      #     } else {
+      #       Write-Host "Rename EXE not found at $env:RENAME_EXE — skipping."
+      #     }
+
+      - name: Remove modules (highest → lowest) with scripted input
+        shell: pwsh
+        run: |
+          $exe = $env:REMOVE_EXE
+          if (-not (Test-Path $exe)) {
+            throw "Remove utility not found at path: $exe"
+          }
+
+          # Parse selections either from workflow_dispatch input or default
+          $targets =
+            $env:SELECTIONS -split ',' |
+            ForEach-Object { $_.Trim() } |
+            Where-Object { $_ -match '^\d+$' } |
+            ForEach-Object { [int]$_ } |
+            Sort-Object -Descending  # ensure highest->lowest even if user gave unordered list
+
+          if (-not $targets -or $targets.Count -eq 0) {
+            throw "No valid numeric selections provided in SELECTIONS='$env:SELECTIONS'."
+          }
+
+          Write-Host "Selections to remove (highest→lowest): $($targets -join ', ')"
+
+          foreach ($n in $targets) {
+            Write-Host "`n=== Running $exe with selection $n, then 'x' to exit ==="
+
+            # Build the exact input: number + Enter, then x + Enter
+            $stdin = @"
+$n
+x
+"@
+
+            # Feed via STDIN (works when app uses Console.ReadLine())
+            $stdin | & $exe
+            $exit = $LASTEXITCODE
+
+            if ($exit -ne 0) {
+              throw "Run failed for selection $n (exit code $exit)."
+            }
+
+            # Tiny pause between cycles; adjust if your app needs more time
+            Start-Sleep -Seconds 1
+          }
+
+          Write-Host "`nAll removals completed."
