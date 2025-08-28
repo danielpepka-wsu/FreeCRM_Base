@@ -1,4 +1,4 @@
-name: .NET (Windows + ConPTY feed)
+name: .NET (Windows + Remove via feeder)
 
 on:
   push:
@@ -7,16 +7,12 @@ on:
     branches: [ "main" ]
   workflow_dispatch:
     inputs:
-      app_name:
-        description: "New application name (letters only, e.g., MyNewApp)"
-        required: false
-        default: "MyNewApp"
       selections:
-        description: "Comma-separated highest→lowest selections to remove (e.g., 6,5,4)"
+        description: "Comma-separated highest→lowest to remove (e.g., 6,5,4)"
         required: false
         default: "6,5,4,3,2,1"
-      remove_delay_ms:
-        description: "Delay in ms between removals"
+      delay_ms:
+        description: "Delay (ms) between lines sent to the app"
         required: false
         default: "1000"
 
@@ -25,16 +21,13 @@ jobs:
     runs-on: windows-latest
 
     env:
-      RENAME_EXE: '.\Rename FreeCRM.exe'
       REMOVE_EXE: '.\Remove Modules from FreeCRM.exe'
-      APP_NAME: ${{ github.event.inputs.app_name }}
       SELECTIONS: ${{ github.event.inputs.selections }}
-      REMOVE_DELAY_MS: ${{ github.event.inputs.remove_delay_ms }}
+      DELAY_MS:  ${{ github.event.inputs.delay_ms }}
 
     steps:
       - uses: actions/checkout@v4
 
-      # Install SDKs (includes runtimes)
       - name: Setup .NET 9 & 8 SDKs
         uses: actions/setup-dotnet@v4
         with:
@@ -42,318 +35,92 @@ jobs:
             9.0.x
             8.0.x
 
-      - name: Verify .NET
+      # --- Build a tiny feeder that reads a text file and writes each line (with delay) to STDIN ---
+      - name: Create feeder project
         shell: pwsh
         run: |
-          dotnet --info
-          dotnet --list-sdks
+          New-Item -ItemType Directory -Force -Path tools\StdInFeeder | Out-Null
 
-      # Build a tiny ConPTY feeder that can "type" lines/keys with delays into a true console
-      - name: Build ConPTY feeder
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-          New-Item -ItemType Directory -Force -Path tools\ConPtyFeeder | Out-Null
-          dotnet new console -n ConPtyFeeder -f net9.0 -o tools\ConPtyFeeder --force
+          $code = @(
+            'using System;'
+            'using System.Diagnostics;'
+            'using System.IO;'
+            'using System.Text;'
+            ''
+            'class Program'
+            '{'
+            '    static int Main(string[] args)'
+            '    {'
+            '        string exe = null;'
+            '        string inputPath = null;'
+            '        int delay = 500;'
+            '        for (int i = 0; i < args.Length; i++)'
+            '        {'
+            '            switch (args[i])'
+            '            {'
+            '                case "--exe":   exe = args[++i]; break;'
+            '                case "--input": inputPath = args[++i]; break;'
+            '                case "--delay": delay = int.Parse(args[++i]); break;'
+            '            }'
+            '        }'
+            '        if (string.IsNullOrWhiteSpace(exe) || !File.Exists(exe))'
+            '        {'
+            '            Console.Error.WriteLine($"Target exe not found: {exe}");'
+            '            return 2;'
+            '        }'
+            '        if (string.IsNullOrWhiteSpace(inputPath) || !File.Exists(inputPath))'
+            '        {'
+            '            Console.Error.WriteLine($"Input file not found: {inputPath}");'
+            '            return 3;'
+            '        }'
+            '        var psi = new ProcessStartInfo'
+            '        {'
+            '            FileName = exe,'
+            '            UseShellExecute = false,'
+            '            RedirectStandardInput = true,'
+            '            RedirectStandardOutput = true,'
+            '            RedirectStandardError = true,'
+            '            CreateNoWindow = true'
+            '        };'
+            '        using var p = new Process { StartInfo = psi };'
+            '        p.OutputDataReceived += (_, e) => { if (e.Data != null) Console.WriteLine(e.Data); };'
+            '        p.ErrorDataReceived  += (_, e) => { if (e.Data != null) Console.Error.WriteLine(e.Data); };'
+            '        if (!p.Start()) return 4;'
+            '        p.BeginOutputReadLine();'
+            '        p.BeginErrorReadLine();'
+            '        foreach (var line in File.ReadAllLines(inputPath, Encoding.ASCII))'
+            '        {'
+            '            p.StandardInput.WriteLine(line);'
+            '            p.StandardInput.Flush();'
+            '            System.Threading.Thread.Sleep(delay);'
+            '        }'
+            '        p.StandardInput.Close();'
+            '        p.WaitForExit();'
+            '        return p.ExitCode;'
+            '    }'
+            '}'
+          )
+          Set-Content -Path tools\StdInFeeder\Program.cs -Value $code -Encoding UTF8
 
-          # Overwrite Program.cs with the ConPTY runner
-          Set-Content -Path tools\ConPtyFeeder\Program.cs -Value @'
-using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Diagnostics;
-using System.IO;
-using System.Runtime.InteropServices;
-using System.Text;
+          $proj = @(
+            '<Project Sdk="Microsoft.NET.Sdk">',
+            '  <PropertyGroup>',
+            '    <OutputType>Exe</OutputType>',
+            '    <TargetFramework>net8.0</TargetFramework>',
+            '    <ImplicitUsings>enable</ImplicitUsings>',
+            '    <Nullable>enable</Nullable>',
+            '    <PublishSingleFile>true</PublishSingleFile>',
+            '    <RuntimeIdentifier>win-x64</RuntimeIdentifier>',
+            '    <SelfContained>false</SelfContained>',
+            '  </PropertyGroup>',
+            '</Project>'
+          )
+          Set-Content -Path tools\StdInFeeder\StdInFeeder.csproj -Value $proj -Encoding UTF8
 
-internal static class Program
-{
-    static int Main(string[] args)
-    {
-        string exe = null!;
-        string exeArgs = "";
-        var sends = new List<(bool isKey, string text)>();
-        int sleepMs = 500;
+          dotnet publish tools\StdInFeeder -c Release -o tools\StdInFeeder\out
 
-        for (int i = 0; i < args.Length; i++)
-        {
-            switch (args[i])
-            {
-                case "--exe":
-                    exe = Next(args, ref i);
-                    break;
-                case "--args":
-                    exeArgs = Next(args, ref i);
-                    break;
-                case "--line":
-                    sends.Add((false, Next(args, ref i)));
-                    break;
-                case "--key":
-                    sends.Add((true, Next(args, ref i)));
-                    break;
-                case "--sleep":
-                case "--delay":
-                    sleepMs = int.Parse(Next(args, ref i));
-                    break;
-                default:
-                    throw new ArgumentException($"Unknown arg: {args[i]}");
-            }
-        }
-
-        if (string.IsNullOrWhiteSpace(exe) || !File.Exists(exe))
-            throw new FileNotFoundException($"Target exe not found: {exe}");
-
-        using var feeder = new ConPtyRunner(exe, exeArgs);
-        feeder.Start();
-
-        foreach (var (isKey, text) in sends)
-        {
-            if (isKey)
-            {
-                feeder.SendKey(text);
-            }
-            else
-            {
-                feeder.SendLine(text);
-            }
-            System.Threading.Thread.Sleep(sleepMs);
-        }
-
-        return feeder.WaitForExit();
-    }
-
-    static string Next(string[] a, ref int i)
-    {
-        if (i + 1 >= a.Length) throw new ArgumentException("Missing value for " + a[i]);
-        return a[++i];
-    }
-}
-
-internal sealed class ConPtyRunner : IDisposable
-{
-    private IntPtr _hPC = IntPtr.Zero;
-    private IntPtr _hPipeInWrite = IntPtr.Zero;   // Our write -> pty input
-    private IntPtr _hPipeOutRead = IntPtr.Zero;   // Our read  <- pty output
-    private IntPtr _pi_hProcess = IntPtr.Zero;
-    private IntPtr _pi_hThread = IntPtr.Zero;
-    private IntPtr _attrList = IntPtr.Zero;
-
-    private readonly string _exe;
-    private readonly string _args;
-
-    public ConPtyRunner(string exe, string args)
-    {
-        _exe = Path.GetFullPath(exe);
-        _args = args ?? "";
-    }
-
-    public void Start()
-    {
-        // Create pipes for the pseudo console
-        SECURITY_ATTRIBUTES sa = new SECURITY_ATTRIBUTES();
-        sa.nLength = Marshal.SizeOf<SECURITY_ATTRIBUTES>();
-        sa.bInheritHandle = true;
-
-        // Input pipe: our write -> pty read
-        if (!Native.CreatePipe(out IntPtr hPtyInRead, out _hPipeInWrite, ref sa, 0))
-            throw new Win32Exception(Marshal.GetLastWin32Error());
-
-        // Output pipe: pty write -> our read
-        if (!Native.CreatePipe(out _hPipeOutRead, out IntPtr hPtyOutWrite, ref sa, 0))
-            throw new Win32Exception(Marshal.GetLastWin32Error());
-
-        // Create the pseudo console
-        COORD size = new COORD { X = 120, Y = 40 };
-        int hr = Native.CreatePseudoConsole(size, hPtyInRead, hPtyOutWrite, 0, out _hPC);
-        // The CreatePseudoConsole function returns an HRESULT (0 == S_OK)
-        if (hr != 0) throw new Win32Exception(hr);
-
-        // Close the PTY-side pipe handles we no longer need
-        Native.CloseHandle(hPtyInRead);
-        Native.CloseHandle(hPtyOutWrite);
-
-        // Prepare STARTUPINFOEX with the ConPTY attribute
-        STARTUPINFOEX siex = new STARTUPINFOEX();
-        siex.StartupInfo.cb = Marshal.SizeOf<STARTUPINFOEX>();
-        IntPtr lpSize = IntPtr.Zero;
-        // First call to get buffer size
-        Native.InitializeProcThreadAttributeList(IntPtr.Zero, 1, 0, ref lpSize);
-        _attrList = Marshal.AllocHGlobal(lpSize);
-        if (!Native.InitializeProcThreadAttributeList(_attrList, 1, 0, ref lpSize))
-            throw new Win32Exception(Marshal.GetLastWin32Error());
-
-        IntPtr hPcPtr = _hPC;
-        if (!Native.UpdateProcThreadAttribute(_attrList, 0, (IntPtr)Native.PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE,
-                                              hPcPtr, (IntPtr)IntPtr.Size, IntPtr.Zero, IntPtr.Zero))
-            throw new Win32Exception(Marshal.GetLastWin32Error());
-
-        siex.lpAttributeList = _attrList;
-
-        // Create the child process attached to the pseudo console
-        PROCESS_INFORMATION pi = new PROCESS_INFORMATION();
-        uint flags = Native.EXTENDED_STARTUPINFO_PRESENT | Native.CREATE_UNICODE_ENVIRONMENT;
-
-        string cmd = $"\"{_exe}\"{(_args.Length > 0 ? " " + _args : "")}";
-        if (!Native.CreateProcessW(null, new StringBuilder(cmd), IntPtr.Zero, IntPtr.Zero, false, flags,
-                                   IntPtr.Zero, null, ref siex, out pi))
-            throw new Win32Exception(Marshal.GetLastWin32Error());
-
-        _pi_hProcess = pi.hProcess;
-        _pi_hThread = pi.hThread;
-    }
-
-    public void SendLine(string text)
-    {
-        var data = Encoding.ASCII.GetBytes(text + "\r\n");
-        Write(data);
-    }
-
-    public void SendKey(string key)
-    {
-        // Default to space for "any key"
-        string k = string.IsNullOrEmpty(key) ? " " : key.Substring(0, 1);
-        var data = Encoding.ASCII.GetBytes(k);
-        Write(data);
-    }
-
-    private void Write(byte[] data)
-    {
-        if (_hPipeInWrite == IntPtr.Zero) throw new InvalidOperationException("PTY input not available.");
-        if (!Native.WriteFile(_hPipeInWrite, data, (uint)data.Length, out uint _, IntPtr.Zero))
-            throw new Win32Exception(Marshal.GetLastWin32Error());
-    }
-
-    public int WaitForExit()
-    {
-        Native.WaitForSingleObject(_pi_hProcess, 60 * 60 * 1000);
-        if (!Native.GetExitCodeProcess(_pi_hProcess, out uint code))
-            code = 1;
-        return unchecked((int)code);
-    }
-
-    public void Dispose()
-    {
-        if (_pi_hThread != IntPtr.Zero) Native.CloseHandle(_pi_hThread);
-        if (_pi_hProcess != IntPtr.Zero) Native.CloseHandle(_pi_hProcess);
-        if (_attrList != IntPtr.Zero) { Native.DeleteProcThreadAttributeList(_attrList); Marshal.FreeHGlobal(_attrList); }
-        if (_hPC != IntPtr.Zero) Native.ClosePseudoConsole(_hPC);
-        if (_hPipeInWrite != IntPtr.Zero) Native.CloseHandle(_hPipeInWrite);
-        if (_hPipeOutRead != IntPtr.Zero) Native.CloseHandle(_hPipeOutRead);
-    }
-}
-
-[StructLayout(LayoutKind.Sequential)]
-internal struct COORD { public short X; public short Y; }
-
-[StructLayout(LayoutKind.Sequential)]
-internal struct STARTUPINFO
-{
-    public int cb;
-    public string lpReserved;
-    public string lpDesktop;
-    public string lpTitle;
-    public int dwX, dwY, dwXSize, dwYSize, dwXCountChars, dwYCountChars, dwFillAttribute, dwFlags;
-    public short wShowWindow;
-    public short cbReserved2;
-    public IntPtr lpReserved2;
-    public IntPtr hStdInput, hStdOutput, hStdError;
-}
-
-[StructLayout(LayoutKind.Sequential)]
-internal struct STARTUPINFOEX
-{
-    public STARTUPINFO StartupInfo;
-    public IntPtr lpAttributeList;
-}
-
-[StructLayout(LayoutKind.Sequential)]
-internal struct PROCESS_INFORMATION
-{
-    public IntPtr hProcess;
-    public IntPtr hThread;
-    public int dwProcessId;
-    public int dwThreadId;
-}
-
-[StructLayout(LayoutKind.Sequential)]
-internal struct SECURITY_ATTRIBUTES
-{
-    public int nLength;
-    public IntPtr lpSecurityDescriptor;
-    [MarshalAs(UnmanagedType.Bool)] public bool bInheritHandle;
-}
-
-internal static class Native
-{
-    public const int PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE = 0x00020016;
-    public const uint EXTENDED_STARTUPINFO_PRESENT = 0x00080000;
-    public const uint CREATE_UNICODE_ENVIRONMENT = 0x00000400;
-    public const uint INFINITE = 0xFFFFFFFF;
-
-    [DllImport("kernel32.dll", SetLastError = true)]
-    public static extern bool CreatePipe(out IntPtr hReadPipe, out IntPtr hWritePipe,
-        ref SECURITY_ATTRIBUTES lpPipeAttributes, int nSize);
-
-    [DllImport("kernel32.dll")]
-    public static extern int CreatePseudoConsole(COORD size, IntPtr hInput, IntPtr hOutput, uint dwFlags, out IntPtr phPC);
-
-    [DllImport("kernel32.dll")]
-    public static extern void ClosePseudoConsole(IntPtr hPC);
-
-    [DllImport("kernel32.dll", SetLastError = true)]
-    public static extern bool InitializeProcThreadAttributeList(IntPtr lpAttributeList, int dwAttributeCount, int dwFlags, ref IntPtr lpSize);
-
-    [DllImport("kernel32.dll", SetLastError = true)]
-    public static extern bool UpdateProcThreadAttribute(IntPtr lpAttributeList, uint dwFlags, IntPtr attribute, IntPtr lpValue, IntPtr cbSize, IntPtr lpPreviousValue, IntPtr lpReturnSize);
-
-    [DllImport("kernel32.dll")]
-    public static extern void DeleteProcThreadAttributeList(IntPtr lpAttributeList);
-
-    [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
-    public static extern bool CreateProcessW(
-        string lpApplicationName,
-        StringBuilder lpCommandLine,
-        IntPtr lpProcessAttributes,
-        IntPtr lpThreadAttributes,
-        bool bInheritHandles,
-        uint dwCreationFlags,
-        IntPtr lpEnvironment,
-        string lpCurrentDirectory,
-        ref STARTUPINFOEX lpStartupInfo,
-        out PROCESS_INFORMATION lpProcessInformation);
-
-    [DllImport("kernel32.dll", SetLastError = true)]
-    public static extern bool WriteFile(IntPtr hFile, byte[] lpBuffer, uint nNumberOfBytesToWrite, out uint lpNumberOfBytesWritten, IntPtr lpOverlapped);
-
-    [DllImport("kernel32.dll")]
-    public static extern uint WaitForSingleObject(IntPtr hHandle, uint dwMilliseconds);
-
-    [DllImport("kernel32.dll", SetLastError = true)]
-    public static extern bool GetExitCodeProcess(IntPtr hProcess, out uint lpExitCode);
-
-    [DllImport("kernel32.dll", SetLastError = true)]
-    public static extern bool CloseHandle(IntPtr hObject);
-}
-'@
-
-          dotnet publish tools\ConPtyFeeder -c Release -o tools\ConPtyFeeder\out
-
-      # --- RENAME: actually "type" the app name, then an ANY KEY via ConPTY ---
-      - name: Rename via ConPTY (type name, then any key)
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $exe  = $env:RENAME_EXE
-          if (-not (Test-Path $exe)) { throw "Rename EXE not found at: $exe" }
-          $name = if ([string]::IsNullOrWhiteSpace($env:APP_NAME)) { "MyNewApp" } else { $env:APP_NAME }
-          if ($name -notmatch '^[A-Za-z]+$') { throw "APP_NAME '$name' invalid; letters only." }
-
-          $feeder = ".\tools\ConPtyFeeder\out\ConPtyFeeder.exe"
-          & $feeder --exe "$exe" --line "$name" --key " " --sleep 800
-          if ($LASTEXITCODE -ne 0) { throw "Rename utility exited with code $LASTEXITCODE" }
-
-      # --- REMOVE: highest→lowest, typing N then x with delay between runs ---
-      - name: Remove modules via ConPTY (highest → lowest, with delays)
+      # --- Generate input and run the remove utility N times highest→lowest ---
+      - name: Remove modules using feeder
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
@@ -361,7 +128,7 @@ internal static class Native
           if (-not (Test-Path $exe)) { throw "Remove utility not found at: $exe" }
 
           $selections = if ([string]::IsNullOrWhiteSpace($env:SELECTIONS)) { "6,5,4,3,2,1" } else { $env:SELECTIONS }
-          $delayMs    = if ([string]::IsNullOrWhiteSpace($env:REMOVE_DELAY_MS)) { 1000 } else { [int]$env:REMOVE_DELAY_MS }
+          $delayMs    = if ([string]::IsNullOrWhiteSpace($env:DELAY_MS)) { 1000 } else { [int]$env:DELAY_MS }
 
           $targets =
             $selections -split ',' |
@@ -372,24 +139,35 @@ internal static class Native
 
           if (-not $targets) { throw "No valid numeric selections in: '$selections'" }
 
-          $feeder = ".\tools\ConPtyFeeder\out\ConPtyFeeder.exe"
-          Write-Host "Selections to remove (highest→lowest): $($targets -join ', '); delay: $delayMs ms"
+          $feeder = ".\tools\StdInFeeder\out\StdInFeeder.exe"
 
           foreach ($n in $targets) {
             Write-Host "`n=== $exe with selection $n, then 'x' ==="
-            & $feeder --exe "$exe" --line "$n" --line "x" --sleep $delayMs
+            # Build a simple input file: line1=selection, line2=x
+            Set-Content -Path input.txt -Value @("$n","x") -Encoding ASCII
+
+            & $feeder --exe "$exe" --input "input.txt" --delay $delayMs
             if ($LASTEXITCODE -ne 0) { throw "Remove run failed for selection $n (exit $LASTEXITCODE)" }
+
+            Remove-Item input.txt -Force -ErrorAction SilentlyContinue
           }
 
-      # --- Build/Test ---
+      # --- Build/Test the renamed/trimmed solution ---
+      - name: Detect solution after changes
+        shell: pwsh
+        run: |
+          $sln = Get-ChildItem -Recurse -Filter *.sln | Select-Object -First 1
+          if (-not $sln) { throw "No .sln found after modifications." }
+          "SLN_PATH=$($sln.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
+
       - name: Restore
         shell: pwsh
-        run: dotnet restore
+        run: dotnet restore "$env:SLN_PATH"
 
       - name: Build
         shell: pwsh
-        run: dotnet build --no-restore
+        run: dotnet build --no-restore "$env:SLN_PATH"
 
       - name: Test
         shell: pwsh
-        run: dotnet test --no-build --verbosity normal
+        run: dotnet test --no-build --verbosity normal "$env:SLN_PATH"
