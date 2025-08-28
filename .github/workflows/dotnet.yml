@@ -17,16 +17,29 @@ jobs:
     runs-on: windows-latest
 
     env:
-      # Adjust these paths to where your EXEs live in the repo
+      # EXEs live in repo root (with spaces in names)
       REMOVE_EXE: ".\Remove Modules from FreeCRM.exe"
       RENAME_EXE: ".\Rename FreeCRM.exe"
-      # Populated only for manual dispatch; defaulting is handled in the step
+      # Only populated for manual dispatch; we'll default in-script for push/PR
       SELECTIONS: ${{ github.event.inputs.selections }}
 
     steps:
       - uses: actions/checkout@v4
 
-      # --- Executable work FIRST: rename + remove ---
+      # --- Install .NET FIRST (SDK includes the runtime) ---
+      - name: Setup .NET 9 & 8 SDKs
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            9.0.x
+            8.0.x
+      - name: Verify .NET
+        shell: pwsh
+        run: |
+          dotnet --info
+          dotnet --list-sdks
+
+      # --- Utilities BEFORE building ---
 
       - name: Run rename utility (optional)
         shell: pwsh
@@ -34,7 +47,7 @@ jobs:
           $exe = $env:RENAME_EXE
           if (Test-Path $exe) {
             Write-Host "Running rename utility: $exe"
-            & $exe
+            & "$exe"
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           } else {
             Write-Host "Rename EXE not found at: $exe — skipping."
@@ -44,9 +57,7 @@ jobs:
         shell: pwsh
         run: |
           $exe = $env:REMOVE_EXE
-          if (-not (Test-Path $exe)) {
-            throw "Remove utility not found at: $exe"
-          }
+          if (-not (Test-Path $exe)) { throw "Remove utility not found at: $exe" }
 
           # Use dispatch input if provided; otherwise default for push/PR
           $selections = $env:SELECTIONS
@@ -57,7 +68,7 @@ jobs:
             ForEach-Object { $_.Trim() } |
             Where-Object { $_ -match '^\d+$' } |
             ForEach-Object { [int]$_ } |
-            Sort-Object -Descending  # enforce highest→lowest even if user passes unordered list
+            Sort-Object -Descending  # enforce highest→lowest even if user passes unordered
 
           if (-not $targets) { throw "No valid numeric selections in: '$selections'" }
 
@@ -70,11 +81,9 @@ jobs:
             $inputText = "$n`r`nx`r`n"
             Set-Content -Path input.txt -Value $inputText -NoNewline -Encoding ascii
 
-            # Feed the file into STDIN
-            & $exe < input.txt
-            if ($LASTEXITCODE -ne 0) {
-              throw "Run failed for selection $n (exit $LASTEXITCODE)"
-            }
+            # Feed the file to STDIN for the console app
+            & "$exe" < input.txt
+            if ($LASTEXITCODE -ne 0) { throw "Run failed for selection $n (exit $LASTEXITCODE)" }
 
             Remove-Item input.txt -Force -ErrorAction SilentlyContinue
             Start-Sleep -Seconds 1
@@ -82,12 +91,7 @@ jobs:
 
           Write-Host "`nAll removals completed."
 
-      # --- Then do the .NET build/test ---
-
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: 9.0.x
+      # --- Then the .NET build/test ---
 
       - name: Restore
         shell: pwsh
