@@ -1,4 +1,4 @@
-name: .NET (Windows + Remove Modules)
+name: .NET (Windows + Pre-Build Utilities)
 
 on:
   push:
@@ -17,49 +17,36 @@ jobs:
     runs-on: windows-latest
 
     env:
-      # Set your EXE paths (adjust these to where your build drops them)
-      REMOVE_EXE: .\RemoveModulesFromFreeCRM.exe
-      RENAME_EXE: .\RenameFreeCRM.exe
-      # This is only populated on manual dispatch; we'll handle defaulting in the step
+      # Adjust these paths to where your EXEs live in the repo
+      REMOVE_EXE: ".\Remove Modules from FreeCRM.exe"
+      RENAME_EXE: ".\Rename FreeCRM.exe"
+      # Populated only for manual dispatch; defaulting is handled in the step
       SELECTIONS: ${{ github.event.inputs.selections }}
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: 9.0.x
+      # --- Executable work FIRST: rename + remove ---
 
-      - name: Restore
+      - name: Run rename utility (optional)
         shell: pwsh
-        run: dotnet restore
-
-      - name: Build
-        shell: pwsh
-        run: dotnet build --no-restore
-
-      - name: Test
-        shell: pwsh
-        run: dotnet test --no-build --verbosity normal
-
-      # Optional: run rename tool once before removals
-      # - name: Run rename utility (optional)
-      #   shell: pwsh
-      #   run: |
-      #     if (Test-Path $env:RENAME_EXE) {
-      #       Write-Host "Running $env:RENAME_EXE ..."
-      #       & $env:RENAME_EXE
-      #       if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-      #     } else {
-      #       Write-Host "Rename EXE not found at $env:RENAME_EXE — skipping."
-      #     }
+        run: |
+          $exe = $env:RENAME_EXE
+          if (Test-Path $exe) {
+            Write-Host "Running rename utility: $exe"
+            & $exe
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          } else {
+            Write-Host "Rename EXE not found at: $exe — skipping."
+          }
 
       - name: Remove modules (highest → lowest) with STDIN file
         shell: pwsh
         run: |
           $exe = $env:REMOVE_EXE
-          if (-not (Test-Path $exe)) { throw "Remove utility not found at: $exe" }
+          if (-not (Test-Path $exe)) {
+            throw "Remove utility not found at: $exe"
+          }
 
           # Use dispatch input if provided; otherwise default for push/PR
           $selections = $env:SELECTIONS
@@ -70,7 +57,7 @@ jobs:
             ForEach-Object { $_.Trim() } |
             Where-Object { $_ -match '^\d+$' } |
             ForEach-Object { [int]$_ } |
-            Sort-Object -Descending  # enforce highest→lowest
+            Sort-Object -Descending  # enforce highest→lowest even if user passes unordered list
 
           if (-not $targets) { throw "No valid numeric selections in: '$selections'" }
 
@@ -89,9 +76,27 @@ jobs:
               throw "Run failed for selection $n (exit $LASTEXITCODE)"
             }
 
-            # Clean up and brief pause
             Remove-Item input.txt -Force -ErrorAction SilentlyContinue
             Start-Sleep -Seconds 1
           }
 
           Write-Host "`nAll removals completed."
+
+      # --- Then do the .NET build/test ---
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Restore
+        shell: pwsh
+        run: dotnet restore
+
+      - name: Build
+        shell: pwsh
+        run: dotnet build --no-restore
+
+      - name: Test
+        shell: pwsh
+        run: dotnet test --no-build --verbosity normal
