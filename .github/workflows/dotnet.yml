@@ -17,9 +17,9 @@ jobs:
     runs-on: windows-latest
 
     env:
-      # EXEs live in repo root (with spaces in names)
-      REMOVE_EXE: ".\Remove Modules from FreeCRM.exe"
-      RENAME_EXE: ".\Rename FreeCRM.exe"
+      # EXEs live in repo root (with spaces in names) — use single quotes so backslashes aren't escapes
+      REMOVE_EXE: '.\Remove Modules from FreeCRM.exe'
+      RENAME_EXE: '.\Rename FreeCRM.exe'
       # Only populated for manual dispatch; we'll default in-script for push/PR
       SELECTIONS: ${{ github.event.inputs.selections }}
 
@@ -33,6 +33,7 @@ jobs:
           dotnet-version: |
             9.0.x
             8.0.x
+
       - name: Verify .NET
         shell: pwsh
         run: |
@@ -68,7 +69,7 @@ jobs:
             ForEach-Object { $_.Trim() } |
             Where-Object { $_ -match '^\d+$' } |
             ForEach-Object { [int]$_ } |
-            Sort-Object -Descending  # enforce highest→lowest even if user passes unordered
+            Sort-Object -Descending  # enforce highest→lowest even if unordered
 
           if (-not $targets) { throw "No valid numeric selections in: '$selections'" }
 
