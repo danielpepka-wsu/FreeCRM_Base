@@ -16,12 +16,12 @@ jobs:
   build:
     runs-on: windows-latest
 
-    # Pick selections: if manual dispatch, use the provided input; else default.
-    # Also set the path to your console EXEs here.
     env:
-      SELECTIONS: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.selections || '6,5,4,3,2,1' }}
+      # Set your EXE paths (adjust these to where your build drops them)
       REMOVE_EXE: .\RemoveModulesFromFreeCRM.exe
-      RENAME_EXE: .\RenameFreeCRM.exe  # if you need it; otherwise you can delete this env var
+      RENAME_EXE: .\RenameFreeCRM.exe
+      # This is only populated on manual dispatch; we'll handle defaulting in the step
+      SELECTIONS: ${{ github.event.inputs.selections }}
 
     steps:
       - uses: actions/checkout@v4
@@ -32,18 +32,18 @@ jobs:
           dotnet-version: 9.0.x
 
       - name: Restore
-        run: dotnet restore
         shell: pwsh
+        run: dotnet restore
 
       - name: Build
-        run: dotnet build --no-restore
         shell: pwsh
+        run: dotnet build --no-restore
 
       - name: Test
-        run: dotnet test --no-build --verbosity normal
         shell: pwsh
+        run: dotnet test --no-build --verbosity normal
 
-      # OPTIONAL: If you need to run the rename utility once before removals, uncomment:
+      # Optional: run rename tool once before removals
       # - name: Run rename utility (optional)
       #   shell: pwsh
       #   run: |
@@ -55,46 +55,42 @@ jobs:
       #       Write-Host "Rename EXE not found at $env:RENAME_EXE — skipping."
       #     }
 
-      - name: Remove modules (highest → lowest) with scripted input
+      - name: Remove modules (highest → lowest) with STDIN file
         shell: pwsh
         run: |
           $exe = $env:REMOVE_EXE
-          if (-not (Test-Path $exe)) {
-            throw "Remove utility not found at path: $exe"
-          }
+          if (-not (Test-Path $exe)) { throw "Remove utility not found at: $exe" }
 
-          # Parse selections either from workflow_dispatch input or default
+          # Use dispatch input if provided; otherwise default for push/PR
+          $selections = $env:SELECTIONS
+          if ([string]::IsNullOrWhiteSpace($selections)) { $selections = "6,5,4,3,2,1" }
+
           $targets =
-            $env:SELECTIONS -split ',' |
+            $selections -split ',' |
             ForEach-Object { $_.Trim() } |
             Where-Object { $_ -match '^\d+$' } |
             ForEach-Object { [int]$_ } |
-            Sort-Object -Descending  # ensure highest->lowest even if user gave unordered list
+            Sort-Object -Descending  # enforce highest→lowest
 
-          if (-not $targets -or $targets.Count -eq 0) {
-            throw "No valid numeric selections provided in SELECTIONS='$env:SELECTIONS'."
-          }
+          if (-not $targets) { throw "No valid numeric selections in: '$selections'" }
 
           Write-Host "Selections to remove (highest→lowest): $($targets -join ', ')"
 
           foreach ($n in $targets) {
-            Write-Host "`n=== Running $exe with selection $n, then 'x' to exit ==="
+            Write-Host "`n=== $exe with selection $n, then 'x' ==="
 
-            # Build the exact input: number + Enter, then x + Enter
-            $stdin = @"
-$n
-x
-"@
+            # Build file content with CRLF line endings: "<n>\r\nx\r\n"
+            $inputText = "$n`r`nx`r`n"
+            Set-Content -Path input.txt -Value $inputText -NoNewline -Encoding ascii
 
-            # Feed via STDIN (works when app uses Console.ReadLine())
-            $stdin | & $exe
-            $exit = $LASTEXITCODE
-
-            if ($exit -ne 0) {
-              throw "Run failed for selection $n (exit code $exit)."
+            # Feed the file into STDIN
+            & $exe < input.txt
+            if ($LASTEXITCODE -ne 0) {
+              throw "Run failed for selection $n (exit $LASTEXITCODE)"
             }
 
-            # Tiny pause between cycles; adjust if your app needs more time
+            # Clean up and brief pause
+            Remove-Item input.txt -Force -ErrorAction SilentlyContinue
             Start-Sleep -Seconds 1
           }
 
