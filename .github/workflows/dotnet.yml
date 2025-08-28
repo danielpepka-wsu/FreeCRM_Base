@@ -7,26 +7,34 @@ on:
     branches: [ "main" ]
   workflow_dispatch:
     inputs:
+      app_name:
+        description: "New application name (letters only, e.g., MyNewApp)"
+        required: false
+        default: "MyNewApp"
       selections:
         description: "Comma-separated highest→lowest selections to remove (e.g., 6,5,4)"
         required: false
         default: "6,5,4,3,2,1"
+      remove_delay_ms:
+        description: "Delay in ms between removals"
+        required: false
+        default: "1000"
 
 jobs:
   build:
     runs-on: windows-latest
 
     env:
-      # EXEs live in repo root (with spaces in names) — use single quotes so backslashes aren't escapes
-      REMOVE_EXE: '.\Remove Modules from FreeCRM.exe'
       RENAME_EXE: '.\Rename FreeCRM.exe'
-      # Only populated for manual dispatch; we'll default in-script for push/PR
+      REMOVE_EXE: '.\Remove Modules from FreeCRM.exe'
+      APP_NAME: ${{ github.event.inputs.app_name }}
       SELECTIONS: ${{ github.event.inputs.selections }}
+      REMOVE_DELAY_MS: ${{ github.event.inputs.remove_delay_ms }}
 
     steps:
       - uses: actions/checkout@v4
 
-      # --- Install .NET FIRST (SDK includes the runtime) ---
+      # Install .NET SDKs (includes runtimes)
       - name: Setup .NET 9 & 8 SDKs
         uses: actions/setup-dotnet@v4
         with:
@@ -40,60 +48,81 @@ jobs:
           dotnet --info
           dotnet --list-sdks
 
-      # --- Utilities BEFORE building ---
-
-      - name: Run rename utility (optional)
+      # --- RENAME: run once, pipe the name, allow the final ReadKey to fail without stopping the job ---
+      - name: Rename (pipe app name; ignore press-any-key failure)
         shell: pwsh
+        continue-on-error: true
         run: |
           $exe = $env:RENAME_EXE
-          if (Test-Path $exe) {
-            Write-Host "Running rename utility: $exe"
-            & "$exe"
-            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          } else {
-            Write-Host "Rename EXE not found at: $exe — skipping."
+          if (-not (Test-Path $exe)) { throw "Rename EXE not found at: $exe" }
+
+          $name = $env:APP_NAME
+          if ([string]::IsNullOrWhiteSpace($name)) { $name = "MyNewApp" }
+
+          # Validate: letters only (tool rejects spaces, periods, numbers)
+          if ($name -notmatch '^[A-Za-z]+$') {
+            throw "APP_NAME '$name' is invalid. Use letters only (e.g., MyNewApp)."
           }
 
-      - name: Remove modules (highest → lowest) with STDIN file
+          # Pipe name + newline to STDIN (the tool will do its work, then try ReadKey and exit non-zero)
+          Set-Content -Path rename_input.txt -Value "$name`r`n" -NoNewline -Encoding ascii
+
+          Write-Host "Running rename with app name: $name"
+          & "$exe" < rename_input.txt
+          $code = $LASTEXITCODE
+
+          # Clean up and add a small delay to let file ops settle
+          Remove-Item rename_input.txt -Force -ErrorAction SilentlyContinue
+          Start-Sleep -Milliseconds 500
+
+          if ($code -ne 0) {
+            Write-Warning "Rename tool exited with code $code (expected on Actions due to ReadKey). Assuming rename already completed and continuing."
+          }
+
+      # --- REMOVE: run highest→lowest, piping input each time with a delay you control ---
+      - name: Remove modules (highest → lowest) with STDIN + delay
         shell: pwsh
         run: |
           $exe = $env:REMOVE_EXE
           if (-not (Test-Path $exe)) { throw "Remove utility not found at: $exe" }
 
-          # Use dispatch input if provided; otherwise default for push/PR
-          $selections = $env:SELECTIONS
-          if ([string]::IsNullOrWhiteSpace($selections)) { $selections = "6,5,4,3,2,1" }
+          $selections = if ([string]::IsNullOrWhiteSpace($env:SELECTIONS)) { "6,5,4,3,2,1" } else { $env:SELECTIONS }
+          $delayMs = if ([string]::IsNullOrWhiteSpace($env:REMOVE_DELAY_MS)) { 1000 } else { [int]$env:REMOVE_DELAY_MS }
 
           $targets =
             $selections -split ',' |
             ForEach-Object { $_.Trim() } |
             Where-Object { $_ -match '^\d+$' } |
             ForEach-Object { [int]$_ } |
-            Sort-Object -Descending  # enforce highest→lowest even if unordered
+            Sort-Object -Descending
 
           if (-not $targets) { throw "No valid numeric selections in: '$selections'" }
 
           Write-Host "Selections to remove (highest→lowest): $($targets -join ', ')"
+          Write-Host "Delay between removals: $delayMs ms"
 
           foreach ($n in $targets) {
             Write-Host "`n=== $exe with selection $n, then 'x' ==="
 
-            # Build file content with CRLF line endings: "<n>\r\nx\r\n"
+            # Build file content with CRLF: "<n>\r\nx\r\n"
             $inputText = "$n`r`nx`r`n"
             Set-Content -Path input.txt -Value $inputText -NoNewline -Encoding ascii
 
-            # Feed the file to STDIN for the console app
             & "$exe" < input.txt
-            if ($LASTEXITCODE -ne 0) { throw "Run failed for selection $n (exit $LASTEXITCODE)" }
+            $exit = $LASTEXITCODE
 
             Remove-Item input.txt -Force -ErrorAction SilentlyContinue
-            Start-Sleep -Seconds 1
+
+            if ($exit -ne 0) {
+              throw "Remove run failed for selection $n (exit $exit)"
+            }
+
+            Start-Sleep -Milliseconds $delayMs
           }
 
           Write-Host "`nAll removals completed."
 
-      # --- Then the .NET build/test ---
-
+      # --- Build/Test ---
       - name: Restore
         shell: pwsh
         run: dotnet restore
