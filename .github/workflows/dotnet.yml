@@ -1,4 +1,4 @@
-name: .NET (Windows + Remove via feeder)
+name: .NET (Windows + Remove + Rename + Artifacts)
 
 on:
   push:
@@ -16,18 +16,13 @@ on:
         required: false
         default: "1000"
 
+# ------------------------------
+# 1) Build the feeder once, upload as artifact
+# ------------------------------
 jobs:
-  build:
+  feeder:
     runs-on: windows-latest
-
-    env:
-      REMOVE_EXE: '.\Remove Modules from FreeCRM.exe'
-      SELECTIONS: ${{ github.event.inputs.selections }}
-      DELAY_MS:  ${{ github.event.inputs.delay_ms }}
-
     steps:
-      - uses: actions/checkout@v4
-
       - name: Setup .NET 9 & 8 SDKs
         uses: actions/setup-dotnet@v4
         with:
@@ -35,7 +30,6 @@ jobs:
             9.0.x
             8.0.x
 
-      # --- Build a tiny feeder that reads a text file and writes each line (with delay) to STDIN ---
       - name: Create feeder project
         shell: pwsh
         run: |
@@ -119,7 +113,50 @@ jobs:
 
           dotnet publish tools\StdInFeeder -c Release -o tools\StdInFeeder\out
 
-      # --- Generate input and run the remove utility N times highest→lowest ---
+      - name: Upload artifact - stdin_feeder
+        uses: actions/upload-artifact@v4
+        with:
+          name: stdin_feeder
+          path: tools/StdInFeeder/out
+          if-no-files-found: error
+          retention-days: 30
+
+  # ------------------------------
+  # 2) Main build that *uses* the feeder artifact
+  # ------------------------------
+  build:
+    runs-on: windows-latest
+    needs: feeder
+    env:
+      REMOVE_EXE: '.\Remove Modules from FreeCRM.exe'
+      RENAME_EXE: '.\Rename FreeCRM.exe'
+      APP_NAME: 'FreeCICD'
+      SELECTIONS: ${{ github.event.inputs.selections }}
+      DELAY_MS:  ${{ github.event.inputs.delay_ms }}
+      FEEDER_EXE: '.\tools\StdInFeeder\out\StdInFeeder.exe'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET 9 & 8 SDKs
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            9.0.x
+            8.0.x
+
+      - name: Download feeder artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: stdin_feeder
+          path: tools/StdInFeeder/out
+
+      - name: Verify feeder exists
+        shell: pwsh
+        run: |
+          if (-not (Test-Path $env:FEEDER_EXE)) { throw "Feeder EXE not found at $env:FEEDER_EXE" }
+          Get-Item $env:FEEDER_EXE | Format-List *
+
       - name: Remove modules using feeder
         shell: pwsh
         run: |
@@ -139,26 +176,62 @@ jobs:
 
           if (-not $targets) { throw "No valid numeric selections in: '$selections'" }
 
-          $feeder = ".\tools\StdInFeeder\out\StdInFeeder.exe"
-
           foreach ($n in $targets) {
             Write-Host "`n=== $exe with selection $n, then 'x' ==="
-            # Build a simple input file: line1=selection, line2=x
             Set-Content -Path input.txt -Value @("$n","x") -Encoding ASCII
-
-            & $feeder --exe "$exe" --input "input.txt" --delay $delayMs
+            & $env:FEEDER_EXE --exe "$exe" --input "input.txt" --delay $delayMs
             if ($LASTEXITCODE -ne 0) { throw "Remove run failed for selection $n (exit $LASTEXITCODE)" }
-
             Remove-Item input.txt -Force -ErrorAction SilentlyContinue
           }
 
-      # --- Build/Test the renamed/trimmed solution ---
+      - name: Rename project using feeder
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $exe  = $env:RENAME_EXE
+          if (-not (Test-Path $exe)) { throw "Rename utility not found at: $exe" }
+
+          $name = if ([string]::IsNullOrWhiteSpace($env:APP_NAME)) { "FreeCICD" } else { $env:APP_NAME }
+          if ($name -notmatch '^[A-Za-z]+$') { throw "APP_NAME '$name' is invalid. Use letters only (e.g., FreeCICD)." }
+
+          Set-Content -Path rename.txt -Value @("$name") -Encoding ASCII
+          & $env:FEEDER_EXE --exe "$exe" --input "rename.txt" --delay 500
+          if ($LASTEXITCODE -ne 0) { throw "Rename run failed (exit $LASTEXITCODE)" }
+          Remove-Item rename.txt -Force -ErrorAction SilentlyContinue
+
       - name: Detect solution after changes
         shell: pwsh
         run: |
           $sln = Get-ChildItem -Recurse -Filter *.sln | Select-Object -First 1
           if (-not $sln) { throw "No .sln found after modifications." }
           "SLN_PATH=$($sln.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Clean (remove bin/obj, etc.)
+        shell: pwsh
+        run: dotnet clean "$env:SLN_PATH" -v minimal
+
+      - name: Directory snapshot (after rename + clean)
+        shell: pwsh
+        run: |
+          Write-Host "=== RECURSIVE TREE (after rename + clean) ==="
+          cmd /c tree /F /A
+          Write-Host "=== END TREE ==="
+
+      # --- Create and upload a source snapshot (code that was compiled) ---
+      - name: Stage source snapshot
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path artifacts\source_snapshot | Out-Null
+          robocopy . artifacts\source_snapshot /E /XD .git artifacts
+          if ($LASTEXITCODE -ge 8) { throw "robocopy failed with code $LASTEXITCODE" }
+
+      - name: Upload artifact - source_snapshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: source_snapshot
+          path: artifacts/source_snapshot
+          if-no-files-found: error
+          retention-days: 14
 
       - name: Restore
         shell: pwsh
@@ -171,3 +244,59 @@ jobs:
       - name: Test
         shell: pwsh
         run: dotnet test --no-build --verbosity normal "$env:SLN_PATH"
+
+      # --- Publish the web app and upload it ---
+      - name: Publish web app (Release)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $pubDir = Join-Path $PWD 'artifacts\published_webapp'
+          New-Item -ItemType Directory -Force -Path $pubDir | Out-Null
+
+          $webProj = Get-ChildItem -Recurse -Filter *.csproj | Where-Object {
+            (Get-Content $_.FullName -Raw) -match 'Sdk="Microsoft\.NET\.Sdk\.Web"'
+          } | Select-Object -First 1
+
+          if (-not $webProj) {
+            $try = Join-Path $PWD 'CRM\CRM.csproj'
+            if (Test-Path $try) { $webProj = Get-Item $try }
+          }
+          if (-not $webProj) { $webProj = Get-ChildItem -Recurse -Filter *.csproj | Select-Object -First 1 }
+
+          Write-Host "Publishing project: $($webProj.FullName)"
+          dotnet publish $webProj.FullName -c Release -o $pubDir
+
+      - name: Upload artifact - published_webapp
+        uses: actions/upload-artifact@v4
+        with:
+          name: published_webapp
+          path: artifacts/published_webapp
+          if-no-files-found: error
+          retention-days: 14
+
+  # ------------------------------
+  # 3) Fresh runner to prove artifacts download/inspect
+  # ------------------------------
+  inspect-artifacts:
+    runs-on: windows-latest
+    needs: build
+    steps:
+      - name: Download published_webapp
+        uses: actions/download-artifact@v4
+        with:
+          name: published_webapp
+          path: inspect\published_webapp
+
+      - name: Download source_snapshot
+        uses: actions/download-artifact@v4
+        with:
+          name: source_snapshot
+          path: inspect\source_snapshot
+
+      - name: Show trees of downloaded artifacts
+        shell: pwsh
+        run: |
+          Write-Host "=== PUBLISHED WEBAPP ==="
+          cmd /c tree /F /A inspect\published_webapp
+          Write-Host "=== SOURCE SNAPSHOT ==="
+          cmd /c tree /F /A inspect\source_snapshot
