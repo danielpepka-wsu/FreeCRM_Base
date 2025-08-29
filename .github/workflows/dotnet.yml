@@ -31,17 +31,19 @@ jobs:
     name: Job 1 • Build feeder
     runs-on: windows-latest
     steps:
-      ## Step 1.1: Setup .NET SDK 8
+      ## Step 1.1: Setup .NET SDK 8 (needed to build our helper)
       - name: Setup .NET SDK 8
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 8.0.x
 
-      ## Step 1.2: Create feeder project (with kill-on support)
+      ## Step 1.2: Create feeder project (small console app to feed text input into EXEs)
       - name: Create feeder project
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path tools\StdInFeeder | Out-Null
+          # Program.cs: reads --exe and --input args, feeds lines into target EXE with delays,
+          # optionally kills on matching output text.
           $code = @'
           using System;
           using System.Diagnostics;
@@ -116,6 +118,7 @@ jobs:
           '@
           Set-Content -Path tools\StdInFeeder\Program.cs -Value $code -Encoding UTF8
 
+          # Simple .csproj configured for single-file publish
           $proj = @'
           <Project Sdk="Microsoft.NET.Sdk">
             <PropertyGroup>
@@ -129,13 +132,12 @@ jobs:
           '@
           Set-Content -Path tools\StdInFeeder\StdInFeeder.csproj -Value $proj -Encoding UTF8
 
-      ## Step 1.3: Publish feeder
+      ## Step 1.3: Build the feeder into a single EXE
       - name: Publish feeder
         shell: pwsh
-        run: |
-          dotnet publish tools\StdInFeeder -c Release -o tools\StdInFeeder\out
+        run: dotnet publish tools\StdInFeeder -c Release -o tools\StdInFeeder\out
 
-      ## Step 1.4: Upload feeder artifact
+      ## Step 1.4: Upload feeder artifact so downstream jobs can use it
       - name: Upload feeder artifact
         uses: actions/upload-artifact@v4
         with:
@@ -143,7 +145,7 @@ jobs:
           path: tools/StdInFeeder/out
 
 #---------------------------------------------------------
-# Job 2 (matrix): Process each project
+# Job 2 (matrix): Process each project (FreeCICD, FreeLLM, …)
 #---------------------------------------------------------
   project:
     name: Job 2 • Process ${{ matrix.project.name }}
@@ -162,6 +164,7 @@ jobs:
             selections: "7,6,5,4,3,2,1"
 
     env:
+      # Allow override from workflow_dispatch inputs, otherwise fall back to matrix values
       SELECTIONS: ${{ github.event.inputs.selections || matrix.project.selections }}
       APP_NAME:  ${{ github.event.inputs.app_name || matrix.project.name }}
       BASE_BRANCH: ${{ matrix.project.branch }}
@@ -171,12 +174,12 @@ jobs:
       FEEDER_EXE: '.\tools\StdInFeeder\out\StdInFeeder.exe'
 
     steps:
-      ## Step 2.1: Checkout repo
+      ## Step 2.1: Checkout repo (pulls FreeCRM_Base code including main branch)
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      ## Step 2.2: Setup .NET 9 & 8
+      ## Step 2.2: Setup .NET SDKs (9 for app, 8 for helper compatibility)
       - name: Setup .NET 9 & 8
         uses: actions/setup-dotnet@v4
         with:
@@ -184,14 +187,14 @@ jobs:
             9.0.x
             8.0.x
 
-      ## Step 2.3: Download feeder artifact
+      ## Step 2.3: Bring in feeder artifact from Job 1
       - name: Download feeder artifact
         uses: actions/download-artifact@v4
         with:
           name: stdin_feeder
           path: tools/StdInFeeder/out
 
-      ## Step 2.4: Run remove modules helper
+      ## Step 2.4: Remove modules based on SELECTIONS
       - name: Run remove modules helper
         shell: pwsh
         run: |
@@ -204,7 +207,7 @@ jobs:
             Remove-Item input.txt -Force
           }
 
-      ## Step 2.5: Run rename helper
+      ## Step 2.5: Run rename helper (renames app to APP_NAME)
       - name: Run rename helper
         shell: pwsh
         run: |
@@ -215,7 +218,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "Rename run failed (exit $LASTEXITCODE)" }
           Remove-Item rename.txt -Force
 
-      ## Step 2.6: Clean up helper tools
+      ## Step 2.6: Clean helper EXEs so they don’t pollute the snapshot
       - name: Clean up helper tools
         shell: pwsh
         run: |
@@ -223,7 +226,7 @@ jobs:
           Remove-Item "$env:REMOVE_EXE" -ErrorAction SilentlyContinue
           Remove-Item "$env:RENAME_EXE" -ErrorAction SilentlyContinue
 
-      ## Step 2.7: Snapshot source after changes
+      ## Step 2.7: Snapshot source (strip .git/.github/artifacts, zip & expand into artifacts folder)
       - name: Snapshot source after changes
         shell: pwsh
         run: |
@@ -231,18 +234,19 @@ jobs:
           $zip = Join-Path $env:RUNNER_TEMP "source_after_changes_${env:APP_NAME}.zip"
           $dst = Join-Path $pwd "artifacts\source_after_changes_${env:APP_NAME}"
           New-Item -ItemType Directory -Force -Path $dst | Out-Null
+          # ⚠️ Keep .git deleted here so snapshot is portable — we’ll re-checkout before commit
           Remove-Item -Recurse -Force "$src\.git","$src\.github","$src\artifacts" -ErrorAction SilentlyContinue
           Compress-Archive -Path "$src\*" -DestinationPath $zip -Force
           Expand-Archive -Path $zip -DestinationPath $dst -Force
 
-      ## Step 2.8: Upload source_after_changes artifact
+      ## Step 2.8: Upload snapshot artifact
       - name: Upload source_after_changes
         uses: actions/upload-artifact@v4
         with:
           name: source_after_changes_${{ env.APP_NAME }}
           path: artifacts/source_after_changes_${{ env.APP_NAME }}
 
-      ## Step 2.9: Detect solution
+      ## Step 2.9: Detect .sln file in snapshot (needed for restore/build/test)
       - name: Detect solution
         shell: pwsh
         run: |
@@ -250,22 +254,28 @@ jobs:
           if (-not $sln) { throw "No .sln found in snapshot" }
           "SLN_PATH=$($sln.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
 
-      ## Step 2.10: Restore
+      ## Step 2.10: Restore NuGet packages
       - name: Restore
         shell: pwsh
         run: dotnet restore "$env:SLN_PATH"
 
-      ## Step 2.11: Build
+      ## Step 2.11: Build in Release mode
       - name: Build
         shell: pwsh
         run: dotnet build --no-restore -c Release "$env:SLN_PATH"
 
-      ## Step 2.12: Test
+      ## Step 2.12: Run unit tests
       - name: Test
         shell: pwsh
         run: dotnet test --no-build -c Release "$env:SLN_PATH"
 
-      ## Step 2.13: Reset BASE_BRANCH with snapshot
+      ## Step 2.13a: Re-checkout repo to restore .git before push
+      - name: Checkout repo again for reset
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      ## Step 2.13b: Reset BASE_BRANCH to the snapshot contents and push
       - name: Reset branch with snapshot
         shell: pwsh
         run: |
