@@ -317,10 +317,9 @@ jobs:
           name: source_after_changes
           path: _consume
 
-      - name: Checkout branch
+      - name: Checkout repo (default branch)
         uses: actions/checkout@v4
         with:
-          ref: ${{ env.BASE_BRANCH }}
           fetch-depth: 0
 
       - name: Reset branch contents with new archive
@@ -329,6 +328,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
+          # Create or switch to FreeCRM_base branch
           git checkout -B "${BASE_BRANCH}"
 
           # Clear all contents
@@ -341,5 +341,5 @@ jobs:
           git add -A
           git commit -m "Replace with regenerated FreeCRM base" || echo "No changes to commit"
 
-          # Force push
+          # Push branch (creates if missing, updates if exists)
           git push origin HEAD:${BASE_BRANCH} --force
