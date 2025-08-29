@@ -23,6 +23,23 @@ on:
 permissions:
   contents: write
 
+#---------------------------------------------------------
+# Global environment variables (shared across jobs)
+#---------------------------------------------------------
+env:
+  # Defaults from workflow_dispatch inputs (fall back if blank)
+  SELECTIONS: ${{ github.event.inputs.selections || '6,5,4,3,2,1' }}
+  DELAY_MS:  ${{ github.event.inputs.delay_ms    || '1000' }}
+  APP_NAME:  ${{ github.event.inputs.app_name    || 'FreeCICD' }}
+
+  # Executable helper tools
+  REMOVE_EXE: '.\Remove Modules from FreeCRM.exe'
+  RENAME_EXE: '.\Rename FreeCRM.exe'
+  FEEDER_EXE: '.\tools\StdInFeeder\out\StdInFeeder.exe'
+
+  # Branch where processed source will be pushed
+  BASE_BRANCH: FreeCRM_base
+
 jobs:
   #---------------------------------------------------------
   # Build the small StdIn feeder and upload it.
@@ -177,14 +194,6 @@ jobs:
     runs-on: windows-latest
     needs: feeder
 
-    env:
-      REMOVE_EXE: '.\Remove Modules from FreeCRM.exe'
-      RENAME_EXE: '.\Rename FreeCRM.exe'
-      FEEDER_EXE: '.\tools\StdInFeeder\out\StdInFeeder.exe'
-      SELECTIONS: ${{ github.event.inputs.selections }}
-      DELAY_MS:  ${{ github.event.inputs.delay_ms }}
-      APP_NAME:  ${{ github.event.inputs.app_name }}
-
     steps:
       - uses: actions/checkout@v4
 
@@ -205,13 +214,8 @@ jobs:
         shell: pwsh
         run: |
           $exe = $env:REMOVE_EXE
-          if (-not (Test-Path $exe)) { throw "Remove utility not found at: $exe" }
-
-          $selections = if ([string]::IsNullOrWhiteSpace($env:SELECTIONS)) { "6,5,4,3,2,1" } else { $env:SELECTIONS }
-          $delayMs    = if ([string]::IsNullOrWhiteSpace($env:DELAY_MS)) { 1000 } else { [int]$env:DELAY_MS }
-
           $targets =
-            $selections -split ',' |
+            $env:SELECTIONS -split ',' |
             ForEach-Object { $_.Trim() } |
             Where-Object { $_ -match '^\d+$' } |
             ForEach-Object { [int]$_ } |
@@ -220,7 +224,7 @@ jobs:
           foreach ($n in $targets) {
             Write-Host "`n=== $exe with selection $n, then 'x' ==="
             Set-Content -Path input.txt -Value @("$n","x") -Encoding ASCII
-            & $env:FEEDER_EXE --exe "$exe" --input "input.txt" --delay $delayMs
+            & $env:FEEDER_EXE --exe "$exe" --input "input.txt" --delay $env:DELAY_MS
             if ($LASTEXITCODE -ne 0) { throw "Remove run failed for selection $n (exit $LASTEXITCODE)" }
             Remove-Item input.txt -Force -ErrorAction SilentlyContinue
           }
@@ -229,12 +233,9 @@ jobs:
         shell: pwsh
         run: |
           $exe  = $env:RENAME_EXE
-          if (-not (Test-Path $exe)) { throw "Rename utility not found at: $exe" }
+          if ($env:APP_NAME -notmatch '^[A-Za-z]+$') { throw "APP_NAME '$env:APP_NAME' is invalid." }
 
-          $name = if ([string]::IsNullOrWhiteSpace($env:APP_NAME)) { "FreeCICD" } else { $env:APP_NAME }
-          if ($name -notmatch '^[A-Za-z]+$') { throw "APP_NAME '$name' is invalid." }
-
-          Set-Content -Path rename.txt -Value @($name) -Encoding ASCII
+          Set-Content -Path rename.txt -Value @($env:APP_NAME) -Encoding ASCII
           & $env:FEEDER_EXE --exe "$exe" --input "rename.txt" --delay 500 --kill-on "press any key" --kill-delay 200
           if ($LASTEXITCODE -ne 0) { throw "Rename run failed (exit $LASTEXITCODE)" }
           Remove-Item rename.txt -Force -ErrorAction SilentlyContinue
@@ -261,12 +262,13 @@ jobs:
               New-Item -ItemType Directory -Force -Path (Split-Path $dest) | Out-Null
               Copy-Item -Path $_.FullName -Destination $dest -Force
             }
+          Compress-Archive -Path $dst\* -DestinationPath artifacts/source_after_changes.zip -Force
 
       - name: Upload artifact • source_after_changes
         uses: actions/upload-artifact@v4
         with:
           name: source_after_changes
-          path: artifacts/source_after_changes
+          path: artifacts/source_after_changes.zip
 
       - name: Detect solution after changes
         shell: pwsh
@@ -274,7 +276,6 @@ jobs:
           $sln = Get-ChildItem -Recurse -Filter *.sln | Select-Object -First 1
           if (-not $sln) { throw "No .sln found after modifications." }
           "SLN_PATH=$($sln.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
-          Write-Host "Detected solution: $($sln.FullName)"
 
       - name: Restore
         shell: pwsh
@@ -305,3 +306,45 @@ jobs:
         run: |
           Write-Host "`n=== source_after_changes top-level ==="
           Get-ChildItem _consume\source_after_changes
+
+  #---------------------------------------------------------
+  # New job: update FreeCRM_base branch with snapshot.
+  #---------------------------------------------------------
+  update-branch:
+    name: Replace FreeCRM_base branch with new contents
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Download source_after_changes
+        uses: actions/download-artifact@v4
+        with:
+          name: source_after_changes
+          path: _consume
+
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.BASE_BRANCH }}
+          fetch-depth: 0
+
+      - name: Reset branch contents with new archive
+        run: |
+          set -e
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git checkout -B "${BASE_BRANCH}"
+
+          # Clear all contents
+          git rm -rf . || true
+
+          # Extract new files
+          unzip -o _consume/source_after_changes.zip -d .
+
+          # Stage and commit
+          git add -A
+          git commit -m "Replace with regenerated FreeCRM base" || echo "No changes to commit"
+
+          # Force push
+          git push origin HEAD:${BASE_BRANCH} --force
