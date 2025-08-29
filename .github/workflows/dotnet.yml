@@ -316,7 +316,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git checkout -B "${env:BASE_BRANCH}"
           git rm -rf . || true
-          Copy-Item -Path "_consume\source_after_changes\*" -Destination "." -Recurse -Force
+          Copy-Item -Path "_consume\*" -Destination "." -Recurse -Force
           git add -A
           git commit -m "Replace with regenerated FreeCRM base" || echo "No changes to commit"
           git push origin HEAD:${env:BASE_BRANCH} --force
