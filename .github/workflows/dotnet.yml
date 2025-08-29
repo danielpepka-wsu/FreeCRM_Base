@@ -1,4 +1,4 @@
-name: .NET (Windows • multi-project remove via feeder • safe rename • source snapshot)
+name: .NET (Windows • multi-project matrix remove/rename • snapshot • base sync)
 
 on:
   push:
@@ -24,9 +24,6 @@ permissions:
   contents: write
 
 jobs:
-  #---------------------------------------------------------
-  # Job 1: Build feeder exe (shared)
-  #---------------------------------------------------------
   feeder:
     name: Build feeder
     runs-on: windows-latest
@@ -137,9 +134,6 @@ jobs:
           name: stdin_feeder
           path: tools/StdInFeeder/out
 
-  #---------------------------------------------------------
-  # Job 2: Matrix of projects
-  #---------------------------------------------------------
   project:
     name: Process ${{ matrix.project.name }}
     runs-on: windows-latest
@@ -157,17 +151,19 @@ jobs:
 
     env:
       SELECTIONS: ${{ github.event.inputs.selections || matrix.project.selections }}
-      DELAY_MS:  ${{ github.event.inputs.delay_ms || '1000' }}
       APP_NAME:  ${{ github.event.inputs.app_name || matrix.project.name }}
       BASE_BRANCH: ${{ matrix.project.branch }}
+      DELAY_MS:  ${{ github.event.inputs.delay_ms || '1000' }}
       REMOVE_EXE: '.\Remove Modules from FreeCRM.exe'
       RENAME_EXE: '.\Rename FreeCRM.exe'
       FEEDER_EXE: '.\tools\StdInFeeder\out\StdInFeeder.exe'
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout main into _main
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          path: _main
 
       - name: Setup .NET 9 & 8
         uses: actions/setup-dotnet@v4
@@ -180,82 +176,73 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: stdin_feeder
-          path: tools/StdInFeeder/out
+          path: _main/tools/StdInFeeder/out
 
-      - name: Run remove modules helper
+      - name: Run remove modules
+        working-directory: _main
         shell: pwsh
         run: |
           $exe = $env:REMOVE_EXE
-          $targets = $env:SELECTIONS -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ -match '^\d+$' } | ForEach-Object { [int]$_ } | Sort-Object -Descending
+          $targets = $env:SELECTIONS -split ',' | % { $_.Trim() } | ? { $_ -match '^\d+$' } | % { [int]$_ } | Sort-Object -Descending
           foreach ($n in $targets) {
             Set-Content -Path input.txt -Value @("$n","x") -Encoding ASCII
             & $env:FEEDER_EXE --exe "$exe" --input "input.txt" --delay $env:DELAY_MS
-            if ($LASTEXITCODE -ne 0) { throw "Remove run failed for selection $n (exit $LASTEXITCODE)" }
+            if ($LASTEXITCODE -ne 0) { throw "Remove failed for $n" }
             Remove-Item input.txt -Force
           }
 
-      - name: Run rename helper
+      - name: Run rename
+        working-directory: _main
         shell: pwsh
         run: |
           $exe = $env:RENAME_EXE
-          if ($env:APP_NAME -notmatch '^[A-Za-z]+$') { throw "APP_NAME '$env:APP_NAME' is invalid." }
+          if ($env:APP_NAME -notmatch '^[A-Za-z]+$') { throw "APP_NAME invalid" }
           Set-Content -Path rename.txt -Value @($env:APP_NAME) -Encoding ASCII
           & $env:FEEDER_EXE --exe "$exe" --input "rename.txt" --delay 500 --kill-on "press any key" --kill-delay 200
-          if ($LASTEXITCODE -ne 0) { throw "Rename run failed (exit $LASTEXITCODE)" }
           Remove-Item rename.txt -Force
-
-      - name: Clean up helper tools
-        shell: pwsh
-        run: |
-          Remove-Item -Recurse -Force "tools\StdInFeeder" -ErrorAction SilentlyContinue
-          Remove-Item "$env:REMOVE_EXE" -ErrorAction SilentlyContinue
-          Remove-Item "$env:RENAME_EXE" -ErrorAction SilentlyContinue
 
       - name: Snapshot source after changes
         shell: pwsh
         run: |
-          $src = $pwd.Path
-          $zip = Join-Path $env:RUNNER_TEMP "source_after_changes_${env:APP_NAME}.zip"
-          $dst = Join-Path $pwd "artifacts\source_after_changes_${env:APP_NAME}"
+          $src = Join-Path $pwd "_main"
+          $dst = Join-Path $pwd "artifacts\source_after_changes_$($env:APP_NAME)"
+          $zip = Join-Path $env:RUNNER_TEMP "snapshot_$($env:APP_NAME).zip"
           New-Item -ItemType Directory -Force -Path $dst | Out-Null
-          Remove-Item -Recurse -Force "$src\.git","$src\.github","$src\artifacts" -ErrorAction SilentlyContinue
+          Remove-Item -Recurse -Force "$src\.github","$src\artifacts" -ErrorAction SilentlyContinue
           Compress-Archive -Path "$src\*" -DestinationPath $zip -Force
           Expand-Archive -Path $zip -DestinationPath $dst -Force
 
-      - name: Upload source_after_changes
+      - name: Upload snapshot
         uses: actions/upload-artifact@v4
         with:
           name: source_after_changes_${{ env.APP_NAME }}
           path: artifacts/source_after_changes_${{ env.APP_NAME }}
 
-      - name: Detect solution
+      - name: Build & test snapshot
         shell: pwsh
         run: |
-          $sln = Get-ChildItem -Path artifacts/source_after_changes_$($env:APP_NAME) -Recurse -Filter *.sln | Select-Object -First 1
-          if (-not $sln) { throw "No .sln found in snapshot" }
-          "SLN_PATH=$($sln.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
+          $sln = Get-ChildItem -Path artifacts/source_after_changes_$($env:APP_NAME) -Recurse -Filter *.sln | Select -First 1
+          if (-not $sln) { throw "No sln found" }
+          dotnet restore $sln.FullName
+          dotnet build --no-restore -c Release $sln.FullName
+          dotnet test --no-build -c Release $sln.FullName
 
-      - name: Restore
-        shell: pwsh
-        run: dotnet restore "$env:SLN_PATH"
+      - name: Checkout base branch into its own dir
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.BASE_BRANCH }}
+          fetch-depth: 0
+          path: _base
 
-      - name: Build
-        shell: pwsh
-        run: dotnet build --no-restore -c Release "$env:SLN_PATH"
-
-      - name: Test
-        shell: pwsh
-        run: dotnet test --no-build -c Release "$env:SLN_PATH"
-
-      - name: Update base branch
+      - name: Replace base branch with snapshot
+        working-directory: _base
         shell: pwsh
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git checkout -B "${env:BASE_BRANCH}"
-          git rm -rf . || true
-          Copy-Item -Path "artifacts/source_after_changes_$($env:APP_NAME)\*" -Destination "." -Recurse -Force
+          Remove-Item -Recurse -Force * -ErrorAction SilentlyContinue
+          Copy-Item -Path "$env:GITHUB_WORKSPACE\artifacts\source_after_changes_$($env:APP_NAME)\*" -Destination . -Recurse -Force
           git add -A
           $commitMsg = git log -1 --pretty=%B origin/main
-          git commit -m "Regenerated BASE_BRANCH: $commitMsg" || echo "No changes to commit"
+          git commit -m "Regenerated $env:BASE_BRANCH: $commitMsg" || echo "No changes"
           git push origin HEAD:${env:BASE_BRANCH} --force
