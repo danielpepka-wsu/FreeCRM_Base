@@ -193,7 +193,7 @@ jobs:
           name: stdin_feeder
           path: tools/StdInFeeder/out
 
-      ## Step 2.4: Run remove modules helper (loop through list)
+      ## Step 2.4: Run remove modules helper
       - name: Run remove modules helper
         shell: pwsh
         run: |
@@ -206,7 +206,7 @@ jobs:
             Remove-Item input.txt -Force
           }
 
-      ## Step 2.5: Run rename helper (feeds in new app name)
+      ## Step 2.5: Run rename helper
       - name: Run rename helper
         shell: pwsh
         run: |
@@ -217,7 +217,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "Rename run failed (exit $LASTEXITCODE)" }
           Remove-Item rename.txt -Force
 
-      ## Step 2.6: Clean up helper tools (remove EXEs + feeder source)
+      ## Step 2.6: Clean up helper tools
       - name: Clean up helper tools
         shell: pwsh
         run: |
@@ -244,7 +244,7 @@ jobs:
           name: source_after_changes_${{ env.APP_NAME }}
           path: artifacts/source_after_changes_${{ env.APP_NAME }}
 
-      ## Step 2.9: Detect solution file (.sln) inside snapshot
+      ## Step 2.9: Detect solution
       - name: Detect solution
         shell: pwsh
         run: |
@@ -252,36 +252,45 @@ jobs:
           if (-not $sln) { throw "No .sln found in snapshot" }
           "SLN_PATH=$($sln.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
 
-      ## Step 2.10: Restore NuGet packages
+      ## Step 2.10: Restore
       - name: Restore
         shell: pwsh
         run: dotnet restore "$env:SLN_PATH"
 
-      ## Step 2.11: Build project
+      ## Step 2.11: Build
       - name: Build
         shell: pwsh
         run: dotnet build --no-restore -c Release "$env:SLN_PATH"
-        
-      ## Step 2.12: Run tests
+
+      ## Step 2.12: Test
       - name: Test
         shell: pwsh
         run: dotnet test --no-build -c Release "$env:SLN_PATH"
 
-      ## Step 2.13: Reset BASE_BRANCH with snapshot, commit with latest main message
-      - name: Reset base branch with snapshot
+      ## Step 2.13: Update BASE_BRANCH with snapshot (preserve history)
+      - name: Update base branch with snapshot
         id: reset-base
         shell: pwsh
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git checkout -B "${env:BASE_BRANCH}"
-          git rm -rf . || true
+
+          # Make sure base branch exists (create if missing)
+          git fetch origin
+          git checkout ${env:BASE_BRANCH} || git checkout -b ${env:BASE_BRANCH}
+
+          # Copy snapshot files into repo
           Copy-Item -Path "artifacts/source_after_changes_${env:APP_NAME}\*" -Destination "." -Recurse -Force
-          Remove-Item -Recurse -Force "artifacts/source_after_changes_${env:APP_NAME}"
+
+          # Stage changes (add/update/remove)
           git add -A
+
+          # Commit with main’s latest message
           $commitMsg = git log -1 --pretty=%B origin/main
-          git commit -m "Regenerated ${env:BASE_BRANCH}: $commitMsg" || echo "No changes to commit"
-          git push origin HEAD:${env:BASE_BRANCH} --force
+          git commit -m "Sync snapshot into ${env:BASE_BRANCH}: $commitMsg" || echo "No changes to commit"
+
+          # Push (normal, not force)
+          git push origin ${env:BASE_BRANCH}
           echo "commitMsg=$commitMsg" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
 
       ## Step 2.14: Tag snapshot for rollback
@@ -293,7 +302,7 @@ jobs:
           git push origin $tagName
           echo "Tagged snapshot as $tagName"
 
-      ## Step 2.15: Ensure app branch exists (create if missing)
+      ## Step 2.15: Ensure app branch exists
       - name: Ensure app branch exists
         id: ensure-branch
         shell: pwsh
@@ -309,7 +318,7 @@ jobs:
             echo "created=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
           }
 
-      ## Step 2.16: Open PR from BASE_BRANCH → APP_NAME if app branch exists
+      ## Step 2.16: Open PR from BASE_BRANCH → APP_NAME
       - name: Suggest merge into app branch
         if: steps.ensure-branch.outputs.created == 'false'
         uses: peter-evans/create-pull-request@v6
@@ -327,7 +336,7 @@ jobs:
               ```
 
             - Snapshot branch: `${{ env.BASE_BRANCH }}`
-            - Target app branch: `${{ env.APP_NAME }}`
+            - Target app branch: `${{ env:APP_NAME }}`
 
             Snapshot rollback tag was created for safety:
             ```
@@ -338,4 +347,3 @@ jobs:
           draft: false
           merge-method: squash
           auto-merge: true
-
