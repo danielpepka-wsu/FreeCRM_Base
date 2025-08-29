@@ -298,16 +298,16 @@ jobs:
     runs-on: windows-latest
     needs: modify
     steps:
+      - name: Checkout repo (default branch)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: Download source_after_changes
         uses: actions/download-artifact@v4
         with:
           name: source_after_changes
           path: _consume
-
-      - name: Checkout repo (default branch)
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Reset branch with snapshot
         shell: pwsh
