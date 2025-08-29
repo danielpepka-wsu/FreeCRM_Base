@@ -307,7 +307,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: source_after_changes
-          path: _consume
+          path: ${{ runner.temp }}/_consume
 
       - name: Reset branch with snapshot
         shell: pwsh
@@ -316,8 +316,8 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git checkout -B "${env:BASE_BRANCH}"
           git rm -rf . || true
-          Copy-Item -Path "_consume\*" -Destination "." -Recurse -Force
-          Remove-Item -Recurse -Force "_consume"
+          Copy-Item -Path "$env:RUNNER_TEMP\_consume\*" -Destination "." -Recurse -Force
+          Remove-Item -Recurse -Force "$env:RUNNER_TEMP\_consume"
           git add -A
           git commit -m "Replace with regenerated BASE_BRANCH base" || echo "No changes to commit"
           git push origin HEAD:${env:BASE_BRANCH} --force
