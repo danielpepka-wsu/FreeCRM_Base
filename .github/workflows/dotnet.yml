@@ -274,13 +274,15 @@ jobs:
         run: |
           $binRoot = Join-Path $pwd "artifacts\binaries"
           New-Item -ItemType Directory -Force -Path $binRoot | Out-Null
-          Get-ChildItem -Recurse -Include bin,obj -Directory |
-            ForEach-Object {
-              $rel = $_.FullName.Substring($pwd.Path.Length).TrimStart('\')
+
+          Get-ChildItem -Recurse -Include bin,obj -Directory | ForEach-Object {
+              $rel = Resolve-Path $_.FullName | ForEach-Object {
+                  $_.Path.Substring((Resolve-Path $pwd).Path.Length).TrimStart('\')
+              }
               $dest = Join-Path $binRoot ($rel -replace '[\\/:*?"<>|]', '_')
               New-Item -ItemType Directory -Force -Path $dest | Out-Null
-              Copy-Item -Path $_.FullName\* -Destination $dest -Recurse -Force
-            }
+              Copy-Item -Path (Join-Path $_.FullName '*') -Destination $dest -Recurse -Force
+          }
 
       - name: Snapshot source after changes
         shell: pwsh
