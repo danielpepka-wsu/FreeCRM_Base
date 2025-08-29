@@ -1,17 +1,16 @@
-
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.8.34309.116
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{F6068EF9-E0E6-49B7-8DC2-9B3E0AB8B333}") = "FreeCICD", "FreeCICD\FreeCICD.csproj", "{56A9720B-8AB6-4627-A2F9-0A5D953565A6}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FreeCICD", "FreeCICD\FreeCICD.csproj", "{56A9720B-8AB6-4627-A2F9-0A5D953565A6}"
 EndProject
-Project("{F6068EF9-E0E6-49B7-8DC2-9B3E0AB8B333}") = "FreeCICD.Client", "FreeCICD.Client\FreeCICD.Client.csproj", "{E70CCF57-4B66-41D3-8712-F890627CA5DD}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FreeCICD.Client", "FreeCICD.Client\FreeCICD.Client.csproj", "{E70CCF57-4B66-41D3-8712-F890627CA5DD}"
 EndProject
-Project("{F6068EF9-E0E6-49B7-8DC2-9B3E0AB8B333}") = "FreeCICD.DataAccess", "FreeCICD.DataAccess\FreeCICD.DataAccess.csproj", "{62CE4F42-D10E-4A70-8395-1F7D80BBDFC4}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FreeCICD.DataAccess", "FreeCICD.DataAccess\FreeCICD.DataAccess.csproj", "{62CE4F42-D10E-4A70-8395-1F7D80BBDFC4}"
 EndProject
-Project("{F6068EF9-E0E6-49B7-8DC2-9B3E0AB8B333}") = "FreeCICD.DataObjects", "FreeCICD.DataObjects\FreeCICD.DataObjects.csproj", "{89484FFE-0DD3-47CC-9CCF-2C7CEDF52D5C}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FreeCICD.DataObjects", "FreeCICD.DataObjects\FreeCICD.DataObjects.csproj", "{89484FFE-0DD3-47CC-9CCF-2C7CEDF52D5C}"
 EndProject
-Project("{F6068EF9-E0E6-49B7-8DC2-9B3E0AB8B333}") = "FreeCICD.EFModels", "FreeCICD.EFModels\FreeCICD.EFModels.csproj", "{BD591841-F5FE-4013-B1B4-6947962B9BB3}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FreeCICD.EFModels", "FreeCICD.EFModels\FreeCICD.EFModels.csproj", "{BD591841-F5FE-4013-B1B4-6947962B9BB3}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{8F5C4830-519A-4BEC-8F9E-D35395C87D27}"
 	ProjectSection(SolutionItems) = preProject
@@ -19,11 +18,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		.gitignore = .gitignore
 		LICENSE = LICENSE
 		README.md = README.md
-		Remove Modules from FreeFreeCICD.exe = Remove Modules from FreeFreeCICD.exe
-		Rename FreeFreeCICD.exe = Rename FreeFreeCICD.exe
 	EndProjectSection
 EndProject
-Project("{F6068EF9-E0E6-49B7-8DC2-9B3E0AB8B333}") = "FreeCICD.Plugins", "FreeCICD.Plugins\FreeCICD.Plugins.csproj", "{BE5684C3-1B31-4DC9-A70B-B71DF66A1FA0}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FreeCICD.Plugins", "FreeCICD.Plugins\FreeCICD.Plugins.csproj", "{BE5684C3-1B31-4DC9-A70B-B71DF66A1FA0}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
