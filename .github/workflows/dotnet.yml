@@ -1,4 +1,4 @@
-name: .NET (Windows • remove via feeder • safe rename • publish artifacts)
+name: .NET (Windows • remove via feeder • safe rename • build artifacts)
 
 on:
   push:
@@ -22,8 +22,7 @@ on:
 
 jobs:
   #---------------------------------------------------------
-  # Build the small StdIn feeder as a single-file EXE
-  # and upload it as an artifact for other jobs to use.
+  # Build the small StdIn feeder and upload it.
   #---------------------------------------------------------
   feeder:
     name: Build feeder
@@ -55,9 +54,8 @@ jobs:
                   string inputPath = null;
                   int delay = 500;
 
-                  // Optional: kill the child after a specific output line appears.
-                  string killOn = null;    // e.g. "press any key"
-                  int killDelay = 200;     // ms
+                  string killOn = null;
+                  int killDelay = 200;
                   bool killTriggered = false;
 
                   for (int i = 0; i < args.Length; i++)
@@ -112,11 +110,11 @@ jobs:
                                       System.Threading.Thread.Sleep(killDelay);
                                       if (!p.HasExited)
                                       {
-                                          try { p.CloseMainWindow(); } catch { /* ignored */ }
+                                          try { p.CloseMainWindow(); } catch { }
                                           if (!p.HasExited) p.Kill(true);
                                       }
                                   }
-                                  catch { /* ignore */ }
+                                  catch { }
                               });
                           }
                       }
@@ -137,7 +135,6 @@ jobs:
 
                   p.WaitForExit();
 
-                  // If we purposely killed after seeing the sentinel output, treat as success.
                   return killTriggered ? 0 : p.ExitCode;
               }
           }
@@ -149,8 +146,6 @@ jobs:
             <PropertyGroup>
               <OutputType>Exe</OutputType>
               <TargetFramework>net8.0</TargetFramework>
-              <ImplicitUsings>enable</ImplicitUsings>
-              <Nullable>enable</Nullable>
               <PublishSingleFile>true</PublishSingleFile>
               <RuntimeIdentifier>win-x64</RuntimeIdentifier>
               <SelfContained>false</SelfContained>
@@ -172,12 +167,11 @@ jobs:
           path: tools/StdInFeeder/out
 
   #---------------------------------------------------------
-  # Main job: checkout repo, download feeder artifact,
-  # run removal tool and rename tool via feeder,
-  # build/test, collect & upload artifacts.
+  # Main job: checkout, run removal & rename, build/test,
+  # collect artifacts (no dotnet publish).
   #---------------------------------------------------------
   build:
-    name: Build & publish
+    name: Build & snapshot
     runs-on: windows-latest
     needs: feeder
 
@@ -185,7 +179,6 @@ jobs:
       REMOVE_EXE: '.\Remove Modules from FreeCRM.exe'
       RENAME_EXE: '.\Rename FreeCRM.exe'
       FEEDER_EXE: '.\tools\StdInFeeder\out\StdInFeeder.exe'
-      # These may be empty for push/PR; the scripts below default them.
       SELECTIONS: ${{ github.event.inputs.selections }}
       DELAY_MS:  ${{ github.event.inputs.delay_ms }}
       APP_NAME:  ${{ github.event.inputs.app_name }}
@@ -212,7 +205,6 @@ jobs:
           if (-not (Test-Path $env:FEEDER_EXE)) { throw "Feeder EXE not found at $env:FEEDER_EXE" }
           Get-Item $env:FEEDER_EXE | Format-List *
 
-      # --- Generate input and run the remove utility N times highest→lowest ---
       - name: Remove modules using feeder
         shell: pwsh
         run: |
@@ -230,8 +222,6 @@ jobs:
             ForEach-Object { [int]$_ } |
             Sort-Object -Descending
 
-          if (-not $targets) { throw "No valid numeric selections in: '$selections'" }
-
           foreach ($n in $targets) {
             Write-Host "`n=== $exe with selection $n, then 'x' ==="
             Set-Content -Path input.txt -Value @("$n","x") -Encoding ASCII
@@ -240,7 +230,6 @@ jobs:
             Remove-Item input.txt -Force -ErrorAction SilentlyContinue
           }
 
-      # --- Rename safely (the tool asks for a keypress; we kill after its "press any key" line) ---
       - name: Rename project using feeder (safe for CI)
         shell: pwsh
         run: |
@@ -249,15 +238,13 @@ jobs:
           if (-not (Test-Path $exe)) { throw "Rename utility not found at: $exe" }
 
           $name = if ([string]::IsNullOrWhiteSpace($env:APP_NAME)) { "FreeCICD" } else { $env:APP_NAME }
-          if ($name -notmatch '^[A-Za-z]+$') { throw "APP_NAME '$name' is invalid. Use letters only (e.g., FreeCICD)." }
+          if ($name -notmatch '^[A-Za-z]+$') { throw "APP_NAME '$name' is invalid." }
 
           Set-Content -Path rename.txt -Value @($name) -Encoding ASCII
-          # Kill-on matches "Rename completed, press any key to exit"
           & $env:FEEDER_EXE --exe "$exe" --input "rename.txt" --delay 500 --kill-on "press any key" --kill-delay 200
           if ($LASTEXITCODE -ne 0) { throw "Rename run failed (exit $LASTEXITCODE)" }
           Remove-Item rename.txt -Force -ErrorAction SilentlyContinue
 
-      # --- Build/Test the renamed/trimmed solution ---
       - name: Detect solution after changes
         shell: pwsh
         run: |
@@ -270,86 +257,54 @@ jobs:
         shell: pwsh
         run: dotnet restore "$env:SLN_PATH"
 
-      - name: Build
+      - name: Build (whole solution)
         shell: pwsh
         run: dotnet build --no-restore -c Release "$env:SLN_PATH"
 
       - name: Test
         shell: pwsh
-        run: dotnet test --no-build -c Release --verbosity normal "$env:SLN_PATH"
+        run: dotnet test --no-build -c Release "$env:SLN_PATH"
 
-      # --- Publish and collect artifacts ---
-      - name: dotnet publish (all publishable projects in solution)
-        shell: pwsh
-        run: |
-          dotnet publish "$env:SLN_PATH" -c Release
-          # Collect all publish folders to a common directory
-          $pubRoot = Join-Path $pwd "artifacts\publish"
-          New-Item -ItemType Directory -Force -Path $pubRoot | Out-Null
-          $pubDirs = Get-ChildItem -Recurse -Directory -Filter publish
-          foreach ($d in $pubDirs) {
-            $rel = $d.FullName.Substring($pwd.Path.Length).TrimStart('\')
-            $dest = Join-Path $pubRoot ($rel -replace '[\\/:*?"<>|]', '_')
-            New-Item -ItemType Directory -Force -Path $dest | Out-Null
-            Write-Host "Copying publish output: $rel -> $dest"
-            robocopy $d.FullName $dest /E | Out-Null
-            if ($LASTEXITCODE -gt 7) { throw "robocopy failed copying publish dir ($rel) with code $LASTEXITCODE" }
-          }
-
-      - name: Collect compiled binaries (bin\Release excluding publish)
+      - name: Collect compiled binaries
         shell: pwsh
         run: |
           $binRoot = Join-Path $pwd "artifacts\binaries"
           New-Item -ItemType Directory -Force -Path $binRoot | Out-Null
-          $binDirs = Get-ChildItem -Recurse -Directory -Filter Release | Where-Object { $_.FullName -match '\\bin\\' }
-          foreach ($b in $binDirs) {
-            if ($b.FullName -match '\\publish(\\|$)') { continue }
-            $rel = $b.FullName.Substring($pwd.Path.Length).TrimStart('\')
-            $dest = Join-Path $binRoot ($rel -replace '[\\/:*?"<>|]', '_')
-            New-Item -ItemType Directory -Force -Path $dest | Out-Null
-            Write-Host "Copying binaries: $rel -> $dest"
-            robocopy $b.FullName $dest /E | Out-Null
-            if ($LASTEXITCODE -gt 7) { throw "robocopy failed copying binaries ($rel) with code $LASTEXITCODE" }
-          }
+          Get-ChildItem -Recurse -Include bin,obj -Directory |
+            ForEach-Object {
+              $rel = $_.FullName.Substring($pwd.Path.Length).TrimStart('\')
+              $dest = Join-Path $binRoot ($rel -replace '[\\/:*?"<>|]', '_')
+              robocopy $_.FullName $dest /E | Out-Null
+              $global:LASTEXITCODE = 0
+            }
 
-      - name: Snapshot source after changes (exclude .git/bin/obj/artifacts)
+      - name: Snapshot source after changes
         shell: pwsh
         run: |
           $src = $pwd.Path
           $dst = Join-Path $pwd "artifacts\source_after_changes"
           New-Item -ItemType Directory -Force -Path $dst | Out-Null
-          # Mirror while excluding common heavy folders
           robocopy $src $dst /MIR /XD ".git" "artifacts" ".github" "tools\StdInFeeder\out" /XF "*.suo" "*.user" "appsettings.*.json" "appsettings.json" "nuget.config" "global.json" | Out-Null
           if ($LASTEXITCODE -gt 7) { throw "robocopy failed mirroring source with code $LASTEXITCODE" }
-          # Remove bin/obj everywhere inside snapshot
+          $global:LASTEXITCODE = 0
           Get-ChildItem -Path $dst -Recurse -Directory -Include bin,obj | ForEach-Object {
             try { Remove-Item -Recurse -Force -LiteralPath $_.FullName } catch { }
           }
 
-      - name: Upload artifact • published_web
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: published_web
-          path: artifacts/publish
-
       - name: Upload artifact • compiled_binaries
-        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: compiled_binaries
           path: artifacts/binaries
 
       - name: Upload artifact • source_after_changes
-        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: source_after_changes
           path: artifacts/source_after_changes
 
   #---------------------------------------------------------
-  # Simple consumer job on a fresh runner: download artifacts
-  # produced above to prove they can be consumed.
+  # Consumer job to prove artifacts are usable.
   #---------------------------------------------------------
   consumer:
     name: Consumer on fresh runner
@@ -357,12 +312,6 @@ jobs:
     needs: build
 
     steps:
-      - name: Download published_web
-        uses: actions/download-artifact@v4
-        with:
-          name: published_web
-          path: _consume/published_web
-
       - name: Download compiled_binaries
         uses: actions/download-artifact@v4
         with:
@@ -378,8 +327,6 @@ jobs:
       - name: List downloaded artifacts
         shell: pwsh
         run: |
-          Write-Host "`n=== published_web ==="
-          Get-ChildItem -Recurse -File _consume\published_web | Select-Object FullName, Length | Format-Table -AutoSize
           Write-Host "`n=== compiled_binaries ==="
           Get-ChildItem -Recurse -File _consume\compiled_binaries | Select-Object FullName, Length | Format-Table -AutoSize
           Write-Host "`n=== source_after_changes top-level ==="
