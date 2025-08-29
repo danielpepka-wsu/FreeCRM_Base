@@ -261,19 +261,13 @@ jobs:
       - name: Build
         shell: pwsh
         run: dotnet build --no-restore -c Release "$env:SLN_PATH"
-
+        
       ## Step 2.12: Run tests
       - name: Test
         shell: pwsh
         run: dotnet test --no-build -c Release "$env:SLN_PATH"
 
-      ## Step 2.13a: Checkout again for clean git context
-      - name: Checkout repo again (for git context)
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      ## Step 2.13b: Reset BASE_BRANCH with snapshot, commit with latest main message
+      ## Step 2.13: Reset BASE_BRANCH with snapshot, commit with latest main message
       - name: Reset base branch with snapshot
         id: reset-base
         shell: pwsh
@@ -290,7 +284,7 @@ jobs:
           git push origin HEAD:${env:BASE_BRANCH} --force
           echo "commitMsg=$commitMsg" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
 
-      ## Step 2.13c: Tag snapshot for rollback
+      ## Step 2.14: Tag snapshot for rollback
       - name: Tag snapshot release
         shell: pwsh
         run: |
@@ -299,7 +293,7 @@ jobs:
           git push origin $tagName
           echo "Tagged snapshot as $tagName"
 
-      ## Step 2.14: Ensure app branch exists (create if missing)
+      ## Step 2.15: Ensure app branch exists (create if missing)
       - name: Ensure app branch exists
         id: ensure-branch
         shell: pwsh
@@ -315,14 +309,14 @@ jobs:
             echo "created=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
           }
 
-      ## Step 2.15: Open PR from BASE_BRANCH → APP_NAME if app branch exists
+      ## Step 2.16: Open PR from BASE_BRANCH → APP_NAME if app branch exists
       - name: Suggest merge into app branch
         if: steps.ensure-branch.outputs.created == 'false'
         uses: peter-evans/create-pull-request@v6
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          base: ${{ env.APP_NAME }}       # Target branch (app branch)
-          head: ${{ env.BASE_BRANCH }}    # Source branch (base branch snapshot)
+          base: ${{ env.APP_NAME }}
+          head: ${{ env.BASE_BRANCH }}
           title: "[AUTO] Sync: ${{ steps.reset-base.outputs.commitMsg }}"
           body: |
             This PR was automatically created by the workflow.
@@ -344,3 +338,4 @@ jobs:
           draft: false
           merge-method: squash
           auto-merge: true
+
