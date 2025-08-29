@@ -249,24 +249,25 @@ jobs:
         run: |
           $src = $pwd.Path
           $zip = Join-Path $env:RUNNER_TEMP "source_after_changes.zip"
-      
-          # Remove dirs we don’t want in the archive
+          $dst = Join-Path $pwd "artifacts\source_after_changes"
+          New-Item -ItemType Directory -Force -Path $dst | Out-Null
+
+          # Remove dirs we don’t want
           Remove-Item -Recurse -Force "$src\.git" -ErrorAction SilentlyContinue
           Remove-Item -Recurse -Force "$src\.github" -ErrorAction SilentlyContinue
           Remove-Item -Recurse -Force "$src\artifacts" -ErrorAction SilentlyContinue
-      
-          # Create a fresh archive in the runner temp dir
+
+          # Make clean zip in temp
           Compress-Archive -Path "$src\*" -DestinationPath $zip -Force
-      
-          # Move final zip into artifacts folder
-          New-Item -ItemType Directory -Force -Path "$src\artifacts" | Out-Null
-          Move-Item $zip "$src\artifacts\source_after_changes.zip" -Force
+
+          # Extract zip into artifacts folder (so upload is folder, not zip-in-zip)
+          Expand-Archive -Path $zip -DestinationPath $dst -Force
 
       - name: Upload artifact • source_after_changes
         uses: actions/upload-artifact@v4
         with:
           name: source_after_changes
-          path: artifacts/source_after_changes.zip
+          path: artifacts/source_after_changes
 
       - name: Detect solution after changes
         shell: pwsh
@@ -310,7 +311,7 @@ jobs:
   #---------------------------------------------------------
   update-branch:
     name: Replace FreeCRM_base branch with new contents
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     needs: build
 
     steps:
@@ -325,24 +326,21 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Reset branch contents with new archive
+      - name: Reset branch contents with new snapshot
+        shell: pwsh
         run: |
-          set -e
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
           # Create or switch to FreeCRM_base branch
-          git checkout -B "${BASE_BRANCH}"
+          git checkout -B "${env:BASE_BRANCH}"
 
-          # Clear all contents
           git rm -rf . || true
 
-          # Extract new files
-          unzip -o _consume/source_after_changes.zip -d .
+          # Extract and copy snapshot contents
+          Expand-Archive -Path "_consume\source_after_changes.zip" -DestinationPath "." -Force
+          Copy-Item -Path "_consume\source_after_changes\*" -Destination "." -Recurse -Force
 
-          # Stage and commit
           git add -A
           git commit -m "Replace with regenerated FreeCRM base" || echo "No changes to commit"
-
-          # Push branch (creates if missing, updates if exists)
-          git push origin HEAD:${BASE_BRANCH} --force
+          git push origin HEAD:${env:BASE_BRANCH} --force
