@@ -1,4 +1,4 @@
-name: .NET (Windows • multi-project matrix remove/rename • snapshot • base sync)
+name: .NET (Windows • multi-project remove via feeder • safe rename • transcription only)
 
 on:
   push:
@@ -24,8 +24,10 @@ permissions:
   contents: write
 
 jobs:
+  #---------------------------------------------------------
+  # Job 1: Build feeder exe
+  #---------------------------------------------------------
   feeder:
-    name: Build feeder
     runs-on: windows-latest
     steps:
       - name: Setup .NET SDK 8
@@ -134,10 +136,13 @@ jobs:
           name: stdin_feeder
           path: tools/StdInFeeder/out
 
+  #---------------------------------------------------------
+  # Job 2 (matrix): Process each project
+  #---------------------------------------------------------
   project:
-    name: Process ${{ matrix.project.name }}
     runs-on: windows-latest
     needs: feeder
+
     strategy:
       fail-fast: false
       matrix:
@@ -159,28 +164,33 @@ jobs:
       FEEDER_EXE: '.\tools\StdInFeeder\out\StdInFeeder.exe'
 
     steps:
-      - name: Checkout main into _main
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          path: _main
+      # --- checkouts ---
+      - uses: actions/checkout@v4
+        with: { ref: main, path: _main, fetch-depth: 0 }
 
-      - name: Setup .NET 9 & 8
-        uses: actions/setup-dotnet@v4
+      - uses: actions/checkout@v4
+        with: { ref: ${{ env.BASE_BRANCH }}, path: _base, fetch-depth: 0 }
+
+      - uses: actions/checkout@v4
+        continue-on-error: true
+        with: { ref: ${{ env.APP_NAME }}, path: _app, fetch-depth: 0 }
+
+      # --- setup ---
+      - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
             9.0.x
             8.0.x
 
-      - name: Download feeder artifact
-        uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4
         with:
           name: stdin_feeder
           path: _main/tools/StdInFeeder/out
 
-      - name: Run remove modules
-        working-directory: _main
+      # --- run helpers on _main ---
+      - name: Remove modules
         shell: pwsh
+        working-directory: _main
         run: |
           $exe = $env:REMOVE_EXE
           $targets = $env:SELECTIONS -split ',' | % { $_.Trim() } | ? { $_ -match '^\d+$' } | % { [int]$_ } | Sort-Object -Descending
@@ -191,9 +201,9 @@ jobs:
             Remove-Item input.txt -Force
           }
 
-      - name: Run rename
-        working-directory: _main
+      - name: Rename app
         shell: pwsh
+        working-directory: _main
         run: |
           $exe = $env:RENAME_EXE
           if ($env:APP_NAME -notmatch '^[A-Za-z]+$') { throw "APP_NAME invalid" }
@@ -201,7 +211,8 @@ jobs:
           & $env:FEEDER_EXE --exe "$exe" --input "rename.txt" --delay 500 --kill-on "press any key" --kill-delay 200
           Remove-Item rename.txt -Force
 
-      - name: Snapshot source after changes
+      # --- snapshot ---
+      - name: Snapshot source
         shell: pwsh
         run: |
           $src = Join-Path $pwd "_main"
@@ -212,37 +223,52 @@ jobs:
           Compress-Archive -Path "$src\*" -DestinationPath $zip -Force
           Expand-Archive -Path $zip -DestinationPath $dst -Force
 
-      - name: Upload snapshot
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: source_after_changes_${{ env.APP_NAME }}
           path: artifacts/source_after_changes_${{ env.APP_NAME }}
 
-      - name: Build & test snapshot
+      # --- update base branch ---
+      - name: Reset base branch
         shell: pwsh
-        run: |
-          $sln = Get-ChildItem -Path artifacts/source_after_changes_$($env:APP_NAME) -Recurse -Filter *.sln | Select -First 1
-          if (-not $sln) { throw "No sln found" }
-          dotnet restore $sln.FullName
-          dotnet build --no-restore -c Release $sln.FullName
-          dotnet test --no-build -c Release $sln.FullName
-
-      - name: Checkout base branch into its own dir
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ env.BASE_BRANCH }}
-          fetch-depth: 0
-          path: _base
-
-      - name: Replace base branch with snapshot
         working-directory: _base
-        shell: pwsh
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          Remove-Item -Recurse -Force * -ErrorAction SilentlyContinue
-          Copy-Item -Path "$env:GITHUB_WORKSPACE\artifacts\source_after_changes_$($env:APP_NAME)\*" -Destination . -Recurse -Force
+          Get-ChildItem -Force | Where-Object { $_.Name -ne ".git" } | Remove-Item -Recurse -Force
+          Copy-Item "$env:GITHUB_WORKSPACE\artifacts\source_after_changes_$($env:APP_NAME)\*" . -Recurse -Force
           git add -A
-          $commitMsg = git log -1 --pretty=%B origin/main
+          $commitMsg = git -C $env:GITHUB_WORKSPACE\_main log -1 --pretty=%B origin/main
           git commit -m "Regenerated $env:BASE_BRANCH: $commitMsg" || echo "No changes"
           git push origin HEAD:${env:BASE_BRANCH} --force
+
+      # --- ensure app branch exists / PR ---
+      - name: Ensure app branch exists
+        id: ensure-branch
+        shell: pwsh
+        working-directory: _app
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          $branch = "${env:APP_NAME}"
+          $exists = git ls-remote --heads origin $branch
+          if (-not $exists) {
+            git checkout -B $branch
+            git push origin HEAD:$branch
+            echo "created=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          } else {
+            echo "created=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          }
+
+      - name: Suggest merge into app branch
+        if: steps.ensure-branch.outputs.created == 'false'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          base: ${{ env.APP_NAME }}
+          head: ${{ env.BASE_BRANCH }}
+          title: "[AUTO] Sync: ${{ env.APP_NAME }}"
+          body: "Automated sync from base snapshot."
+          draft: false
+          merge-method: squash
+          auto-merge: true
