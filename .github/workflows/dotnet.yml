@@ -35,7 +35,7 @@ env:
   RENAME_EXE: '.\Rename FreeCRM.exe'
   FEEDER_EXE: '.\tools\StdInFeeder\out\StdInFeeder.exe'
 
-  BASE_BRANCH: FreeCRM_base
+  BASE_BRANCH: FreeCICD_base
 
 jobs:
   #---------------------------------------------------------
@@ -291,10 +291,10 @@ jobs:
         run: dotnet test --no-build -c Release "$env:SLN_PATH"
 
   #---------------------------------------------------------
-  # Job 4: Update FreeCRM_base branch
+  # Job 4: Update BASE_BRANCH branch
   #---------------------------------------------------------
   update-branch:
-    name: Replace FreeCRM_base branch with new snapshot
+    name: Replace BASE_BRANCH branch with new snapshot
     runs-on: windows-latest
     needs: modify
     steps:
@@ -319,5 +319,5 @@ jobs:
           Copy-Item -Path "_consume\*" -Destination "." -Recurse -Force
           Remove-Item -Recurse -Force "_consume"
           git add -A
-          git commit -m "Replace with regenerated FreeCRM base" || echo "No changes to commit"
+          git commit -m "Replace with regenerated BASE_BRANCH base" || echo "No changes to commit"
           git push origin HEAD:${env:BASE_BRANCH} --force
