@@ -317,6 +317,7 @@ jobs:
           git checkout -B "${env:BASE_BRANCH}"
           git rm -rf . || true
           Copy-Item -Path "_consume\*" -Destination "." -Recurse -Force
+          Remove-Item -Recurse -Force "_consume"
           git add -A
           git commit -m "Replace with regenerated FreeCRM base" || echo "No changes to commit"
           git push origin HEAD:${env:BASE_BRANCH} --force
