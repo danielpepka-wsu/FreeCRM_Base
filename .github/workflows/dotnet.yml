@@ -277,21 +277,21 @@ jobs:
 
           # Make sure base branch exists (create if missing)
           git fetch origin
-          git checkout ${env:BASE_BRANCH} || git checkout -b ${env:BASE_BRANCH}
+          git checkout $env:BASE_BRANCH || git checkout -b $env:BASE_BRANCH
 
           # Copy snapshot files into repo
-          Copy-Item -Path "artifacts/source_after_changes_${env:APP_NAME}\*" -Destination "." -Recurse -Force
+          Copy-Item -Path "artifacts/source_after_changes_$env:APP_NAME\*" -Destination "." -Recurse -Force
 
-          # Stage changes (add/update/remove)
+          # Stage changes
           git add -A
 
           # Commit with main’s latest message
           $commitMsg = git log -1 --pretty=%B origin/main
-          git commit -m "Sync snapshot into ${env:BASE_BRANCH}: $commitMsg" || echo "No changes to commit"
+          git commit -m "Sync snapshot into $env:BASE_BRANCH: $commitMsg" || echo "No changes to commit"
 
-          # Push (normal, not force)
-          git push origin ${env:BASE_BRANCH}
+          git push origin $env:BASE_BRANCH
           echo "commitMsg=$commitMsg" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
 
       ## Step 2.14: Tag snapshot for rollback
       - name: Tag snapshot release
