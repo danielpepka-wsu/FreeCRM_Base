@@ -289,7 +289,7 @@ jobs:
           $dst = Join-Path $pwd "artifacts\source_after_changes"
           New-Item -ItemType Directory -Force -Path $dst | Out-Null
           $excludeDirs = @(".git","artifacts",".github","tools\StdInFeeder\out")
-          $excludeFiles = @("*.suo","*.user","appsettings.*.json","appsettings.json","nuget.config","global.json")
+          $excludeFiles = @("*.suo","*.user","nuget.config","global.json")
           Get-ChildItem -Path $src -Recurse -File |
             Where-Object { ($excludeDirs -notcontains $_.Directory.Name) -and ($excludeFiles -notcontains $_.Name) } |
             ForEach-Object {
