@@ -251,14 +251,13 @@ jobs:
           $zip = Join-Path $pwd "artifacts\source_after_changes.zip"
           New-Item -ItemType Directory -Force -Path (Split-Path $zip) | Out-Null
 
-          # Zip everything except .git, .github, artifacts
-          $items = Get-ChildItem $src -Recurse -Force | Where-Object {
-            $_.FullName -notmatch '\\\.git($|\\)' -and
-            $_.FullName -notmatch '\\\.github($|\\)' -and
-            $_.FullName -notmatch '\\artifacts($|\\)'
-          }
+          # Remove dirs we don’t want in the archive
+          Remove-Item -Recurse -Force "$src\.git" -ErrorAction SilentlyContinue
+          Remove-Item -Recurse -Force "$src\.github" -ErrorAction SilentlyContinue
+          Remove-Item -Recurse -Force "$src\artifacts" -ErrorAction SilentlyContinue
 
-          Compress-Archive -Path $items.FullName -DestinationPath $zip -Force
+          # Zip the entire repo
+          Compress-Archive -Path "$src\*" -DestinationPath $zip -Force
 
       - name: Upload artifact • source_after_changes
         uses: actions/upload-artifact@v4
