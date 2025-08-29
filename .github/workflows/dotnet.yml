@@ -1,4 +1,4 @@
-name: .NET (Windows • remove via feeder • safe rename • build artifacts)
+name: .NET (Windows • remove via feeder • safe rename • source snapshot)
 
 on:
   push:
@@ -20,7 +20,6 @@ on:
         required: false
         default: "FreeCICD"
 
-# Explicit permissions so workflow can push commits if needed
 permissions:
   contents: write
 
@@ -171,11 +170,10 @@ jobs:
           path: tools/StdInFeeder/out
 
   #---------------------------------------------------------
-  # Main job: checkout, run removal & rename, build/test,
-  # collect artifacts (no dotnet publish).
+  # Main job: modify repo, package source, then build/test.
   #---------------------------------------------------------
   build:
-    name: Build & snapshot
+    name: Modify & snapshot source, then build
     runs-on: windows-latest
     needs: feeder
 
@@ -203,16 +201,9 @@ jobs:
           name: stdin_feeder
           path: tools/StdInFeeder/out
 
-      - name: Verify feeder exists
+      - name: Run remove modules helper
         shell: pwsh
         run: |
-          if (-not (Test-Path $env:FEEDER_EXE)) { throw "Feeder EXE not found at $env:FEEDER_EXE" }
-          Get-Item $env:FEEDER_EXE | Format-List *
-
-      - name: Remove modules using feeder
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
           $exe = $env:REMOVE_EXE
           if (-not (Test-Path $exe)) { throw "Remove utility not found at: $exe" }
 
@@ -234,10 +225,9 @@ jobs:
             Remove-Item input.txt -Force -ErrorAction SilentlyContinue
           }
 
-      - name: Rename project using feeder (safe for CI)
+      - name: Run rename helper
         shell: pwsh
         run: |
-          $ErrorActionPreference = 'Stop'
           $exe  = $env:RENAME_EXE
           if (-not (Test-Path $exe)) { throw "Rename utility not found at: $exe" }
 
@@ -248,6 +238,35 @@ jobs:
           & $env:FEEDER_EXE --exe "$exe" --input "rename.txt" --delay 500 --kill-on "press any key" --kill-delay 200
           if ($LASTEXITCODE -ne 0) { throw "Rename run failed (exit $LASTEXITCODE)" }
           Remove-Item rename.txt -Force -ErrorAction SilentlyContinue
+
+      - name: Clean up helper tools
+        shell: pwsh
+        run: |
+          Remove-Item -Recurse -Force "tools\StdInFeeder" -ErrorAction SilentlyContinue
+          Remove-Item "$env:REMOVE_EXE" -ErrorAction SilentlyContinue
+          Remove-Item "$env:RENAME_EXE" -ErrorAction SilentlyContinue
+
+      - name: Snapshot source after changes
+        shell: pwsh
+        run: |
+          $src = $pwd.Path
+          $dst = Join-Path $pwd "artifacts\source_after_changes"
+          New-Item -ItemType Directory -Force -Path $dst | Out-Null
+          $excludeDirs = @(".git",".github","artifacts")
+          Get-ChildItem -Path $src -Recurse -File |
+            Where-Object { $excludeDirs -notcontains $_.Directory.Name } |
+            ForEach-Object {
+              $rel  = $_.FullName.Substring($src.Length).TrimStart('\')
+              $dest = Join-Path $dst $rel
+              New-Item -ItemType Directory -Force -Path (Split-Path $dest) | Out-Null
+              Copy-Item -Path $_.FullName -Destination $dest -Force
+            }
+
+      - name: Upload artifact • source_after_changes
+        uses: actions/upload-artifact@v4
+        with:
+          name: source_after_changes
+          path: artifacts/source_after_changes
 
       - name: Detect solution after changes
         shell: pwsh
@@ -269,78 +288,20 @@ jobs:
         shell: pwsh
         run: dotnet test --no-build -c Release "$env:SLN_PATH"
 
-      - name: Collect compiled binaries
-        shell: pwsh
-        run: |
-          $binRoot = Join-Path $pwd "artifacts\binaries"
-          New-Item -ItemType Directory -Force -Path $binRoot | Out-Null
-
-          Get-ChildItem -Recurse -Include bin,obj -Directory | ForEach-Object {
-              $rel = Resolve-Path $_.FullName | ForEach-Object {
-                  $_.Path.Substring((Resolve-Path $pwd).Path.Length).TrimStart('\')
-              }
-              $dest = Join-Path $binRoot ($rel -replace '[\\/:*?"<>|]', '_')
-              New-Item -ItemType Directory -Force -Path $dest | Out-Null
-              Copy-Item -Path (Join-Path $_.FullName '*') -Destination $dest -Recurse -Force
-          }
-
-      - name: Snapshot source after changes
-        shell: pwsh
-        run: |
-          $src = $pwd.Path
-          $dst = Join-Path $pwd "artifacts\source_after_changes"
-          New-Item -ItemType Directory -Force -Path $dst | Out-Null
-          $excludeDirs = @(".git","artifacts",".github","tools\StdInFeeder\out")
-          $excludeFiles = @("*.suo","*.user","nuget.config","global.json")
-          Get-ChildItem -Path $src -Recurse -File |
-            Where-Object { ($excludeDirs -notcontains $_.Directory.Name) -and ($excludeFiles -notcontains $_.Name) } |
-            ForEach-Object {
-              $rel  = $_.FullName.Substring($src.Length).TrimStart('\')
-              $dest = Join-Path $dst $rel
-              New-Item -ItemType Directory -Force -Path (Split-Path $dest) | Out-Null
-              Copy-Item -Path $_.FullName -Destination $dest -Force
-            }
-          Get-ChildItem -Path $dst -Recurse -Directory -Include bin,obj | ForEach-Object {
-            try { Remove-Item -Recurse -Force -LiteralPath $_.FullName } catch { }
-          }
-
-      - name: Upload artifact • compiled_binaries
-        uses: actions/upload-artifact@v4
-        with:
-          name: compiled_binaries
-          path: artifacts/binaries
-
-      - name: Upload artifact • source_after_changes
-        uses: actions/upload-artifact@v4
-        with:
-          name: source_after_changes
-          path: artifacts/source_after_changes
-
-  #---------------------------------------------------------
-  # Consumer job to prove artifacts are usable.
-  #---------------------------------------------------------
   consumer:
     name: Consumer on fresh runner
     runs-on: windows-latest
     needs: build
 
     steps:
-      - name: Download compiled_binaries
-        uses: actions/download-artifact@v4
-        with:
-          name: compiled_binaries
-          path: _consume/compiled_binaries
-
       - name: Download source_after_changes
         uses: actions/download-artifact@v4
         with:
           name: source_after_changes
           path: _consume/source_after_changes
 
-      - name: List downloaded artifacts
+      - name: List downloaded source
         shell: pwsh
         run: |
-          Write-Host "`n=== compiled_binaries ==="
-          Get-ChildItem -Recurse -File _consume\compiled_binaries | Select-Object FullName, Length | Format-Table -AutoSize
           Write-Host "`n=== source_after_changes top-level ==="
           Get-ChildItem _consume\source_after_changes
