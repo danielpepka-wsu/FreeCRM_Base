@@ -39,12 +39,11 @@ env:
 
 jobs:
   #---------------------------------------------------------
-  # Build the small StdIn feeder and upload it.
+  # Job 1: Build feeder exe
   #---------------------------------------------------------
   feeder:
     name: Build feeder
     runs-on: windows-latest
-
     steps:
       - name: Setup .NET SDK 8
         uses: actions/setup-dotnet@v4
@@ -175,7 +174,6 @@ jobs:
         shell: pwsh
         run: |
           dotnet publish tools\StdInFeeder -c Release -o tools\StdInFeeder\out
-          Get-ChildItem tools\StdInFeeder\out
 
       - name: Upload feeder artifact
         uses: actions/upload-artifact@v4
@@ -184,17 +182,16 @@ jobs:
           path: tools/StdInFeeder/out
 
   #---------------------------------------------------------
-  # Main job: modify repo, package source, then build/test.
+  # Job 2: Modify repo & snapshot
   #---------------------------------------------------------
-  build:
-    name: Modify & snapshot source, then build
+  modify:
+    name: Modify repo & snapshot
     runs-on: windows-latest
     needs: feeder
-
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup .NET 9 & 8 SDKs
+      - name: Setup .NET 9 & 8
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
@@ -211,31 +208,23 @@ jobs:
         shell: pwsh
         run: |
           $exe = $env:REMOVE_EXE
-          $targets =
-            $env:SELECTIONS -split ',' |
-            ForEach-Object { $_.Trim() } |
-            Where-Object { $_ -match '^\d+$' } |
-            ForEach-Object { [int]$_ } |
-            Sort-Object -Descending
-
+          $targets = $env:SELECTIONS -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ -match '^\d+$' } | ForEach-Object { [int]$_ } | Sort-Object -Descending
           foreach ($n in $targets) {
-            Write-Host "`n=== $exe with selection $n, then 'x' ==="
             Set-Content -Path input.txt -Value @("$n","x") -Encoding ASCII
             & $env:FEEDER_EXE --exe "$exe" --input "input.txt" --delay $env:DELAY_MS
             if ($LASTEXITCODE -ne 0) { throw "Remove run failed for selection $n (exit $LASTEXITCODE)" }
-            Remove-Item input.txt -Force -ErrorAction SilentlyContinue
+            Remove-Item input.txt -Force
           }
 
       - name: Run rename helper
         shell: pwsh
         run: |
-          $exe  = $env:RENAME_EXE
+          $exe = $env:RENAME_EXE
           if ($env:APP_NAME -notmatch '^[A-Za-z]+$') { throw "APP_NAME '$env:APP_NAME' is invalid." }
-
           Set-Content -Path rename.txt -Value @($env:APP_NAME) -Encoding ASCII
           & $env:FEEDER_EXE --exe "$exe" --input "rename.txt" --delay 500 --kill-on "press any key" --kill-delay 200
           if ($LASTEXITCODE -ne 0) { throw "Rename run failed (exit $LASTEXITCODE)" }
-          Remove-Item rename.txt -Force -ErrorAction SilentlyContinue
+          Remove-Item rename.txt -Force
 
       - name: Clean up helper tools
         shell: pwsh
@@ -251,36 +240,49 @@ jobs:
           $zip = Join-Path $env:RUNNER_TEMP "source_after_changes.zip"
           $dst = Join-Path $pwd "artifacts\source_after_changes"
           New-Item -ItemType Directory -Force -Path $dst | Out-Null
-
-          # Remove dirs we don’t want
-          Remove-Item -Recurse -Force "$src\.git" -ErrorAction SilentlyContinue
-          Remove-Item -Recurse -Force "$src\.github" -ErrorAction SilentlyContinue
-          Remove-Item -Recurse -Force "$src\artifacts" -ErrorAction SilentlyContinue
-
-          # Make clean zip in temp
+          Remove-Item -Recurse -Force "$src\.git","$src\.github","$src\artifacts" -ErrorAction SilentlyContinue
           Compress-Archive -Path "$src\*" -DestinationPath $zip -Force
-
-          # Extract zip into artifacts folder (so upload is folder, not zip-in-zip)
           Expand-Archive -Path $zip -DestinationPath $dst -Force
 
-      - name: Upload artifact • source_after_changes
+      - name: Upload source_after_changes
         uses: actions/upload-artifact@v4
         with:
           name: source_after_changes
           path: artifacts/source_after_changes
 
-      - name: Detect solution after changes
+  #---------------------------------------------------------
+  # Job 3: Build & test snapshot
+  #---------------------------------------------------------
+  build:
+    name: Build & test snapshot
+    runs-on: windows-latest
+    needs: modify
+    steps:
+      - name: Download source_after_changes
+        uses: actions/download-artifact@v4
+        with:
+          name: source_after_changes
+          path: _src
+
+      - name: Detect solution
         shell: pwsh
         run: |
-          $sln = Get-ChildItem -Recurse -Filter *.sln | Select-Object -First 1
-          if (-not $sln) { throw "No .sln found after modifications." }
+          $sln = Get-ChildItem -Path _src -Recurse -Filter *.sln | Select-Object -First 1
+          if (-not $sln) { throw "No .sln found in snapshot" }
           "SLN_PATH=$($sln.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Setup .NET 9 & 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            9.0.x
+            8.0.x
 
       - name: Restore
         shell: pwsh
         run: dotnet restore "$env:SLN_PATH"
 
-      - name: Build (whole solution)
+      - name: Build
         shell: pwsh
         run: dotnet build --no-restore -c Release "$env:SLN_PATH"
 
@@ -288,32 +290,13 @@ jobs:
         shell: pwsh
         run: dotnet test --no-build -c Release "$env:SLN_PATH"
 
-  consumer:
-    name: Consumer on fresh runner
-    runs-on: windows-latest
-    needs: build
-
-    steps:
-      - name: Download source_after_changes
-        uses: actions/download-artifact@v4
-        with:
-          name: source_after_changes
-          path: _consume/source_after_changes
-
-      - name: List downloaded source
-        shell: pwsh
-        run: |
-          Write-Host "`n=== source_after_changes top-level ==="
-          Get-ChildItem _consume\source_after_changes
-
   #---------------------------------------------------------
-  # New job: update FreeCRM_base branch with snapshot.
+  # Job 4: Update FreeCRM_base branch
   #---------------------------------------------------------
   update-branch:
-    name: Replace FreeCRM_base branch with new contents
+    name: Replace FreeCRM_base branch with new snapshot
     runs-on: windows-latest
-    needs: build
-
+    needs: modify
     steps:
       - name: Download source_after_changes
         uses: actions/download-artifact@v4
@@ -326,21 +309,14 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Reset branch contents with new snapshot
+      - name: Reset branch with snapshot
         shell: pwsh
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-
-          # Create or switch to FreeCRM_base branch
           git checkout -B "${env:BASE_BRANCH}"
-
           git rm -rf . || true
-
-          # Extract and copy snapshot contents
-          Expand-Archive -Path "_consume\source_after_changes.zip" -DestinationPath "." -Force
           Copy-Item -Path "_consume\source_after_changes\*" -Destination "." -Recurse -Force
-
           git add -A
           git commit -m "Replace with regenerated FreeCRM base" || echo "No changes to commit"
           git push origin HEAD:${env:BASE_BRANCH} --force
