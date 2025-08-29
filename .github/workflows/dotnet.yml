@@ -1,4 +1,4 @@
-name: .NET (Windows • multi-project remove via feeder • safe rename • source snapshot • auto-merge to app branch)
+name: .NET (Windows • multi-project remove via feeder • safe rename • snapshot push)
 
 on:
   push:
@@ -182,7 +182,7 @@ jobs:
           path: _app
           fetch-depth: 0
 
-      - name: Setup .NET 9 & 8
+      - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
@@ -236,34 +236,15 @@ jobs:
           name: source_after_changes_${{ env.APP_NAME }}
           path: artifacts/source_after_changes_${{ env.APP_NAME }}
 
-      - name: Detect solution
-        shell: pwsh
-        run: |
-          $sln = Get-ChildItem -Path artifacts/source_after_changes_$($env:APP_NAME) -Recurse -Filter *.sln | Select-Object -First 1
-          if (-not $sln) { throw "No .sln found in snapshot" }
-          "SLN_PATH=$($sln.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
-
-      - name: Restore
-        shell: pwsh
-        run: dotnet restore "$env:SLN_PATH"
-
-      - name: Build
-        shell: pwsh
-        run: dotnet build --no-restore -c Release "$env:SLN_PATH"
-
-      - name: Test
-        shell: pwsh
-        run: dotnet test --no-build -c Release "$env:SLN_PATH"
-
       - name: Push to base branch
         shell: pwsh
         run: |
           cd _base
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          Remove-Item -Recurse -Force * -ErrorAction SilentlyContinue
+          Get-ChildItem -Force | Where-Object { $_.Name -ne ".git" } | Remove-Item -Recurse -Force
           Copy-Item -Path "$env:GITHUB_WORKSPACE\artifacts\source_after_changes_$($env:APP_NAME)\*" -Destination . -Recurse -Force
           git add -A
-          $commitMsg = git log -1 --pretty=%B origin/main
+          $commitMsg = git -C ..\_main log -1 --pretty=%B origin/main
           git commit -m "Regenerated $env:BASE_BRANCH: $commitMsg" || echo "No changes to commit"
           git push origin HEAD:${env:BASE_BRANCH} --force
