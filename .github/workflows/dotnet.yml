@@ -319,5 +319,6 @@ jobs:
           Copy-Item -Path "$env:RUNNER_TEMP\_consume\*" -Destination "." -Recurse -Force
           Remove-Item -Recurse -Force "$env:RUNNER_TEMP\_consume"
           git add -A
-          git commit -m "Replace with regenerated BASE_BRANCH base" || echo "No changes to commit"
+          $commitMsg = git log -1 --pretty=%B origin/main
+          git commit -m "Regenerated BASE_BRANCH: $commitMsg" || echo "No changes to commit"
           git push origin HEAD:${env:BASE_BRANCH} --force
