@@ -269,14 +269,14 @@ jobs:
         shell: pwsh
         run: dotnet test --no-build -c Release "$env:SLN_PATH"
 
-      ## Step 2.13a: Re-checkout repo to restore .git before push
+            ## Step 2.13a: Re-checkout repo to restore .git before push
       - name: Checkout repo again for reset
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      ## Step 2.13b: Reset BASE_BRANCH to the snapshot contents and push
-      - name: Reset branch with snapshot
+      ## Step 2.13b: Reset BASE_BRANCH with snapshot and force push
+      - name: Reset base branch with snapshot
         shell: pwsh
         run: |
           git config user.name "github-actions[bot]"
@@ -289,3 +289,54 @@ jobs:
           $commitMsg = git log -1 --pretty=%B origin/main
           git commit -m "Regenerated ${env:BASE_BRANCH}: $commitMsg" || echo "No changes to commit"
           git push origin HEAD:${env:BASE_BRANCH} --force
+
+      ## Step 2.13c: Tag snapshot commit for rollback safety
+      - name: Tag snapshot release
+        shell: pwsh
+        run: |
+          $tagName = "snapshot/${env:APP_NAME}/$(Get-Date -Format yyyyMMdd-HHmmss)"
+          git tag $tagName
+          git push origin $tagName
+          echo "Tagged snapshot as $tagName"
+
+      ## Step 2.14: Ensure app branch exists (create if missing)
+      - name: Ensure app branch exists
+        id: ensure-branch
+        shell: pwsh
+        run: |
+          $branch = "${env:APP_NAME}"
+          $exists = git ls-remote --heads origin $branch
+          if (-not $exists) {
+            Write-Host "Branch $branch does not exist. Creating it..."
+            git checkout -B $branch
+            git push origin HEAD:$branch
+            echo "created=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          } else {
+            echo "created=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          }
+
+      ## Step 2.15: Open pull request from BASE_BRANCH → APP_NAME if branch already existed
+      - name: Suggest merge into app branch
+        if: steps.ensure-branch.outputs.created == 'false'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          base: ${{ env.APP_NAME }}       # target branch (e.g. FreeCICD)
+          head: ${{ env.BASE_BRANCH }}    # source branch (e.g. FreeCICD_base)
+          title: "[AUTO] Sync updates from main into ${{ env.APP_NAME }}"
+          body: |
+            This PR was automatically created by the workflow.
+
+            - Source: `origin/main`
+            - Snapshot branch: `${{ env.BASE_BRANCH }}`
+            - Target app branch: `${{ env.APP_NAME }}`
+
+            A snapshot tag has also been created for rollback:
+            ```
+            snapshot/${{ env.APP_NAME }}/<timestamp>
+            ```
+
+            If no conflicts, this PR will be auto-merged.
+          draft: false
+          merge-method: squash
+          auto-merge: true
