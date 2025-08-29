@@ -248,16 +248,19 @@ jobs:
         shell: pwsh
         run: |
           $src = $pwd.Path
-          $zip = Join-Path $pwd "artifacts\source_after_changes.zip"
-          New-Item -ItemType Directory -Force -Path (Split-Path $zip) | Out-Null
-
+          $zip = Join-Path $env:RUNNER_TEMP "source_after_changes.zip"
+      
           # Remove dirs we don’t want in the archive
           Remove-Item -Recurse -Force "$src\.git" -ErrorAction SilentlyContinue
           Remove-Item -Recurse -Force "$src\.github" -ErrorAction SilentlyContinue
           Remove-Item -Recurse -Force "$src\artifacts" -ErrorAction SilentlyContinue
-
-          # Zip the entire repo
+      
+          # Create a fresh archive in the runner temp dir
           Compress-Archive -Path "$src\*" -DestinationPath $zip -Force
+      
+          # Move final zip into artifacts folder
+          New-Item -ItemType Directory -Force -Path "$src\artifacts" | Out-Null
+          Move-Item $zip "$src\artifacts\source_after_changes.zip" -Force
 
       - name: Upload artifact • source_after_changes
         uses: actions/upload-artifact@v4
