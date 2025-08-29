@@ -178,7 +178,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      ## Step 2.2: Setup .NET 9 & 8 SDKs (so both are available)
+      ## Step 2.2: Setup .NET 9 & 8 SDKs
       - name: Setup .NET 9 & 8
         uses: actions/setup-dotnet@v4
         with:
@@ -186,7 +186,7 @@ jobs:
             9.0.x
             8.0.x
 
-      ## Step 2.3: Download feeder artifact (from Job 1)
+      ## Step 2.3: Download feeder artifact
       - name: Download feeder artifact
         uses: actions/download-artifact@v4
         with:
@@ -230,8 +230,8 @@ jobs:
         shell: pwsh
         run: |
           $src = $pwd.Path
-          $zip = Join-Path $env:RUNNER_TEMP "source_after_changes_${env:APP_NAME}.zip"
-          $dst = Join-Path $pwd "artifacts\source_after_changes_${env:APP_NAME}"
+          $zip = Join-Path $env:RUNNER_TEMP "source_after_changes_$env:APP_NAME.zip"
+          $dst = Join-Path $pwd "artifacts\source_after_changes_$env:APP_NAME"
           New-Item -ItemType Directory -Force -Path $dst | Out-Null
           Remove-Item -Recurse -Force "$src\.git","$src\.github","$src\artifacts" -ErrorAction SilentlyContinue
           Compress-Archive -Path "$src\*" -DestinationPath $zip -Force
@@ -248,7 +248,7 @@ jobs:
       - name: Detect solution
         shell: pwsh
         run: |
-          $sln = Get-ChildItem -Path artifacts/source_after_changes_${env:APP_NAME} -Recurse -Filter *.sln | Select-Object -First 1
+          $sln = Get-ChildItem -Path artifacts/source_after_changes_$env:APP_NAME -Recurse -Filter *.sln | Select-Object -First 1
           if (-not $sln) { throw "No .sln found in snapshot" }
           "SLN_PATH=$($sln.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
 
@@ -267,7 +267,7 @@ jobs:
         shell: pwsh
         run: dotnet test --no-build -c Release "$env:SLN_PATH"
 
-      ## Step 2.13: Update BASE_BRANCH with snapshot (preserve history)
+      ## Step 2.13: Update BASE_BRANCH with snapshot
       - name: Update base branch with snapshot
         id: reset-base
         shell: pwsh
@@ -275,29 +275,23 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          # Make sure base branch exists (create if missing)
           git fetch origin
           git checkout $env:BASE_BRANCH || git checkout -b $env:BASE_BRANCH
 
-          # Copy snapshot files into repo
           Copy-Item -Path "artifacts/source_after_changes_$env:APP_NAME\*" -Destination "." -Recurse -Force
-
-          # Stage changes
           git add -A
 
-          # Commit with main’s latest message
           $commitMsg = git log -1 --pretty=%B origin/main
           git commit -m "Sync snapshot into $env:BASE_BRANCH: $commitMsg" || echo "No changes to commit"
-
           git push origin $env:BASE_BRANCH
-          echo "commitMsg=$commitMsg" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
 
+          echo "commitMsg=$commitMsg" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
 
       ## Step 2.14: Tag snapshot for rollback
       - name: Tag snapshot release
         shell: pwsh
         run: |
-          $tagName = "snapshot/${env:APP_NAME}/$(Get-Date -Format yyyyMMdd-HHmmss)"
+          $tagName = "snapshot/$env:APP_NAME/$(Get-Date -Format yyyyMMdd-HHmmss)"
           git tag $tagName
           git push origin $tagName
           echo "Tagged snapshot as $tagName"
@@ -307,7 +301,7 @@ jobs:
         id: ensure-branch
         shell: pwsh
         run: |
-          $branch = "${env:APP_NAME}"
+          $branch = "$env:APP_NAME"
           $exists = git ls-remote --heads origin $branch
           if (-not $exists) {
             Write-Host "Branch $branch does not exist. Creating it..."
@@ -336,7 +330,7 @@ jobs:
               ```
 
             - Snapshot branch: `${{ env.BASE_BRANCH }}`
-            - Target app branch: `${{ env:APP_NAME }}`
+            - Target app branch: `${{ env.APP_NAME }}`
 
             Snapshot rollback tag was created for safety:
             ```
