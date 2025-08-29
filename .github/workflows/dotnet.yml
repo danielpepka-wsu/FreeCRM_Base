@@ -1,4 +1,4 @@
-name: .NET (Windows • multi-project remove via feeder • safe rename • transcription only)
+name: .NET (Windows • multi-project remove via feeder • safe rename • source snapshot • auto-merge to app branch)
 
 on:
   push:
@@ -24,10 +24,8 @@ permissions:
   contents: write
 
 jobs:
-  #---------------------------------------------------------
-  # Job 1: Build feeder exe
-  #---------------------------------------------------------
   feeder:
+    name: Job 1 • Build feeder
     runs-on: windows-latest
     steps:
       - name: Setup .NET SDK 8
@@ -136,10 +134,8 @@ jobs:
           name: stdin_feeder
           path: tools/StdInFeeder/out
 
-  #---------------------------------------------------------
-  # Job 2 (matrix): Process each project
-  #---------------------------------------------------------
   project:
+    name: Job 2 • Process ${{ matrix.project.name }}
     runs-on: windows-latest
     needs: feeder
 
@@ -164,55 +160,66 @@ jobs:
       FEEDER_EXE: '.\tools\StdInFeeder\out\StdInFeeder.exe'
 
     steps:
-      # --- checkouts ---
-      - uses: actions/checkout@v4
-        with: { ref: main, path: _main, fetch-depth: 0 }
+      - name: Checkout main branch
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: _main
+          fetch-depth: 0
 
-      - uses: actions/checkout@v4
-        with: { ref: ${{ env.BASE_BRANCH }}, path: _base, fetch-depth: 0 }
+      - name: Checkout base branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.BASE_BRANCH }}
+          path: _base
+          fetch-depth: 0
 
-      - uses: actions/checkout@v4
+      - name: Checkout app branch
+        uses: actions/checkout@v4
         continue-on-error: true
-        with: { ref: ${{ env.APP_NAME }}, path: _app, fetch-depth: 0 }
+        with:
+          ref: ${{ env.APP_NAME }}
+          path: _app
+          fetch-depth: 0
 
-      # --- setup ---
-      - uses: actions/setup-dotnet@v4
+      - name: Setup .NET 9 & 8
+        uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
             9.0.x
             8.0.x
 
-      - uses: actions/download-artifact@v4
+      - name: Download feeder artifact
+        uses: actions/download-artifact@v4
         with:
           name: stdin_feeder
           path: _main/tools/StdInFeeder/out
 
-      # --- run helpers on _main ---
-      - name: Remove modules
+      - name: Run remove modules helper
         shell: pwsh
-        working-directory: _main
         run: |
+          cd _main
           $exe = $env:REMOVE_EXE
-          $targets = $env:SELECTIONS -split ',' | % { $_.Trim() } | ? { $_ -match '^\d+$' } | % { [int]$_ } | Sort-Object -Descending
+          $targets = $env:SELECTIONS -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ -match '^\d+$' } | ForEach-Object { [int]$_ } | Sort-Object -Descending
           foreach ($n in $targets) {
             Set-Content -Path input.txt -Value @("$n","x") -Encoding ASCII
             & $env:FEEDER_EXE --exe "$exe" --input "input.txt" --delay $env:DELAY_MS
-            if ($LASTEXITCODE -ne 0) { throw "Remove failed for $n" }
+            if ($LASTEXITCODE -ne 0) { throw "Remove run failed for selection $n (exit $LASTEXITCODE)" }
             Remove-Item input.txt -Force
           }
 
-      - name: Rename app
+      - name: Run rename helper
         shell: pwsh
-        working-directory: _main
         run: |
+          cd _main
           $exe = $env:RENAME_EXE
-          if ($env:APP_NAME -notmatch '^[A-Za-z]+$') { throw "APP_NAME invalid" }
+          if ($env:APP_NAME -notmatch '^[A-Za-z]+$') { throw "APP_NAME '$env:APP_NAME' is invalid." }
           Set-Content -Path rename.txt -Value @($env:APP_NAME) -Encoding ASCII
           & $env:FEEDER_EXE --exe "$exe" --input "rename.txt" --delay 500 --kill-on "press any key" --kill-delay 200
+          if ($LASTEXITCODE -ne 0) { throw "Rename run failed (exit $LASTEXITCODE)" }
           Remove-Item rename.txt -Force
 
-      # --- snapshot ---
-      - name: Snapshot source
+      - name: Snapshot source after changes
         shell: pwsh
         run: |
           $src = Join-Path $pwd "_main"
@@ -223,52 +230,40 @@ jobs:
           Compress-Archive -Path "$src\*" -DestinationPath $zip -Force
           Expand-Archive -Path $zip -DestinationPath $dst -Force
 
-      - uses: actions/upload-artifact@v4
+      - name: Upload source_after_changes
+        uses: actions/upload-artifact@v4
         with:
           name: source_after_changes_${{ env.APP_NAME }}
           path: artifacts/source_after_changes_${{ env.APP_NAME }}
 
-      # --- update base branch ---
-      - name: Reset base branch
+      - name: Detect solution
         shell: pwsh
-        working-directory: _base
         run: |
+          $sln = Get-ChildItem -Path artifacts/source_after_changes_$($env:APP_NAME) -Recurse -Filter *.sln | Select-Object -First 1
+          if (-not $sln) { throw "No .sln found in snapshot" }
+          "SLN_PATH=$($sln.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Restore
+        shell: pwsh
+        run: dotnet restore "$env:SLN_PATH"
+
+      - name: Build
+        shell: pwsh
+        run: dotnet build --no-restore -c Release "$env:SLN_PATH"
+
+      - name: Test
+        shell: pwsh
+        run: dotnet test --no-build -c Release "$env:SLN_PATH"
+
+      - name: Push to base branch
+        shell: pwsh
+        run: |
+          cd _base
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          Get-ChildItem -Force | Where-Object { $_.Name -ne ".git" } | Remove-Item -Recurse -Force
-          Copy-Item "$env:GITHUB_WORKSPACE\artifacts\source_after_changes_$($env:APP_NAME)\*" . -Recurse -Force
+          Remove-Item -Recurse -Force * -ErrorAction SilentlyContinue
+          Copy-Item -Path "$env:GITHUB_WORKSPACE\artifacts\source_after_changes_$($env:APP_NAME)\*" -Destination . -Recurse -Force
           git add -A
-          $commitMsg = git -C $env:GITHUB_WORKSPACE\_main log -1 --pretty=%B origin/main
-          git commit -m "Regenerated $env:BASE_BRANCH: $commitMsg" || echo "No changes"
+          $commitMsg = git log -1 --pretty=%B origin/main
+          git commit -m "Regenerated $env:BASE_BRANCH: $commitMsg" || echo "No changes to commit"
           git push origin HEAD:${env:BASE_BRANCH} --force
-
-      # --- ensure app branch exists / PR ---
-      - name: Ensure app branch exists
-        id: ensure-branch
-        shell: pwsh
-        working-directory: _app
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          $branch = "${env:APP_NAME}"
-          $exists = git ls-remote --heads origin $branch
-          if (-not $exists) {
-            git checkout -B $branch
-            git push origin HEAD:$branch
-            echo "created=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-          } else {
-            echo "created=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-          }
-
-      - name: Suggest merge into app branch
-        if: steps.ensure-branch.outputs.created == 'false'
-        uses: peter-evans/create-pull-request@v6
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          base: ${{ env.APP_NAME }}
-          head: ${{ env.BASE_BRANCH }}
-          title: "[AUTO] Sync: ${{ env.APP_NAME }}"
-          body: "Automated sync from base snapshot."
-          draft: false
-          merge-method: squash
-          auto-merge: true
