@@ -230,12 +230,21 @@ jobs:
         shell: pwsh
         run: |
           $src = $pwd.Path
-          $zip = Join-Path $env:RUNNER_TEMP "source_after_changes_$env:APP_NAME.zip"
           $dst = Join-Path $pwd "artifacts\source_after_changes_$env:APP_NAME"
           New-Item -ItemType Directory -Force -Path $dst | Out-Null
-          Remove-Item -Recurse -Force "$src\.git","$src\.github","$src\artifacts" -ErrorAction SilentlyContinue
-          Compress-Archive -Path "$src\*" -DestinationPath $zip -Force
-          Expand-Archive -Path $zip -DestinationPath $dst -Force
+
+          # Copy everything except .git, .github, and artifacts into the snapshot folder
+          Get-ChildItem -Path $src -Recurse -Force |
+            Where-Object { $_.FullName -notmatch '\\(\.git|\.github|artifacts)($|\\)' } |
+            ForEach-Object {
+              $target = $_.FullName.Replace($src, $dst)
+              if ($_.PSIsContainer) {
+                New-Item -ItemType Directory -Force -Path $target | Out-Null
+              } else {
+                Copy-Item $_.FullName -Destination $target -Force
+              }
+            }
+
 
       ## Step 2.8: Upload source_after_changes artifact
       - name: Upload source_after_changes
