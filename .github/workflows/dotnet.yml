@@ -24,20 +24,17 @@ permissions:
   contents: write
 
 #---------------------------------------------------------
-# Global environment variables (shared across jobs)
+# Global environment variables
 #---------------------------------------------------------
 env:
-  # Defaults from workflow_dispatch inputs (fall back if blank)
   SELECTIONS: ${{ github.event.inputs.selections || '6,5,4,3,2,1' }}
   DELAY_MS:  ${{ github.event.inputs.delay_ms    || '1000' }}
   APP_NAME:  ${{ github.event.inputs.app_name    || 'FreeCICD' }}
 
-  # Executable helper tools
   REMOVE_EXE: '.\Remove Modules from FreeCRM.exe'
   RENAME_EXE: '.\Rename FreeCRM.exe'
   FEEDER_EXE: '.\tools\StdInFeeder\out\StdInFeeder.exe'
 
-  # Branch where processed source will be pushed
   BASE_BRANCH: FreeCRM_base
 
 jobs:
@@ -251,18 +248,17 @@ jobs:
         shell: pwsh
         run: |
           $src = $pwd.Path
-          $dst = Join-Path $pwd "artifacts\source_after_changes"
-          New-Item -ItemType Directory -Force -Path $dst | Out-Null
-          $excludeDirs = @(".git",".github","artifacts")
-          Get-ChildItem -Path $src -Recurse -File |
-            Where-Object { $excludeDirs -notcontains $_.Directory.Name } |
-            ForEach-Object {
-              $rel  = $_.FullName.Substring($src.Length).TrimStart('\')
-              $dest = Join-Path $dst $rel
-              New-Item -ItemType Directory -Force -Path (Split-Path $dest) | Out-Null
-              Copy-Item -Path $_.FullName -Destination $dest -Force
-            }
-          Compress-Archive -Path $dst\* -DestinationPath artifacts/source_after_changes.zip -Force
+          $zip = Join-Path $pwd "artifacts\source_after_changes.zip"
+          New-Item -ItemType Directory -Force -Path (Split-Path $zip) | Out-Null
+
+          # Zip everything except .git, .github, artifacts
+          $items = Get-ChildItem $src -Recurse -Force | Where-Object {
+            $_.FullName -notmatch '\\\.git($|\\)' -and
+            $_.FullName -notmatch '\\\.github($|\\)' -and
+            $_.FullName -notmatch '\\artifacts($|\\)'
+          }
+
+          Compress-Archive -Path $items.FullName -DestinationPath $zip -Force
 
       - name: Upload artifact • source_after_changes
         uses: actions/upload-artifact@v4
