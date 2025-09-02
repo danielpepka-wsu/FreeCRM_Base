@@ -46,7 +46,17 @@ public partial class Program
     {
         var output = loader;
 
-        //output.MyProperty = builder.Configuration.GetValue<string>("MyProperty"); ;
+        var pat = builder.Configuration.GetValue<string>("App:AzurePAT");
+        var projectId = builder.Configuration.GetValue<string>("App:AzureProjectId");
+        var repoId = builder.Configuration.GetValue<string>("App:AzureRepoId");
+        var branch = builder.Configuration.GetValue<string>("App:AzureBranch");
+        var orgName = builder.Configuration.GetValue<string>("App:AzureOrgName");
+
+        output.PAT = String.IsNullOrWhiteSpace(pat) ? null : pat;
+        output.ProjectId = String.IsNullOrWhiteSpace(projectId) ? null : projectId;
+        output.RepoId = String.IsNullOrWhiteSpace(repoId) ? null : repoId;
+        output.Branch = String.IsNullOrWhiteSpace(branch) ? null : branch;
+        output.OrgName = String.IsNullOrWhiteSpace(orgName) ? null : orgName;
 
         return output;
     }
