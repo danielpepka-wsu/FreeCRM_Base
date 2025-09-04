@@ -1,0 +1,65 @@
+
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.8.34309.116
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8AA2F6C7-6259-40CB-B82B-E27138F74917}") = "PJProcessor", "PJProcessor\PJProcessor.csproj", "{4EC0BC0C-9138-44DE-B460-F2DC5E70D3C1}"
+EndProject
+Project("{8AA2F6C7-6259-40CB-B82B-E27138F74917}") = "PJProcessor.Client", "PJProcessor.Client\PJProcessor.Client.csproj", "{6F4AD441-E1E0-4E66-ABEF-0F96C14995BF}"
+EndProject
+Project("{8AA2F6C7-6259-40CB-B82B-E27138F74917}") = "PJProcessor.DataAccess", "PJProcessor.DataAccess\PJProcessor.DataAccess.csproj", "{ABB7E4DA-D9CA-482C-A08B-C18839A16793}"
+EndProject
+Project("{8AA2F6C7-6259-40CB-B82B-E27138F74917}") = "PJProcessor.DataObjects", "PJProcessor.DataObjects\PJProcessor.DataObjects.csproj", "{9C516609-F218-42FC-8C95-D76166A43DD8}"
+EndProject
+Project("{8AA2F6C7-6259-40CB-B82B-E27138F74917}") = "PJProcessor.EFModels", "PJProcessor.EFModels\PJProcessor.EFModels.csproj", "{9DE2E76D-4739-4DB9-8A6E-F6A5DF1F4874}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{FE905E83-A7A2-40AD-B5E1-85E07EFDEA72}"
+	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
+		.gitignore = .gitignore
+		LICENSE = LICENSE
+		README.md = README.md
+		Remove Modules from FreePJProcessor.exe = Remove Modules from FreePJProcessor.exe
+		Rename FreePJProcessor.exe = Rename FreePJProcessor.exe
+	EndProjectSection
+EndProject
+Project("{8AA2F6C7-6259-40CB-B82B-E27138F74917}") = "PJProcessor.Plugins", "PJProcessor.Plugins\PJProcessor.Plugins.csproj", "{9C775ABD-50F9-4EFF-97C7-4A35F76BA591}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{4EC0BC0C-9138-44DE-B460-F2DC5E70D3C1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4EC0BC0C-9138-44DE-B460-F2DC5E70D3C1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4EC0BC0C-9138-44DE-B460-F2DC5E70D3C1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4EC0BC0C-9138-44DE-B460-F2DC5E70D3C1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6F4AD441-E1E0-4E66-ABEF-0F96C14995BF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6F4AD441-E1E0-4E66-ABEF-0F96C14995BF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6F4AD441-E1E0-4E66-ABEF-0F96C14995BF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6F4AD441-E1E0-4E66-ABEF-0F96C14995BF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{ABB7E4DA-D9CA-482C-A08B-C18839A16793}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{ABB7E4DA-D9CA-482C-A08B-C18839A16793}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{ABB7E4DA-D9CA-482C-A08B-C18839A16793}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{ABB7E4DA-D9CA-482C-A08B-C18839A16793}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9C516609-F218-42FC-8C95-D76166A43DD8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9C516609-F218-42FC-8C95-D76166A43DD8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9C516609-F218-42FC-8C95-D76166A43DD8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9C516609-F218-42FC-8C95-D76166A43DD8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9DE2E76D-4739-4DB9-8A6E-F6A5DF1F4874}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9DE2E76D-4739-4DB9-8A6E-F6A5DF1F4874}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9DE2E76D-4739-4DB9-8A6E-F6A5DF1F4874}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9DE2E76D-4739-4DB9-8A6E-F6A5DF1F4874}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9C775ABD-50F9-4EFF-97C7-4A35F76BA591}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9C775ABD-50F9-4EFF-97C7-4A35F76BA591}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9C775ABD-50F9-4EFF-97C7-4A35F76BA591}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9C775ABD-50F9-4EFF-97C7-4A35F76BA591}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {C4A59AD0-92A7-475D-A3BC-51E982A9C0FA}
+	EndGlobalSection
+EndGlobal
