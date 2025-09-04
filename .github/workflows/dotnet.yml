@@ -152,6 +152,10 @@ jobs:
           - name: FreeManager
             branch: FreeManager_base
             selections: "7,6,5,4,3,2,1"
+          - name: PJProcessor
+            branch: PJProcessor_base
+            selections: "7,6,5,4,3,2,1"
+            
 
     env:
       SELECTIONS: ${{ github.event.inputs.selections || matrix.project.selections }}
