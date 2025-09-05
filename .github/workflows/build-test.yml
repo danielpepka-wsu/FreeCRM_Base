@@ -19,7 +19,7 @@ jobs:
         image: mysql:8.0
         env:
           MYSQL_ROOT_PASSWORD: sapassword
-          MYSQL_DATABASE: crmdb
+          MYSQL_DATABASE: CRM
           MYSQL_USER: sa
           MYSQL_PASSWORD: sapassword
         ports:
