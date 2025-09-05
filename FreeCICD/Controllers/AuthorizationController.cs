@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Server.HttpSys;
+using Plugins;
 using System.Security.Claims;
 
 namespace FreeCICD.Server.Controllers;
@@ -11,13 +12,15 @@ public class AuthorizationController : ControllerBase
 {
     private HttpContext? context;
     private IDataAccess da;
+    private IPlugins plugins;
     private string _baseUrl = "";
     private string _requestedUrl = "";
     private string _fingerprint = "";
 
-    public AuthorizationController(IDataAccess daInjection, IHttpContextAccessor httpContextAccessor)
+    public AuthorizationController(IDataAccess daInjection, IHttpContextAccessor httpContextAccessor, IPlugins daPlugins)
     {
         da = daInjection;
+        plugins = daPlugins;
 
         if (httpContextAccessor != null && httpContextAccessor.HttpContext != null) {
             context = httpContextAccessor.HttpContext;
@@ -40,6 +43,17 @@ public class AuthorizationController : ControllerBase
         string ssoToken = da.Request("sso-token");
 
         return Redirect(_baseUrl + "Authorization/Custom?TenantId=" + tenantId + "&sso-token=" + ssoToken + "&Fingerprint=" + _fingerprint);
+    }
+
+    [HttpPost]
+    [Route("~/Authorization/Plugin")]
+    public IActionResult PluginLogin()
+    {
+        string tenantId = da.Request("TenantId");
+        string ssoToken = da.Request("sso-token");
+        string pluginName = da.Request("Name");
+
+        return Redirect(_baseUrl + "Authorization/Plugin?Name=" + pluginName + "&TenantId=" + tenantId + "&sso-token=" + ssoToken + "&Fingerprint=" + _fingerprint);
     }
 
     private void CookieWrite(string cookieName, string value)
@@ -292,6 +306,7 @@ public class AuthorizationController : ControllerBase
                                             Added = now,
                                             AddedBy = Source,
                                             Admin = false,
+                                            CanBeScheduled = false,
                                             Deleted = false,
                                             Email = preferredUsername,
                                             FirstName = givenName,
@@ -299,6 +314,7 @@ public class AuthorizationController : ControllerBase
                                             LastModified = now,
                                             LastModifiedBy = Source,
                                             LastName = familyName,
+                                            ManageAppointments = false,
                                             ManageFiles = false,
                                             PreventPasswordChange = false,
                                             Source = Source,
@@ -315,16 +331,20 @@ public class AuthorizationController : ControllerBase
                                     output.Result = true;
                                     noLocalAccount = false;
 
+                                    await da.UpdateUserFromPlugins(user.UserId);
+
                                     if (String.IsNullOrWhiteSpace(user.AuthToken)) {
-                                        user.AuthToken = da.GetUserToken(TenantId, user.UserId, _fingerprint);
+                                        user.AuthToken = da.GetUserToken(TenantId, user.UserId, _fingerprint, user.Sudo);
                                     }
                                     await CustomAuthorization.AddAuthetication(user, context, _fingerprint, Source);
 
                                     // Write out the user token
-                                    CookieWrite("user-token", da.GetUserToken(TenantId, user.UserId, _fingerprint));
+                                    CookieWrite("user-token", da.GetUserToken(TenantId, user.UserId, _fingerprint, user.Sudo));
                                     CookieWrite("Login-Method", Source);
 
-                                    await da.UpdateUserLastLoginTime(user.UserId, Source);
+                                    if (!user.Sudo) {
+                                        await da.UpdateUserLastLoginTime(user.UserId, Source);
+                                    }
                                 }
                             }
                         }

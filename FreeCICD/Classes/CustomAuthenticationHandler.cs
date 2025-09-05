@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.Kiota.Http.HttpClientLibrary.Middleware;
+using Plugins;
 using SQLitePCL;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
@@ -45,6 +46,14 @@ public static class CustomAuthorization
                 identity.AddClaim(new Claim(ClaimTypes.Role, Policies.AppAdmin));
             }
 
+            if (user.CanBeScheduled) {
+                identity.AddClaim(new Claim(ClaimTypes.Role, Policies.CanBeScheduled));
+            }
+
+            if (user.ManageAppointments) {
+                identity.AddClaim(new Claim(ClaimTypes.Role, Policies.ManageAppointments));
+            }
+
             if (user.ManageFiles) {
                 identity.AddClaim(new Claim(ClaimTypes.Role, Policies.ManageFiles));
             }
@@ -71,6 +80,8 @@ public static class Policies
 {
     public const string Admin = "Admin";
     public const string AppAdmin = "AppAdmin";
+    public const string CanBeScheduled = "CanBeScheduled";
     public const string ManageFiles = "ManageFiles";
+    public const string ManageAppointments = "ManageAppointments";
     public const string PreventPasswordChange = "PreventPasswordChange";
 }

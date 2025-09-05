@@ -1,5 +1,14 @@
 namespace FreeCICD;
 
+public partial interface IConfigurationHelper
+{
+    public string? PAT { get; }
+    public string? ProjectId { get; }
+    public string? RepoId { get; }
+    public string? Branch { get; }
+    public string? OrgName { get; }
+}
+
 public partial class ConfigurationHelper : IConfigurationHelper
 {
     public string? PAT {
@@ -30,16 +39,7 @@ public partial class ConfigurationHelper : IConfigurationHelper
         get {
             return _loader.OrgName;
         }
-    }    
-}
-
-public partial interface IConfigurationHelper
-{
-    public string? PAT { get; }
-    public string? ProjectId { get; }
-    public string? RepoId { get; }
-    public string? Branch { get; }
-    public string? OrgName { get; }
+    }
 }
 
 public partial class ConfigurationHelperLoader
@@ -49,4 +49,9 @@ public partial class ConfigurationHelperLoader
     public string? RepoId { get; set; }
     public string? Branch { get; set; }
     public string? OrgName { get; set; }
+}
+
+public partial class ConfigurationHelperConnectionStrings
+{
+    //public string? MyCustomConnectionString { get; set; }
 }

@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.CodeAnalysis;
 using Microsoft.Graph.Models;
 using System.Net.Http;
+using System.Reflection;
 using Utilities;
 
 namespace FreeCICD;
@@ -25,6 +26,7 @@ public partial interface IDataAccess
     string CultureCodeDisplay(string cc);
     Guid? CurrentUserId(DataObjects.User? user);
     string? CurrentUserIdString(DataObjects.User? user);
+    string DatabaseType { get; }
     DateTime? DateOnlyToDateTime(DateOnly? dateOnly);
     public DateOnly? DateTimeToDateOnly(DateTime? dateTime);
     decimal DecimalValue(decimal? value);
@@ -62,6 +64,7 @@ public partial interface IDataAccess
     string RecurseExceptionAsString(Exception ex, bool ShowExceptionType = true);
     void Redirect(string url);
     DateOnly Released { get; }
+    object RemoveSensitiveData(object o);
     string Replace(string input, string replaceText, string withText);
     string Request(string parameter);
     double RunningSince { get; }
@@ -367,6 +370,12 @@ public partial class DataAccess
         return user != null ? user.UserId.ToString() : null;
     }
 
+    public string DatabaseType {
+        get {
+            return _databaseType;
+        }
+    }
+
     public DateTime? DateOnlyToDateTime(DateOnly? dateOnly)
     {
         DateTime? output = null;
@@ -446,10 +455,80 @@ public partial class DataAccess
     {
         DataObjects.BooleanResponse output = new DataObjects.BooleanResponse();
 
+        // First, try any app-specific deletions.
+        var deleteAppRecords = await DeleteAllPendingDeletedRecordsApp(TenantId, OlderThan);
+        if (!deleteAppRecords.Result) {
+            output.Messages.AddRange(deleteAppRecords.Messages);
+            return output;
+        }
+
         try {
-          
-            await data.Database.ExecuteSqlRawAsync("DELETE FROM FileStorage WHERE TenantId={0} AND Deleted=1 AND (DeletedAt IS NULL OR DeletedAt > {1})", TenantId, OlderThan);
-            
+
+            // Other items need to call their delete method to get all related data.
+            var departmentGroups = await data.DepartmentGroups.Where(x => x.TenantId == TenantId && x.Deleted == true && (x.DeletedAt == null || x.DeletedAt > OlderThan)).ToListAsync();
+            if(departmentGroups != null && departmentGroups.Any()) {
+                foreach(var rec in departmentGroups) {
+                    var result = await DeleteDepartmentGroup(rec.DepartmentGroupId, null, true);
+                    if (!result.Result) {
+                        output.Messages = result.Messages;
+                        return output;
+                    }
+                }
+            }
+
+            var departments = await data.Departments.Where(x => x.TenantId == TenantId && x.Deleted == true && (x.DeletedAt == null || x.DeletedAt > OlderThan)).ToListAsync();
+            if(departments != null && departments.Any()) {
+                foreach(var rec in departments) {
+                    var result = await DeleteDepartment(rec.DepartmentId, null, true);
+                    if (!result.Result) {
+                        output.Messages = result.Messages;
+                        return output;
+                    }
+                }
+            }
+
+
+            var fileStorage = await data.FileStorages.Where(x => x.TenantId == TenantId && x.Deleted == true && (x.DeletedAt == null || x.DeletedAt > OlderThan)).ToListAsync();
+            if (fileStorage != null && fileStorage.Any()) {
+                foreach (var rec in fileStorage) {
+                    var result = await DeleteFileStorage(rec.FileId, null, true);
+                    if (!result.Result) {
+                        output.Messages = result.Messages;
+                        return output;
+                    }
+                }
+            }
+
+
+
+            // {{ModuleItemStart:Tags}}
+            // For tags, remove any related items first, then delete the tags.
+            var tags = await data.Tags.Where(x => x.TenantId == TenantId && x.Deleted == true && (x.DeletedAt == null || x.DeletedAt > OlderThan)).ToListAsync();
+            if(tags != null && tags.Any()) {
+                foreach(var rec in tags) {
+                    await data.Database.ExecuteSqlRawAsync("DELETE FROM TagItems WHERE TagId={0}", rec.TagId);
+                    await data.SaveChangesAsync();
+
+                    var result = await DeleteTag(rec.TagId, null, true);
+                    if (!result.Result) {
+                        output.Messages = result.Messages;
+                        return output;
+                    }
+                }
+            }
+            // {{ModuleItemEnd:Tags}}
+
+            var userGroups = await data.UserGroups.Where(x => x.TenantId == TenantId && x.Deleted == true && (x.DeletedAt == null || x.DeletedAt > OlderThan)).ToListAsync();
+            if(userGroups != null &&  userGroups.Any()) {
+                foreach (var rec in userGroups) {
+                    var result = await DeleteUserGroup(rec.GroupId, null, true);
+                    if (!result.Result) {
+                        output.Messages = result.Messages;
+                        return output;
+                    }
+                }
+            }
+
             var users = await data.Users.Where(x => x.TenantId == TenantId && x.Deleted == true && (x.DeletedAt == null || x.DeletedAt > OlderThan)).ToListAsync();
             if(users != null && users.Any()) {
                 foreach(var rec in users) { 
@@ -509,9 +588,30 @@ public partial class DataAccess
 
         if (!String.IsNullOrWhiteSpace(Type)) {
             switch (Type.ToLower()) {
-              
+
+                case "departmentgroup":
+                    output = await DeleteDepartmentGroup(RecordId, CurrentUser, true);
+                    break;
+
+                case "department":
+                    output = await DeleteDepartment(RecordId, CurrentUser, true);
+                    break;
+
+
                 case "filestorage":
                     output = await DeleteFileStorage(RecordId, CurrentUser, true);
+                    break;
+
+
+
+                // {{ModuleItemStart:Tags}}
+                case "tag":
+                    output = await DeleteTag(RecordId, CurrentUser, true);
+                    break;
+                // {{ModuleItemEnd:Tags}}
+
+                case "usergroup":
+                    output = await DeleteUserGroup(RecordId, CurrentUser, true);
                     break;
 
                 case "user":
@@ -519,7 +619,7 @@ public partial class DataAccess
                     break;
 
                 default:
-                    output.Messages.Add("Invalid Delete Record Type '" + Type + "'");
+                    output = await DeleteRecordImmediatelyApp(Type, RecordId, CurrentUser);
                     break;
             }
         } else {
@@ -603,6 +703,40 @@ public partial class DataAccess
         return output;
     }
 
+    private string FormatAppointmentTitle(string title, DateTime start, DateTime end, bool allDay)
+    {
+        string output = String.Empty;
+
+        string startDate = start.ToString("d");
+        string startTime = start.ToString("t");
+        string endDate = end.ToString("d");
+        string endTime = end.ToString("t");
+
+        if (allDay) {
+            if(startDate == endDate) {
+                output = startDate + " All Day";
+            } else {
+                output = startDate + " - " + endDate + " All Day";
+            }
+        } else {
+            if(startDate == endDate) {
+                output = startDate + " " + startTime;
+
+                if(endTime != startTime) {
+                    output += " - " + endTime;
+                }
+            } else {
+                output = startDate + " " + startTime + " - " + endDate + " " + endTime;
+            }
+        }
+
+        if (!String.IsNullOrWhiteSpace(title)) {
+            output += " - " + title;
+        }
+
+        return output;
+    }
+
     public string FormatStringAsGuid(string input)
     {
         string output = String.Empty;
@@ -649,9 +783,16 @@ public partial class DataAccess
         // Gets a limited version of the model.
         DataObjects.BlazorDataModelLoader output = new DataObjects.BlazorDataModelLoader();
 
+        var tenantsList = GetTenantsList();
+        if (tenantsList.Any()) {
+            foreach(var item in tenantsList) {
+                RemoveSensitiveData(item);
+            }
+        }
+
         output.ActiveUsers = new List<DataObjects.ActiveUser>();
         output.AdminCustomLoginProvider = AdminCustomLoginProvider;
-        output.AllTenants = GetTenantsList();
+        output.AllTenants = tenantsList;
         output.ApplicationUrl = ApplicationURL;
         output.AppSettings = AppSettings;
         output.AuthenticationProviders = _authenticationProviders;
@@ -660,6 +801,7 @@ public partial class DataAccess
         output.CultureCodes = GetLanguageCultureCodes();
         output.Languages = new List<DataObjects.Language>();
         output.LoggedIn = false;
+        output.Plugins = GetPluginsWithoutCode();
         output.Released = Released;
         output.TenantId = Guid.Empty;
         output.Tenants = new List<DataObjects.Tenant>();
@@ -668,6 +810,8 @@ public partial class DataAccess
         output.Users = new List<DataObjects.User>();
         output.UseTenantCodeInUrl = UseTenantCodeInUrl;
         output.Version = Version;
+
+        output = GetBlazorDataModelApp(output).Result;
 
         return output;
     }
@@ -682,20 +826,21 @@ public partial class DataAccess
                 await ValidateMainAdminUser(CurrentUser.UserId);
             }
 
-            CurrentUser.AuthToken = GetUserToken(CurrentUser.TenantId, CurrentUser.UserId, fingerprint);
+            CurrentUser.AuthToken = GetUserToken(CurrentUser.TenantId, CurrentUser.UserId, fingerprint, CurrentUser.Sudo);
 
             List<DataObjects.Language> languages = new List<DataObjects.Language>();
             List<DataObjects.Tenant> tenants = new List<DataObjects.Tenant>();
             List<DataObjects.User> users = new List<DataObjects.User>();
 
-            var allUsers = await GetUsersForEmailAddress(CurrentUser.Email, fingerprint);
+            var allUsers = await GetUsersForEmailAddress(CurrentUser.Email, fingerprint, CurrentUser.Sudo);
             if (allUsers != null && allUsers.Any()) {
                 users = allUsers;
             }
 
             if (users.Any()) {
-                foreach (var user in users) {
-                    var tenant = GetTenant(user.TenantId, CurrentUser);
+                var allTenantIds = users.Select(x => x.TenantId).Distinct().ToList();
+                foreach (var tenantId in allTenantIds) {
+                    var tenant = GetTenant(tenantId, CurrentUser);
                     if (tenant != null && tenant.ActionResponse.Result && tenant.Enabled) {
                         tenants.Add(tenant);
                         var tenantLanguages = await GetTenantLanguages(tenant.TenantId);
@@ -708,9 +853,16 @@ public partial class DataAccess
                 }
             }
 
+            var tenantsList = GetTenantsList();
+            if (tenantsList.Any()) {
+                foreach (var item in tenantsList) {
+                    RemoveSensitiveData(item);
+                }
+            }
+
             output.ActiveUsers = await GetActiveUsers(CurrentUser);
             output.AdminCustomLoginProvider = AdminCustomLoginProvider;
-            output.AllTenants = await GetTenants();
+            output.AllTenants = tenantsList;
             output.ApplicationUrl = ApplicationURL;
             output.AppSettings = AppSettings;
             output.AuthenticationProviders = _authenticationProviders;
@@ -719,6 +871,7 @@ public partial class DataAccess
             output.CultureCodes = GetLanguageCultureCodes();
             output.Languages = languages;
             output.LoggedIn = true;
+            output.Plugins = GetPluginsWithoutCode();
             output.Released = Released;
             output.TenantId = CurrentUser.TenantId;
             output.Tenants = tenants;
@@ -727,6 +880,8 @@ public partial class DataAccess
             output.Users = users;
             output.UseTenantCodeInUrl = UseTenantCodeInUrl;
             output.Version = Version;
+
+            output = await GetBlazorDataModelApp(output, CurrentUser);
         }
 
         return output;
@@ -741,8 +896,15 @@ public partial class DataAccess
         if (tenant.ActionResponse.Result) {
             var tenantLanguages = await GetTenantLanguages(tenant.TenantId);
 
+            var tenantsList = GetTenantsList();
+            if (tenantsList.Any()) {
+                foreach (var item in tenantsList) {
+                    RemoveSensitiveData(item);
+                }
+            }
+
             output.AdminCustomLoginProvider = AdminCustomLoginProvider;
-            output.AllTenants = await GetTenants();
+            output.AllTenants = tenantsList;
             output.ApplicationUrl = ApplicationURL;
             output.AppSettings = AppSettings;
             output.AuthenticationProviders = _authenticationProviders;
@@ -751,6 +913,7 @@ public partial class DataAccess
             output.CultureCodes = GetLanguageCultureCodes();
             output.Languages = tenantLanguages;
             output.LoggedIn = false;
+            output.Plugins = GetPluginsWithoutCode();
             output.Released = Released;
             output.TenantId = tenant.TenantId;
             output.Tenants = new List<DataObjects.Tenant>{ tenant };
@@ -759,6 +922,8 @@ public partial class DataAccess
             output.Users = new List<DataObjects.User>();
             output.UseTenantCodeInUrl = UseTenantCodeInUrl;
             output.Version = Version;
+
+            output = await GetBlazorDataModelApp(output);
         } else {
             output = GetBlazorDataModel();
         }
@@ -768,20 +933,66 @@ public partial class DataAccess
 
     public async Task<DataObjects.DeletedRecordCounts> GetDeletedRecordCounts(Guid TenantId)
     {
+        var departmentGroups = await data.DepartmentGroups.CountAsync(x => x.TenantId == TenantId && x.Deleted == true);
+        var departments = await data.Departments.CountAsync(x => x.TenantId == TenantId && x.Deleted == true);
         var fileStorage = await data.FileStorages.CountAsync(x => x.TenantId == TenantId && x.Deleted == true);
+        // {{ModuleItemStart:Tags}}
+        var tags = await data.Tags.CountAsync(x => x.TenantId == TenantId && x.Deleted == true);
+        // {{ModuleItemEnd:Tags}}
+        var userGroups = await data.UserGroups.CountAsync(x => x.TenantId == TenantId && x.Deleted == true);
         var users = await data.Users.CountAsync(x => x.TenantId == TenantId && x.Deleted == true);
 
-        DataObjects.DeletedRecordCounts output = new DataObjects.DeletedRecordCounts { 
+        DataObjects.DeletedRecordCounts output = new DataObjects.DeletedRecordCounts {
+            DepartmentGroups = departmentGroups,
+            Departments = departments,
             FileStorage = fileStorage,
+            // {{ModuleItemStart:Tags}}
+            Tags = tags,
+            // {{ModuleItemEnd:Tags}}
+            UserGroups = userGroups,
             Users = users,
         };
+
+        output = await GetDeletedRecordCountsApp(TenantId, output);
 
         return output;
     }
 
     public async Task<DataObjects.DeletedRecords> GetDeletedRecords(Guid TenantId)
     {
-        
+
+        List<DataObjects.DeletedRecordItem> departmentGroups = new List<DataObjects.DeletedRecordItem>();
+        var departmentGroupRecords = await data.DepartmentGroups
+            .Where(x => x.TenantId == TenantId && x.Deleted == true)
+            .Select(x => new { x.DeletedAt, x.LastModified, x.LastModifiedBy, x.DepartmentGroupName, x.DepartmentGroupId })
+            .ToListAsync();
+        if (departmentGroupRecords != null && departmentGroupRecords.Any()) {
+            foreach(var item in departmentGroupRecords) {
+                departmentGroups.Add(new DataObjects.DeletedRecordItem {
+                    DeletedAt = item.DeletedAt.HasValue ? (DateTime)item.DeletedAt : DateTime.Now,
+                    DeletedBy = LastModifiedDisplayName(item.LastModifiedBy),
+                    Display = StringValue(item.DepartmentGroupName),
+                    ItemId = item.DepartmentGroupId,
+                });
+            }
+        }
+
+        List<DataObjects.DeletedRecordItem> departments = new List<DataObjects.DeletedRecordItem>();
+        var departmentRecords = await data.Departments
+            .Where(x => x.TenantId == TenantId && x.Deleted == true)
+            .Select(x => new { x.DeletedAt, x.LastModified, x.LastModifiedBy, x.DepartmentName, x.DepartmentId })
+            .ToListAsync();
+        if (departmentRecords != null && departmentRecords.Any()) {
+            foreach(var item in departmentRecords) {
+                departments.Add(new DataObjects.DeletedRecordItem {
+                    DeletedAt = item.DeletedAt.HasValue ? (DateTime)item.DeletedAt : DateTime.Now,
+                    DeletedBy = LastModifiedDisplayName(item.LastModifiedBy),
+                    Display = StringValue(item.DepartmentName),
+                    ItemId = item.DepartmentId,
+                });
+            }
+        }
+
 
         List<DataObjects.DeletedRecordItem> fileStorage = new List<DataObjects.DeletedRecordItem>();
         var fileStorageRecord = await data.FileStorages
@@ -795,6 +1006,42 @@ public partial class DataAccess
                     DeletedBy = LastModifiedDisplayName(item.LastModifiedBy),
                     Display = StringValue(item.FileName),
                     ItemId = item.FileId,
+                });
+            }
+        }
+
+
+
+        // {{ModuleItemStart:Tags}}
+        List<DataObjects.DeletedRecordItem> tags = new List<DataObjects.DeletedRecordItem>();
+        var tagRecords = await data.Tags
+            .Where(x => x.TenantId == TenantId && x.Deleted == true)
+            .Select(x => new { x.DeletedAt, x.LastModified, x.LastModifiedBy, x.Name, x.TagId})
+            .ToListAsync();
+        if(tagRecords != null && tagRecords.Any()) {
+            foreach(var item in tagRecords) {
+                tags.Add(new DataObjects.DeletedRecordItem {
+                    DeletedAt = item.DeletedAt.HasValue ? (DateTime)item.DeletedAt : DateTime.Now,
+                    DeletedBy = LastModifiedDisplayName(item.LastModifiedBy),
+                    Display = item.Name,
+                    ItemId = item.TagId,
+                });
+            }
+        }
+        // {{ModuleItemEnd:Tags}}
+
+        List<DataObjects.DeletedRecordItem> userGroups = new List<DataObjects.DeletedRecordItem>();
+        var userGroupRecords = await data.UserGroups
+            .Where(x => x.TenantId == TenantId && x.Deleted == true)
+            .Select(x => new { x.DeletedAt, x.LastModified, x.LastModifiedBy, x.Name, x.GroupId })
+            .ToListAsync();
+        if (userGroupRecords != null && userGroupRecords.Any()) {
+            foreach(var item in userGroupRecords) {
+                userGroups.Add(new DataObjects.DeletedRecordItem {
+                    DeletedAt = item.DeletedAt.HasValue ? (DateTime)item.DeletedAt : DateTime.Now,
+                    DeletedBy = LastModifiedDisplayName(item.LastModifiedBy),
+                    Display = StringValue(item.Name),
+                    ItemId = item.GroupId,
                 });
             }
         }
@@ -816,9 +1063,17 @@ public partial class DataAccess
         }
 
         DataObjects.DeletedRecords output = new DataObjects.DeletedRecords {
+            DepartmentGroups = departmentGroups,
+            Departments = departments,
             FileStorage = fileStorage,
+            // {{ModuleItemStart:Tags}}
+            Tags = tags,
+            // {{ModuleItemEnd:Tags}}
+            UserGroups = userGroups,
             Users = users,
         };
+
+        output = await GetDeletedRecordsApp(TenantId, output);
 
         return output;
     }
@@ -1147,6 +1402,44 @@ public partial class DataAccess
         }
     }
 
+    public object RemoveSensitiveData(object o)
+    {
+        var type = o.GetType();
+        var properties = type.GetProperties();
+
+        foreach (var property in properties) {
+            var propertyType = property.PropertyType;
+            var thisObject = property.GetValue(o);
+
+            if (property.IsDefined(typeof(SensitiveAttribute))) {
+                object? defaultValue = null;
+                try {
+                    defaultValue = Activator.CreateInstance(propertyType);
+                } catch { }
+
+                // For specific item types return a value instead of null.
+                // In my testing so far it seems like only string is a problem.
+                if (thisObject != null) {
+                    if (thisObject.GetType() == typeof(System.String)) {
+                        defaultValue = "";
+                    }
+                }
+
+                property.SetValue(o, defaultValue);
+            }
+
+            if (!propertyType.ToString().ToLower().StartsWith("system.")) {
+                // This might be an object.
+                if (thisObject != null) {
+                    thisObject = RemoveSensitiveData(thisObject);
+                }
+            }
+        }
+
+        return o;
+    }
+
+
     public string Replace(string input, string replaceText, string withText)
     {
         string output = input;
@@ -1162,6 +1455,46 @@ public partial class DataAccess
                 withText.Replace("$", "$$"),
                 RegexOptions.IgnoreCase
             );
+        }
+
+        return output;
+    }
+
+    private DataObjects.EmailMessage ReplaceTagsInEmail(DataObjects.EmailMessage message, DataObjects.User? user = null, object? obj = null)
+    {
+        var output = message;
+
+        output.Subject = ReplaceTagsInText(output.Subject, user, obj);
+        output.Body = ReplaceTagsInText(output.Body, user, obj);
+
+        return output;
+    }
+
+    private string ReplaceTagsInText(string? input, DataObjects.User? user = null, object? obj = null)
+    {
+        string output = String.Empty;
+
+        if (!String.IsNullOrWhiteSpace(input)) {
+            output = input;
+
+            if (user != null) {
+                output = output.Replace("{{FirstName}}", user.FirstName, StringComparison.InvariantCultureIgnoreCase);
+                output = output.Replace("{{LastName}}", user.LastName, StringComparison.InvariantCultureIgnoreCase);
+                output = output.Replace("{{Email}}", user.Email, StringComparison.InvariantCultureIgnoreCase);
+            }
+
+            if (obj != null) {
+
+            }
+
+            // Now, replace any potential empty tags that weren't caught above.
+            List<string> tags = new List<string> { "{{FirstName}}", "{{LastName}}", "{{Email}}",
+            "{{Appointment:Title}}", "{{Appointment:Note}}", "{{Appointment:Start}}", "{{Appointment:End}}", "{{Appointment:DatesAndTimes}}",
+            "{{Service:Code}}", "{{Service:Description}}", "{{Service:Rate}}"};
+
+            foreach (var tag in tags) {
+                output = output.Replace(tag, "", StringComparison.InvariantCultureIgnoreCase);
+            }
         }
 
         return output;
@@ -1546,7 +1879,42 @@ public partial class DataAccess
 
         try {
             if (!String.IsNullOrWhiteSpace(Type)) {
+                object? obj = null;
+                bool sendSignalRUpdate = false;
+
                 switch (Type.ToLower()) {
+
+                    case "departmentgroup":
+                        var recDeptGroup = await data.DepartmentGroups.FirstOrDefaultAsync(x => x.DepartmentGroupId == RecordId);
+                        if (recDeptGroup != null) {
+                            recDeptGroup.Deleted = false;
+                            recDeptGroup.DeletedAt = null;
+                            await data.SaveChangesAsync();
+                            output.Result = true;
+                            sendSignalRUpdate = true;
+
+                            obj = await GetDepartmentGroup(RecordId, CurrentUser);
+                        } else {
+                            output.Messages.Add(Type + " Record '" + RecordId.ToString() + "' Not Found");
+                        }
+                        break;
+
+                    case "department":
+                        var recDept = await data.Departments.FirstOrDefaultAsync(x => x.DepartmentId == RecordId);
+                        if (recDept != null) {
+                            recDept.Deleted = false;
+                            recDept.DeletedAt = null;
+                            await data.SaveChangesAsync();
+                            output.Result = true;
+                            sendSignalRUpdate = true;
+
+                            obj = await GetDepartment(RecordId, CurrentUser);
+                        } else {
+                            output.Messages.Add(Type + " Record '" + RecordId.ToString() + "' Not Found");
+                        }
+                        break;
+
+
                     case "filestorage":
                         var recFile = await data.FileStorages.FirstOrDefaultAsync(x => x.FileId == RecordId);
                         if (recFile != null) {
@@ -1554,6 +1922,43 @@ public partial class DataAccess
                             recFile.DeletedAt = null;
                             await data.SaveChangesAsync();
                             output.Result = true;
+                            sendSignalRUpdate = true;
+
+                            obj = await GetFileStorage(RecordId, CurrentUser);
+                        } else {
+                            output.Messages.Add(Type + " Record '" + RecordId.ToString() + "' Not Found");
+                        }
+                        break;
+
+
+
+                    // {{ModuleItemStart:Tags}}
+                    case "tag":
+                        var recTag = await data.Tags.FirstOrDefaultAsync(x => x.TagId == RecordId);
+                        if (recTag != null) {
+                            recTag.Deleted = false;
+                            recTag.DeletedAt = null;
+                            await data.SaveChangesAsync();
+                            output.Result = true;
+                            sendSignalRUpdate = true;
+
+                            obj = await GetTag(RecordId, CurrentUser);
+                        } else {
+                            output.Messages.Add(Type + " Record '" + RecordId.ToString() + "' Not Found");
+                        }
+                        break;
+                    // {{ModuleItemEnd:Tags}}
+
+                    case "usergroup":
+                        var recUserGroup = await data.UserGroups.FirstOrDefaultAsync(x => x.GroupId == RecordId);
+                        if (recUserGroup != null) {
+                            recUserGroup.Deleted = false;
+                            recUserGroup.DeletedAt = null;
+                            await data.SaveChangesAsync();
+                            output.Result = true;
+                            sendSignalRUpdate = true;
+
+                            obj = await GetUserGroup(RecordId, true, CurrentUser);
                         } else {
                             output.Messages.Add(Type + " Record '" + RecordId.ToString() + "' Not Found");
                         }
@@ -1566,14 +1971,28 @@ public partial class DataAccess
                             recUser.DeletedAt = null;
                             await data.SaveChangesAsync();
                             output.Result = true;
+                            sendSignalRUpdate = true;
+
+                            obj = await GetUser(RecordId, false, CurrentUser);
                         } else {
                             output.Messages.Add(Type + " Record '" + RecordId.ToString() + "' Not Found");
                         }
                         break;
 
                     default:
-                        output.Messages.Add("Invalid Delete Record Type '" + Type + "'");
+                        output = await UndeleteRecordApp(Type, RecordId, CurrentUser);
                         break;
+                }
+
+                if (sendSignalRUpdate) {
+                    await SignalRUpdate(new DataObjects.SignalRUpdate {
+                        TenantId = CurrentUser.TenantId,
+                        ItemId = RecordId,
+                        UpdateType = DataObjects.SignalRUpdateType.Undelete,
+                        Message = Type,
+                        Object = obj,
+                        UserId = CurrentUserId(CurrentUser),
+                    });
                 }
             } else {
                 output.Messages.Add("Missing Required Data Type");
@@ -1581,8 +2000,6 @@ public partial class DataAccess
         } catch (Exception ex) {
             output.Messages.Add("Error Undeleting '" + Type + "' " + RecordId.ToString() + " - " + RecurseExceptionAsString(ex));
         }
-
-
 
         return output;
     }

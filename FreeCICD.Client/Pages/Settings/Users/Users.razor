@@ -1,4 +1,4 @@
-﻿@page "/Settings/Users"
+@page "/Settings/Users"
 @page "/{TenantCode}/Settings/Users"
 @implements IDisposable
 @using Blazored.LocalStorage
@@ -61,7 +61,22 @@
 
         if (Filter.ShowFilters) {
             <div class="row mb-2">
-                
+                @if (Model.FeatureEnabledDepartments && Model.Departments.Any()) {
+                    <div class="col col-lg-2 col-md-3 col-sm-4 col-12 mb-2">
+                        <label for="filter-users-departments">
+                            <Language Tag="Departments" />
+                        </label>
+                        <select class="form-select" id="filter-users-departments" multiple size="4" @bind="Filter.FilterDepartments" @bind:after="LoadFilter">
+                            @foreach (var item in Model.Departments.OrderBy(x => x.DepartmentName)) {
+                                if (Filter.FilterDepartments != null && Filter.FilterDepartments.Contains(item.DepartmentId)) {
+                                    <option value="@item.DepartmentId" selected>@item.DepartmentName</option>
+                                } else {
+                                    <option value="@item.DepartmentId">@item.DepartmentName</option>
+                                }
+                            }
+                        </select>
+                    </div>
+                }
 
                 <div class="col col-lg-2 col-md-3 col-sm-4 col-12 mb-2">
                     <label for="users-filter-enabled"><Language Tag="Enabled" /></label>
@@ -109,7 +124,26 @@
                     </select>
                 </div>
 
-               
+                @for (int x = 1; x < 11; x++) {
+                    int udfItem = x;
+                    var udfOptions = Model.UdfFilterOptions("Users", udfItem);
+                    string udfLabel = Model.UdfLabel("Users", udfItem);
+
+                    if (!String.IsNullOrEmpty(udfLabel) && udfOptions.Any() && Model.UdfShowInFilter("Users", udfItem)) {
+                        <div class="col-3 mb-2">
+                            <label for="users-filter-UDF@(udfItem)">@((MarkupString)udfLabel)</label>
+                            <select class="form-select" size="4"
+                                    id="users-filter-UDF@(udfItem)"
+                                    value="@(Helpers.GetObjectPropertyValue<string>(Filter, "UDF" + (udfItem < 10 ? "0" : "") + udfItem.ToString()))"
+                                    @onchange="@((ChangeEventArgs e) => FilterChangedUDF(e, udfItem))">
+                                <option value=""></option>
+                                @foreach (var item in udfOptions) {
+                                    <option value="@item">@item</option>
+                                }
+                            </select>
+                        </div>
+                    }
+                }
 
             </div>
 
@@ -231,6 +265,14 @@
 
     protected async Task LoadData()
     {
+        if (!Model.Departments.Any()) {
+            await Helpers.LoadDepartments();
+        }
+
+        if (!Model.udfLabels.Any()) {
+            await Helpers.LoadUdfLabels();
+        }
+
         ActionHandlers = new List<PagedRecordset.ActionHandler> {
             new PagedRecordset.ActionHandler {
                 CallbackHandler = OnRecordSelected,
@@ -240,6 +282,8 @@
                     "</button>"
             },
         };
+
+
         CenterItems = new Dictionary<string, Action?>();
 
         Formatters = new List<PagedRecordset.Formatter> {
@@ -259,6 +303,7 @@
 
         // Get the saved filter if it exists.
         Filter = Model.User.UserPreferences.filterUsers;
+        if(Filter.FilterDepartments == null){ Filter.FilterDepartments = new Guid[] { }; }
 
         await LoadFilter();
     }
@@ -276,12 +321,67 @@
         Filter.Sort = "lastLogin";
         Filter.SortOrder = "DESC";
         Filter.Page = 1;
+        Filter.FilterDepartments = new Guid[] { };
+        Filter.udf01 = null;
+        Filter.udf02 = null;
+        Filter.udf03 = null;
+        Filter.udf04 = null;
+        Filter.udf05 = null;
+        Filter.udf06 = null;
+        Filter.udf07 = null;
+        Filter.udf08 = null;
+        Filter.udf09 = null;
+        Filter.udf10 = null;
 
         Model.User.UserPreferences.IncludeDeletedItems = false;
 
         await LoadFilter();
     }
 
+    protected async Task FilterChangedUDF(ChangeEventArgs e, int Item)
+    {
+        string value = String.Empty;
+        if(e.Value != null) {
+            try {
+                value += e.Value.ToString();
+            } catch { }
+        }
+
+        switch (Item) {
+            case 1:
+                Filter.udf01 = value;
+                break;
+            case 2:
+                Filter.udf02 = value;
+                break;
+            case 3:
+                Filter.udf03 = value;
+                break;
+            case 4:
+                Filter.udf04 = value;
+                break;
+            case 5:
+                Filter.udf05 = value;
+                break;
+            case 6:
+                Filter.udf06 = value;
+                break;
+            case 7:
+                Filter.udf07 = value;
+                break;
+            case 8:
+                Filter.udf08 = value;
+                break;
+            case 9:
+                Filter.udf09 = value;
+                break;
+            case 10:
+                Filter.udf10 = value;
+                break;
+        }
+
+        await LoadFilter();
+    }
 
     protected string FilterSearchPlaceholder
     {
@@ -518,6 +618,7 @@
             End = null,
             Export = null,
             ExecutionTime = 0,
+            FilterDepartments = Filter.FilterDepartments,
             Keyword = Filter.Keyword,
             Loading = false,
             Page = 1,
@@ -530,7 +631,17 @@
             SortOrder = Filter.SortOrder,
             Start = null,
             TenantId = Filter.TenantId,
-            Tenants = Filter.Tenants
+            Tenants = Filter.Tenants,
+            udf01 = Filter.udf01,
+            udf02 = Filter.udf02,
+            udf03 = Filter.udf03,
+            udf04 = Filter.udf04,
+            udf05 = Filter.udf05,
+            udf06 = Filter.udf06,
+            udf07 = Filter.udf07,
+            udf08 = Filter.udf08,
+            udf09 = Filter.udf09,
+            udf10 = Filter.udf10,
         };
 
         Model.User.UserPreferences.filterUsers = saveFilter;

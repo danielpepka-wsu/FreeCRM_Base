@@ -1,40 +1,41 @@
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Caching.Memory;
+using Plugins;
 
 namespace FreeCICD;
 
-public partial class DataAccess : IDisposable, IDataAccess
+public partial class DataAccess: IDisposable, IDataAccess
 {
     private int _accountLockoutMaxAttempts = 5;
     private int _accountLockoutMinutes = 10;
-    private string _appName = $"FreeCICD";
+    private string _appName = "FreeCICD";
     private DataObjects.AuthenticationProviders? _authenticationProviders;
     private string _connectionString;
     private string _copyright = "Company Name";
     private EFDataModel data;
+    private string _databaseType;
     private bool _firstInit = true;
     private Guid _guid1 = new Guid("00000000-0000-0000-0000-000000000001");
     private Guid _guid2 = new Guid("00000000-0000-0000-0000-000000000002");
     private Microsoft.AspNetCore.Http.HttpContext? _httpContext;
     private HttpRequest? _httpRequest;
     private HttpResponse? _httpResponse;
+    private bool _inMemoryDatabase = false;
     private string _localModeUrl = "";
     private bool _open;
-    private DateOnly _released = DateOnly.FromDateTime(Convert.ToDateTime("7/1/2025"));
+    private DateOnly _released = DateOnly.FromDateTime(Convert.ToDateTime("9/2/2025"));
     private IServiceProvider? _serviceProvider;
     private string _uniqueId = Guid.NewGuid().ToString().Replace("-", "").ToLower();
 
     /// <summary>
     /// The migrations engine is one of the last components I will work on after getting the primary data structure defined.
     /// </summary>
-    private bool _useMigrations = false;
+    private bool _useMigrations = true;
     private string _version = "1.0.0";
 
-    public DataAccess(string ConnectionString = "",  string LocalModeUrl = "", IServiceProvider? serviceProvider = null)
+    public DataAccess(string ConnectionString = "", string DatabaseType = "", string LocalModeUrl = "", IServiceProvider? serviceProvider = null)
     {
-        PartialClassDataAccessAppConstructor(serviceProvider);
-
         _connectionString = ConnectionString;
+        _databaseType = DatabaseType;
         _localModeUrl = LocalModeUrl;
         _serviceProvider = serviceProvider;
 
@@ -46,9 +47,36 @@ public partial class DataAccess : IDisposable, IDataAccess
 
         // Both the Connection String and Database Type parameters are required.
         // Otherwise the app will redirect to the page to configure the database connection.
-        if (!String.IsNullOrEmpty(_connectionString) ) {
-            optionsBuilder.UseSqlServer(_connectionString, options => options.EnableRetryOnFailure());
+        if (!String.IsNullOrEmpty(_connectionString) && !String.IsNullOrWhiteSpace(_databaseType)) {
+            switch (_databaseType.ToLower()) {
+                case "inmemory":
+                    optionsBuilder.UseInMemoryDatabase("InMemory");
+                    _inMemoryDatabase = true;
+                    break;
+
+                case "mysql":
+                    optionsBuilder.UseMySQL(_connectionString, options => options.EnableRetryOnFailure());
+                    break;
+
+                case "postgresql":
+                    optionsBuilder.UseNpgsql(_connectionString, options => options.EnableRetryOnFailure());
+                    break;
+
+                case "sqlite":
+                    optionsBuilder.UseSqlite(_connectionString);
+                    break;
+
+                case "sqlserver":
+                    optionsBuilder.UseSqlServer(_connectionString, options => options.EnableRetryOnFailure());
+                    break;
+            }
+
             data = new EFDataModel(optionsBuilder.Options);
+
+            if (_inMemoryDatabase) {
+                // For the In-Memory database this creates the schema in memory.
+                data.Database.EnsureCreated();
+            }
 
             if (!GlobalSettings.StartupRun && _firstInit) {
                 _firstInit = false;
@@ -57,7 +85,7 @@ public partial class DataAccess : IDisposable, IDataAccess
                     _open = true;
 
                     // See if any migrations need to be applied.
-                    if (_useMigrations) {
+                    if (!_inMemoryDatabase && _useMigrations) {
                         DatabaseApplyLatestMigrations();
                     }
                 } else {
@@ -99,6 +127,10 @@ public partial class DataAccess : IDisposable, IDataAccess
                 _open = true;
             }
 
+            if (PluginsInterface != null && !GlobalSettings.PluginsSavedToCache) {
+                GlobalSettings.PluginsSavedToCache = true;
+                SavePluginsToCache();
+            }
         } else {
             // To prevent errors just use an InMemory copy
             optionsBuilder.UseInMemoryDatabase("InMemory");

@@ -72,10 +72,72 @@ public partial class DataAccess
             { "ActiveDirectoryNames", "Active Directory Names" },
             { "ActiveDirectoryNamesInfo", "Bracket-separated names of AD groups to match for this department (eg: {Enrollment IT]{Admissions}, etc.)" },
 
+
+            // Departments
+            { "Department", "Department" },
+            { "DepartmentGroup", "Department Group" },
+            { "DepartmentGroupName", "Department Group Name" },
+            { "DepartmentGroups", "Department Groups" },
+            { "DepartmentName", "Department Name" },
+            { "Departments", "Departments" },
+            { "EditDepartment", "Edit Department" },
+            { "EditDepartmentGroup", "Edit Department Group" },
+
+
             // Files
             { "Extension", "Extension" },
             { "Extensions", "Extensions" },
 
+
+
+
+            // Plugins
+            { "InvalidPlugin", "Invalid Plugin" },
+            { "Plugin", "Plugin" },
+            { "PluginNotFound", "The plugin with an Id of {0} could not be found." },
+            { "TestPlugin", "Test Plugin" },
+
+
+            // {{ModuleItemStart:Tags}}
+            // Tags
+            { "AddNewTag", "Add a New Tag" },
+            { "AddTag", "Add a Tag" },
+            { "CurrentTags", "Current Tags" },
+            { "EditTag", "Edit Tag" },
+            { "ManageTags", "Manage Tags" },
+            { "NoTagsSelected", "No Tags Have Been Selected" },
+            { "SelectTags", "Select Tags" },
+            { "SelectTagsToAdd", "Select Tags to Add" },
+            { "Tag", "Tag" },
+            { "TagCustomStyle", "Or Write Your Own Custom CSS" },
+            { "TagModules", "Modules" },
+            { "TagMustBeEnabledForAtLeastOneModule", "A tag must be enabled for at least one module." },
+            { "TagName", "Name" },
+            { "TagPreview", "Preview" },
+            { "Tags", "Tags" },
+            { "TagSelectColor", "Select a Color" },
+            { "TagStyle", "Style" },
+            { "TagStyleInfo", "Enter any HTML style info without the style name (eg: background-color:red; color:#fff;)" },
+            { "TagUseInAppointments", "Use in Appointments" },
+            { "TagUseInEmailTemplates", "Use in Email Templates" },
+            { "TagUseInServices", "Use in Services" },
+            // {{ModuleItemEnd:Tags}}
+
+            // UDF Labels
+            { "FeatureOptInUdf", "Use the User-Defined Fields" },
+            { "UDF", "UDF" },
+            { "UserDefinedFields", "User-Defined Fields" },
+            { "UserDefinedFieldsHelpIntro", "For a simple text input just enter the field name in the Label field.<br /><br />Alternatively, you can specify that the field should be a select element or a list of radio buttons by using the following format:<br /><br />Label|select|options,separated,by,commas<br />Label|radio|options,separated,by,commas" },
+            { "UserDefinedFieldsOptions", "Options:" },
+            { "UserDefinedFieldsShowConflictNote", "NOTE: While it is possible to use both Show in Filter and Include in Search for an item, this is not recommended as it is a duplication of searching. If the item is shown as a filter you can quickly find those items by clicking the appropriate filter option. Adding unneccesary fields to the Include in Search can affect performance." },
+
+            // User Groups
+            { "AddNewUserGroup", "Add a New User Group" },
+            { "FeatureOptInUsergroups", "Use User Groups for Users" },
+            { "NewUserGroup", "New User Group" },
+            { "UserGroup", "User Group" },
+            { "UserGroups", "User Groups" },
+            { "UsersInGroup", "Users in Group" },
 
             // General Language Tags
             { "About", "About" },
@@ -89,9 +151,12 @@ public partial class DataAccess
             { "AddedBy", "by" },
             { "AddLanguage", "Add a Language" },
             { "AddLanguageInfo", "Select a new language to add. The default English (en-US) language elements will be copied into a new language set for the selected language. You can then translate the words and phrases into the desired language." },
+            { "AddNewDepartment", "Add a New Department" },
+            { "AddNewDepartmentGroup", "Add a New Department Group" },
             { "AddNewTenant", "Add a New Tenant" },
             { "AddNewUser", "Add a New User" },
             { "AddUser", "Add a User" },
+            { "AddUsersToGroup", "Add Users to Group" },
             { "Admin", "Admin" },
             { "AdminUsersOnly", "Admin Users Only" },
             { "Ago", "Ago" },
@@ -183,6 +248,7 @@ public partial class DataAccess
             { "EditNotes", "Edit Notes" },
             { "EditTenant", "Edit Tenant" },
             { "EditUser", "Edit User" },
+            { "EditUserGroup", "Edit User Group" },
             { "Email", "Email" },
             { "EmailAddress", "Email Address" },
             { "EmployeeId", "Employee ID" },
@@ -198,9 +264,16 @@ public partial class DataAccess
             { "FailedLoginAttempts", "Failed Login Attempts" },
             { "FeatureOptIn", "Optional Features" },
             { "FeatureOptInInfo", "The following feature have been enabled for your account and you can choose which of these you want to use in the application." },
+            { "FeatureOptInDepartments", "Use Departments for Users" },
+            { "FeatureOptInEmailTemplates", "Use the Email Templates Feature" },
             { "FeatureOptInEmployeeid", "Use the Employee Id Field for Users" },
             { "FeatureOptInFiles", "Use the Files Feature" },
+            { "FeatureOptInLocation", "Use the Location Field for Users" },
+            { "FeatureOptInScheduling", "Use the Scheduling Module" },
+            { "FeatureOptInServices", "Use the Services Feature" },
+            { "FeatureOptInTags", "Use the Tags Feature" },
             { "FeatureOptInThemes", "Themes" },
+            { "FeatureOptInWorkSchedule", "Work Schedule Hours" },
             { "File", "File" },
             { "FileName", "File Name" },
             { "Files", "Files" },
@@ -255,6 +328,8 @@ public partial class DataAccess
             { "InsertFieldEmployeeId", "Employee ID" },
             { "InsertFieldFirstName", "First Name" },
             { "InsertFieldGroupGeneral", "General Items" },
+            { "InsertFieldGroupScheduling", "Scheduling Items" },
+            { "InsertFieldGroupServices", "Service Items" },
             { "InsertFieldInfo", "You can insert fields into your email template that will be replaced when sent to a customer. Some fields are specific to sending an email about a certain type of item." },
             { "InsertFieldLastName", "Last Name" },
             { "InsertFieldEmail", "Email Address" },
@@ -402,6 +477,7 @@ public partial class DataAccess
             { "Save", "Save" },
             { "Saved", "Saved" },
             { "SavedAt", "Saved at" },
+            { "SaveItemChanges", "Save Item Changes" },
             { "Saving", "Saving" },
             { "SavingWait", "Saving, Please Wait..." },
             { "Second", "Second" },
@@ -520,11 +596,22 @@ public partial class DataAccess
             { "WorkScheduleStart", "Start" },
         };
 
-        foreach (var item in language) {
+        // First, add any items from the app language.
+        foreach(var item in AppLanguage) {
             output.Phrases.Add(new DataObjects.OptionPair {
                 Id = item.Key,
                 Value = item.Value
             });
+        }
+
+        // Next, add any items from the default language.
+        foreach (var item in language) {
+            if (!output.Phrases.Any(x => x.Id != null && x.Id.ToLower() == item.Key.ToLower())) {
+                output.Phrases.Add(new DataObjects.OptionPair {
+                    Id = item.Key,
+                    Value = item.Value
+                });
+            }
         }
 
         return output;
@@ -552,18 +639,20 @@ public partial class DataAccess
     {
         List<string> output = new List<string>();
 
-        var recs = await data.Settings
-            .Where(x => x.TenantId == TenantId && x.SettingName != null && x.SettingName.ToLower().StartsWith("language_"))
-            .ToListAsync();
+        try {
+            var recs = await data.Settings
+                .Where(x => x.TenantId == TenantId && x.SettingName != null)
+                .ToListAsync();
 
-        if (recs != null && recs.Any()) {
-            foreach (var rec in recs) {
-                string culture = StringValue(rec.SettingName).Substring(9);
-                if (!String.IsNullOrWhiteSpace(culture)) {
-                    output.Add(culture);
+            if (recs != null && recs.Any(x => x.SettingName.ToLower().StartsWith("language_"))) {
+                foreach (var rec in recs.Where(x => x.SettingName.ToLower().StartsWith("language_"))) {
+                    string culture = StringValue(rec.SettingName).Substring(9);
+                    if (!String.IsNullOrWhiteSpace(culture)) {
+                        output.Add(culture);
+                    }
                 }
             }
-        }
+        } catch {}
 
         return output;
     }

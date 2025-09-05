@@ -21,7 +21,11 @@ public partial class User
 
     public string? EmployeeId { get; set; }
 
+    public Guid? DepartmentId { get; set; }
+
     public string? Title { get; set; }
+
+    public string? Location { get; set; }
 
     public bool Enabled { get; set; }
 
@@ -31,8 +35,12 @@ public partial class User
 
     public bool Admin { get; set; }
 
+    public bool CanBeScheduled { get; set; }
+
     public bool ManageFiles { get; set; }
-    
+
+    public bool ManageAppointments { get; set; }
+
     public string? Password { get; set; }
 
     public bool PreventPasswordChange { get; set; }
@@ -42,6 +50,26 @@ public partial class User
     public DateTime? LastLockoutDate { get; set; }
 
     public string? Source { get; set; }
+
+    public string? UDF01 { get; set; }
+
+    public string? UDF02 { get; set; }
+
+    public string? UDF03 { get; set; }
+
+    public string? UDF04 { get; set; }
+
+    public string? UDF05 { get; set; }
+
+    public string? UDF06 { get; set; }
+
+    public string? UDF07 { get; set; }
+
+    public string? UDF08 { get; set; }
+
+    public string? UDF09 { get; set; }
+
+    public string? UDF10 { get; set; }
 
     public DateTime Added { get; set; }
 
@@ -57,7 +85,14 @@ public partial class User
 
     public string? Preferences { get; set; }
 
+
+    public virtual Department? Department { get; set; }
+
     public virtual ICollection<FileStorage> FileStorages { get; set; } = new List<FileStorage>();
 
+
+
     public virtual Tenant Tenant { get; set; } = null!;
+
+    public virtual ICollection<UserInGroup> UserInGroups { get; set; } = new List<UserInGroup>();
 }

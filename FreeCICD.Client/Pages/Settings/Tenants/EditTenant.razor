@@ -179,7 +179,7 @@ namespace CustomAuthenticationProvider {
     using Microsoft.EntityFrameworkCore;
     using System.Net;
     using System.Net.Mail;
-    using System.Data.SqlClient;
+    using Microsoft.Data.SqlClient;
     using System.Dynamic;
     using System.Collections.Generic;
     using System.Linq;
@@ -205,7 +205,9 @@ namespace CustomAuthenticationProvider {
             //
             // .Phone
             // .EmployeeId
+            // .DepartmentName
             // .Title
+            // .Location
             //
             // The Email property will be used as the unique property when determining if
             // this user already has an account configured in the application. If not, and if the
@@ -309,6 +311,9 @@ namespace CustomAuthenticationProvider {
                 </div>
             </div>
         }
+
+        <EditTenant_App @bind-Value="_tenant" />
+
         @if (!_newTenant) {
             <div class="mb-2">
                 <hr />

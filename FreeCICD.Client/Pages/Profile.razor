@@ -1,4 +1,4 @@
-﻿@page "/Profile"
+@page "/Profile"
 @page "/{TenantCode}/Profile"
 @implements IDisposable
 @using Blazored.LocalStorage
@@ -87,6 +87,17 @@
                         <div class="mb-2">
                             <label for="edit-profile-title"><Language Tag="Title" /></label>
                             <input type="text" class="form-control" id="edit-profile-title" @bind="_user.Title" />
+                        </div>
+                    }
+                    @if (Model.AllowUsersToManageDepartment && Model.Departments.Any()) {
+                        <div class="mb-2">
+                            <label for="edit-profile-department"><Language Tag="Department" /></label>
+                            <select class="form-select" id="edit-profile-department" @bind="_user.DepartmentId">
+                                <option value=""></option>
+                                @foreach (var dept in Model.Departments) {
+                                    <option value="@dept.DepartmentId">@dept.DepartmentName</option>
+                                }
+                            </select>
                         </div>
                     }
                 </div>
@@ -180,6 +191,9 @@
 
         Model.ClearMessages();
 
+        if (Model.FeatureEnabledDepartments && !Model.Departments.Any()) {
+            await Helpers.LoadDepartments();
+        }
 
         _loading = true;
 

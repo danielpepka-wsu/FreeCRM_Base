@@ -44,6 +44,13 @@ public partial class DataAccess
         try {
             string query = "SELECT MigrationId FROM __EFMigrationsHistory";
 
+            if (_databaseType.ToLower() == "postgresql") {
+                query =
+                    """
+					SELECT "MigrationId"
+					FROM public."__EFMigrationsHistory";
+					""";
+            }
 
             var recs = data.Database.SqlQueryRaw<string>(query);
             if (recs != null) {
@@ -66,8 +73,26 @@ public partial class DataAccess
 
         var migrations = new DataMigrations();
 
-        
-        output = migrations.GetMigrationsSqlServer();
+        switch (_databaseType.ToLower()) {
+            case "inmemory":
+                break;
+
+            case "mysql":
+                output = migrations.GetMigrationsMySQL();
+                break;
+
+            case "postgresql":
+                output = migrations.GetMigrationsPostgreSQL();
+                break;
+
+            case "sqlite":
+                output = migrations.GetMigrationsSQLite();
+                break;
+
+            case "sqlserver":
+                output = migrations.GetMigrationsSqlServer();
+                break;
+        }
 
         return output;
     }
@@ -119,11 +144,18 @@ public partial class DataAccess
                     if (!String.IsNullOrEmpty(element)) {
                         switch (element.ToUpper()) {
                             case "DATABASE":
+                                output.MySQL_Database = value;
+                                output.PostgreSql_Database = value;
                                 output.SqlServer_Database = value;
                                 break;
 
                             case "DATA SOURCE":
+                                output.SQLiteDatabase = value;
                                 output.SqlServer_Server = value;
+                                break;
+
+                            case "HOST":
+                                output.PostgreSql_Host = value;
                                 break;
 
                             case "INITIAL CATALOG":
@@ -135,6 +167,8 @@ public partial class DataAccess
                                 break;
 
                             case "PASSWORD":
+                                output.MySQL_Password = value;
+                                output.PostgreSql_Password = value;
                                 output.SqlServer_Password = value;
                                 break;
 
@@ -143,11 +177,20 @@ public partial class DataAccess
                                 break;
 
                             case "SERVER":
+                                output.MySQL_Server = value;
                                 output.SqlServer_Server = value;
                                 break;
 
                             case "TRUSTSERVERCERTIFICATE":
                                 output.SqlServer_TrustServerCertificate = value.ToLower() == "true";
+                                break;
+
+                            case "USER":
+                                output.MySQL_User = value;
+                                break;
+
+                            case "USERNAME":
+                                output.PostgreSql_Username = value;
                                 break;
 
                             case "USER ID":

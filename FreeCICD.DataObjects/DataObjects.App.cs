@@ -1,11 +1,16 @@
-using System.Runtime.Serialization;
 using System.Text.Json.Serialization;
-using static FreeCICD.DataObjects;
 
 namespace FreeCICD;
 
+// Use this file as a place to put any application-specific data objects.
+
 public partial class DataObjects
 {
+    public partial class User
+    {
+        public string? MyCustomUserProperty { get; set; }
+    }
+
     public static partial class Endpoints
     {
         public static class DevOps
@@ -50,7 +55,7 @@ public partial class DataObjects
         public string AppPoolName { get; set; } = "";
         public string VariableGroupName { get; set; } = "";
         public string BindingInfo { get; set; } = "";
-        public string AuthUser { get;set; } = "";
+        public string AuthUser { get; set; } = "";
     }
 
     public class Application
@@ -304,6 +309,13 @@ public partial class DataObjects
         public Guid TestThingId { get; set; } = Guid.NewGuid();
         public string TestValue { get; set; } = string.Empty;
     }
+
+
+    public partial class SignalRUpdate
+    {
+        public string ConnectionId { get; set; } = string.Empty;
+    }
+
     public record FilePathRequest(string Path);
     public record FileContentRequest(List<string> FilePaths);
 }

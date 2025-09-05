@@ -30,14 +30,7 @@ public partial class DataAccess
 
         string updateData = SerializeObject(update);
 
-        try {
-
-            var result = await client.PostAsync(baseURL + "api/Data/SignalRUpdate/",
+        await client.PostAsync(baseURL + "api/Data/SignalRUpdate/",
             new StringContent(updateData, System.Text.Encoding.UTF8, "application/json"));
-            //Console.WriteLine($"SignalRUpdate: {result.StatusCode}");
-        } catch (Exception ex) {
-            //Console.WriteLine($"SignalRUpdate Error: {ex.Message}");
-        }
-        //Console.WriteLine("");
     }
 }

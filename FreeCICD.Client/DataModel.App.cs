@@ -1,17 +1,44 @@
-using BlazorBootstrap;
-using MudBlazor;
-using System.Reflection;
-using System.Text.RegularExpressions;
-using System.Windows.Markup;
-using static FreeCICD.DataObjects;
-
 namespace FreeCICD.Client;
 
-/// <summary>
-/// The Model used on every page in the Blazor application to share database in the interface.
-/// </summary>
 public partial class BlazorDataModel
 {
+    private List<string> _MyValues = new List<string>();
+
+    private bool HaveDeletedRecordsApp {
+        get {
+            bool output = false;
+
+            // Check your app-specific deleted records here.
+            //if (DeletedRecordCounts.MyValue > 0 ) {
+            //    output = true;
+            //}
+
+            return output;
+        }
+    }
+
+    public bool MyCustomDataModelMethod()
+    {
+        return true;
+    }
+
+    /// <summary>
+    /// An example of implementing a custom property in your data model.
+    /// </summary>
+    public List<string> MyValues {
+        get {
+            return _MyValues;
+        }
+
+        set {
+            if (!ObjectsAreEqual(_MyValues, value)) {
+                _MyValues = value;
+                _ModelUpdated = DateTime.UtcNow;
+                NotifyDataChanged();
+            }
+        }
+    }
+
     private DataObjects.SignalrClientRegistration _SignalrClientRegistration = new();
 
     public DataObjects.SignalrClientRegistration SignalrClientRegistration {

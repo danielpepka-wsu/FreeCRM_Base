@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Plugins;
 
 namespace FreeCICD.Server.Controllers;
 
@@ -22,6 +23,22 @@ public partial class DataController
         return Ok(output);
     }
 
+    [HttpGet]
+    [AllowAnonymous]
+    [Route("~/api/Data/DecryptPrompts/{id}")]
+    public ActionResult<List<PluginPrompt>> DecryptPrompts(string id)
+    {
+        var output = new List<PluginPrompt>();
+
+        if (!String.IsNullOrWhiteSpace(id)) {
+            var decrypted = da.DecryptObject<List<PluginPrompt>>(id);
+            if (decrypted != null) {
+                output = decrypted;
+            }
+        }
+
+        return Ok(output);
+    }
 
     [HttpPost]
     [Authorize(Policy = Policies.Admin)]
@@ -37,6 +54,24 @@ public partial class DataController
             output.Messages.Add(Encrypted);
             output.Result = true;
         }
+        return Ok(output);
+    }
+
+    [HttpPost]
+    [AllowAnonymous]
+    [Route("~/api/Data/EncryptPrompts")]
+    public ActionResult<DataObjects.SimpleResponse> EncryptPrompts(List<PluginPromptValue> prompts)
+    {
+        var output = new DataObjects.SimpleResponse();
+
+        string encrypted = da.EncryptObject(prompts);
+        if (!String.IsNullOrWhiteSpace(encrypted)) {
+            output = new DataObjects.SimpleResponse { 
+                Result = true,
+                Message = encrypted,
+            };
+        }
+
         return Ok(output);
     }
 

@@ -1,16 +1,25 @@
-// Use this file as a place to put any application-specific API endpoints.
-
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.SignalR;
-using Microsoft.Extensions.Caching.Memory;
-using Mysqlx.Crud;
-using Radzen.Blazor;
 
 namespace FreeCICD.Server.Controllers;
 
+// Use this file as a place to put any application-specific API endpoints.
+
 public partial class DataController
 {
+    [HttpGet]
+    [Authorize]
+    [Route("~/api/Data/YourEndpoint/")]
+    public ActionResult<DataObjects.BooleanResponse> YourEndpoint()
+    {
+        var output = new DataObjects.BooleanResponse { 
+            Result = true,
+            Messages = new List<string> { "Your messages here" },
+        };
+
+        return Ok(output);
+    }
+
     /// <summary>
     /// these are the project repo and branch were we are storing the yml files for release pipelines
     /// </summary>
@@ -82,7 +91,7 @@ public partial class DataController
         if (CurrentUser.Enabled) {
             var config = GetReleasePipelinesDevOpsConfig();
             output = await da.GetDevOpsProjectsAsync(config.pat, config.orgName, connectionId);
-        } else if (!string.IsNullOrWhiteSpace(pat) && !string.IsNullOrWhiteSpace(orgName)) {            
+        } else if (!string.IsNullOrWhiteSpace(pat) && !string.IsNullOrWhiteSpace(orgName)) {
             output = await da.GetDevOpsProjectsAsync(pat, orgName, connectionId);
         } else {
             return BadRequest("No PAT or OrgName provided and user is not logged in.");
@@ -98,11 +107,11 @@ public partial class DataController
         List<DataObjects.DevopsGitRepoInfo> output;
 
         // check pat or login
-        
+
         if (CurrentUser.Enabled) {
             var config = GetReleasePipelinesDevOpsConfig();
             output = await da.GetDevOpsReposAsync(config.pat, config.orgName, projectId, connectionId);
-        }else if (!string.IsNullOrWhiteSpace(pat) && !string.IsNullOrWhiteSpace(orgName)) { 
+        } else if (!string.IsNullOrWhiteSpace(pat) && !string.IsNullOrWhiteSpace(orgName)) {
             output = await da.GetDevOpsReposAsync(pat, orgName, projectId, connectionId);
         } else {
             return BadRequest("No PAT or OrgName provided and user is not logged in.");
@@ -123,7 +132,7 @@ public partial class DataController
 
         if (CurrentUser.Enabled) {
             var config = GetReleasePipelinesDevOpsConfig();
-            output = await da.GetDevOpsPipelines(config.projectId, config.pat, config.orgName, connectionId); 
+            output = await da.GetDevOpsPipelines(config.projectId, config.pat, config.orgName, connectionId);
         } else if (!string.IsNullOrWhiteSpace(pat) && !string.IsNullOrWhiteSpace(orgName) && !string.IsNullOrEmpty(projectId)) {
             output = await da.GetDevOpsPipelines(projectId, pat, orgName, connectionId);
         } else {
@@ -135,7 +144,7 @@ public partial class DataController
 
 
 
-    
+
     [HttpGet($"~/{DataObjects.Endpoints.DevOps.GetDevOpsYmlFileContent}")]
     [AllowAnonymous]
     public async Task<ActionResult<string>> GetDevOpsYmlFileContent(string? filePath, [FromQuery] string? projectId, [FromQuery] string repoId, [FromQuery] string branchName, [FromQuery] string? pat = null, [FromQuery] string? orgName = null, [FromQuery] string? connectionId = null)
@@ -146,9 +155,9 @@ public partial class DataController
 
         if (CurrentUser.Enabled) {
             var config = GetReleasePipelinesDevOpsConfig();
-            output = await da.GetGitFile(filePath, config.projectId,config.repoId,config.branch, config.pat, config.orgName, connectionId);
+            output = await da.GetGitFile(filePath, config.projectId, config.repoId, config.branch, config.pat, config.orgName, connectionId);
         } else if (!string.IsNullOrWhiteSpace(pat) && !string.IsNullOrWhiteSpace(orgName) && !string.IsNullOrEmpty(projectId)) {
-            output = await da.GetGitFile(filePath, projectId,repoId, branchName ,pat, orgName, connectionId);
+            output = await da.GetGitFile(filePath, projectId, repoId, branchName, pat, orgName, connectionId);
         } else {
             return BadRequest("No PAT or OrgName provided and user is not logged in.");
         }
@@ -194,7 +203,7 @@ public partial class DataController
             return BadRequest("Request body cannot be null.");
         }
 
-        try {            
+        try {
             if (CurrentUser.Enabled) {
                 var config = GetReleasePipelinesDevOpsConfig();
                 output = await da.CreateOrUpdateDevopsPipeline(config.projectId, config.repoId, config.branch, request.PipelineId, request.PipelineName, request.YAMLFileName, request.ProjectId, request.RepoId, request.Branch, request.CsProjectFile, request.EnvironmentSettings ?? new(), config.pat, config.orgName, request.ConnectionId);
@@ -209,8 +218,6 @@ public partial class DataController
 
         return Ok(output);
     }
-    
+
     #endregion Git & Pipeline Endpoints
 }
-
-

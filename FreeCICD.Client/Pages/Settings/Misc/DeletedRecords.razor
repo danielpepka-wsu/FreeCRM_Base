@@ -1,4 +1,4 @@
-﻿@page "/Settings/DeletedRecords"
+@page "/Settings/DeletedRecords"
 @page "/{TenantCode}/Settings/DeletedRecords"
 @implements IDisposable
 @using Blazored.LocalStorage
@@ -14,10 +14,7 @@
         <LoadingMessage />
     } else {
         if (Model.HaveDeletedRecords) {
-            var deletedRecordTypes = new List<string> {
-                "FileStorage",
-                "User",
-            };
+            var deletedRecordTypes = Helpers.GetDeletedRecordTypes();
 
             <div class="@Model.StickyMenuClass">
                 <h1 class="page-title">
@@ -40,15 +37,42 @@
                 List<DataObjects.DeletedRecordItem>? deletedRecords = null;
 
                 switch (deletedRecordType) {
+
+                    case "Department":
+                        deletedRecords = _DeletedRecords.Departments;
+                        break;
+
+                    case "DepartmentGroup":
+                        deletedRecords = _DeletedRecords.DepartmentGroups;
+                        break;
+
+
                     case "FileStorage":
                         deletedRecords = _DeletedRecords.FileStorage;
                         deletedRecordTypeLanguageTag = "Files";
                         break;
 
+
+
+                    // {{ModuleItemStart:Tags}}
+                    case "Tag":
+                        deletedRecords = _DeletedRecords.Tags;
+                        break;
+                    // {{ModuleItemEnd:Tags}}
+
                     case "User":
                         deletedRecords = _DeletedRecords.Users;
                         break;
 
+                    case "UserGroup":
+                        deletedRecords = _DeletedRecords.UserGroups;
+                        break;
+
+                    default:
+                        // Check for app-specific types.
+                        deletedRecords = Helpers.GetDeletedRecordsForAppType(_DeletedRecords, deletedRecordType);
+                        deletedRecordTypeLanguageTag = Helpers.GetDeletedRecordsLanguageTagForAppType(deletedRecordType);
+                        break;
                 }
 
                 if (deletedRecords != null && deletedRecords.Any()) {
@@ -185,15 +209,9 @@
         // Always reload the data in the data model.
         _loading = true;
 
-        var deletedRecords = await Helpers.GetOrPost<DataObjects.DeletedRecords>("api/Data/GetDeletedRecords");
+        var deletedRecords = await Helpers.GetDeletedRecords();
         if(deletedRecords != null) {
             _DeletedRecords = deletedRecords;
-
-            // Also update the counts on the Main Model
-            Model.DeletedRecordCounts = new DataObjects.DeletedRecordCounts {
-                FileStorage = _DeletedRecords.FileStorage.Count(),
-                Users = _DeletedRecords.Users.Count(),
-            };
 
             _loading = false;
         } else {

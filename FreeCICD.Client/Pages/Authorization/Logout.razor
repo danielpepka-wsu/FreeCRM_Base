@@ -40,6 +40,14 @@
                 if (loginMethod.ToLower() == "custom") {
                     customLogin = true;
                     tenantId = Model.TenantId.ToString();
+                } else if (loginMethod.ToLower().StartsWith("plugin:")) {
+                    pluginName = loginMethod.Substring(7);
+
+                    var plugin = Model.Plugins.FirstOrDefault(x => x.Name.ToLower() == pluginName.ToLower() && x.Type.ToLower() == "auth");
+                    if (plugin != null) {
+                        pluginLogin = true;
+                        tenantId = Model.TenantId.ToString();
+                    }
                 }
             }
 

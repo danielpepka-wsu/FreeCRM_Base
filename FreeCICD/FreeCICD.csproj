@@ -5,28 +5,28 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
 	<SatelliteResourceLanguages>en</SatelliteResourceLanguages>
-	<UserSecretsId>4ea530d4-e846-4cd1-b5ac-42a7131ae070</UserSecretsId>
+	<UserSecretsId>86e6c2eb-8255-4c39-87b8-cd01f695b364</UserSecretsId>
   </PropertyGroup>
-
-  <ItemGroup>
-    <Compile Remove="wwwroot\**" />
-    <Content Remove="wwwroot\**" />
-    <EmbeddedResource Remove="wwwroot\**" />
-    <None Remove="wwwroot\**" />
-  </ItemGroup>
 
   <ItemGroup>
     <Content Remove="appsettings.Development.json" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="AspNet.Security.OAuth.Apple" Version="9.1.0" />
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.Facebook" Version="9.0.3" />
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.Google" Version="9.0.3" />
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.MicrosoftAccount" Version="9.0.3" />
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="9.0.3" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="9.0.3" />
-    <PackageReference Include="Microsoft.Azure.SignalR" Version="1.30.2" />
+    <ProjectReference Include="..\FreeCICD.DataAccess\FreeCICD.DataAccess.csproj" />
+    <ProjectReference Include="..\FreeCICD.Client\FreeCICD.Client.csproj" />
+    <ProjectReference Include="..\FreeCICD.Plugins\FreeCICD.Plugins.csproj" />
+    <PackageReference Include="AspNet.Security.OAuth.Apple" Version="9.4.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.Facebook" Version="9.0.8" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.Google" Version="9.0.8" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.MicrosoftAccount" Version="9.0.8" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="9.0.8" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="9.0.8" />
+    <PackageReference Include="Microsoft.Azure.SignalR" Version="1.31.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="wwwroot\" />
   </ItemGroup>
 
   <ItemGroup>
@@ -34,8 +34,33 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\FreeCICD.Client\FreeCICD.Client.csproj" />
-    <ProjectReference Include="..\FreeCICD.DataAccess\FreeCICD.DataAccess.csproj" />
+    <Compile Update="Plugins\UserUpdate.cs">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Compile>
+    <Compile Update="Plugins\LoginWithPrompts.cs">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Compile>
+    <Compile Update="Plugins\Example3.cs">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Compile>
+    <Compile Update="Plugins\Example2.cs">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Compile>
+    <Compile Update="Plugins\Example1.cs">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Compile>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Plugins\HelloWorld.assemblies">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Plugins\HelloWorld.plugin">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Plugins\HelloWorld\HelloWorld.dll">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>

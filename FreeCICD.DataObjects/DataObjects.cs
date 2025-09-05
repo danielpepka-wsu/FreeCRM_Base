@@ -1,16 +1,9 @@
 namespace FreeCICD;
 
+public class SensitiveAttribute : System.Attribute { }
+
 public partial class DataObjects
 {
-
-    public static partial class Endpoints
-    {
-        public static class SignalR
-        {
-            public const string Update = "api/Data/SignalRUpdate";
-        }
-    }
-
     public enum DeletePreference
     {
         Immediate,
@@ -39,12 +32,12 @@ public partial class DataObjects
         Username
     }
 
-    public class ActionResponseObject
+    public partial class ActionResponseObject
     {
         public BooleanResponse ActionResponse { get; set; } = new BooleanResponse();
     }
 
-    public class ActiveUser
+    public partial class ActiveUser
     {
         public Guid UserId { get; set; }
         public Guid TenantId { get; set; }
@@ -58,7 +51,7 @@ public partial class DataObjects
         public UserPreferences UserPreferences { get; set; } = new UserPreferences();
     }
 
-    public class ApplicationSettings : ActionResponseObject
+    public partial class ApplicationSettings : ActionResponseObject
     {
         public string? ApplicationURL { get; set; }
         public string? DefaultReplyToAddress { get; set; }
@@ -70,7 +63,7 @@ public partial class DataObjects
         public bool ShowTenantListingWhenMissingTenantCode { get; set; }
     }
 
-    public class ApplicationSettingsUpdate
+    public partial class ApplicationSettingsUpdate
     {
         public string? ApplicationURL { get; set; }
         public string? DefaultTenantCode { get; set; }
@@ -79,7 +72,7 @@ public partial class DataObjects
         public bool ShowTenantListingWhenMissingTenantCode { get; set; }
     }
 
-    public class Authenticate
+    public partial class Authenticate
     {
         public string? Username { get; set; }
         public string? Password { get; set; }
@@ -87,7 +80,7 @@ public partial class DataObjects
         public Guid? TenantId { get; set; }
     }
 
-    public class AuthenticationProviders
+    public partial class AuthenticationProviders
     {
         public bool UseApple { get; set; }
         public bool UseFacebook { get; set;  }
@@ -99,7 +92,7 @@ public partial class DataObjects
         public bool UseGoogle { get; set; }
     }
 
-    public class BlazorDataModelLoader
+    public partial class BlazorDataModelLoader
     {
         public List<DataObjects.ActiveUser> ActiveUsers { get; set; } = new List<ActiveUser>();
         public CustomLoginProvider AdminCustomLoginProvider { get; set; } = new CustomLoginProvider();
@@ -112,6 +105,7 @@ public partial class DataObjects
         public Language DefaultLanguage { get; set; } = new Language();
         public List<Language> Languages { get; set; } = new List<Language>();
         public bool LoggedIn { get; set; }
+        public List<Plugins.Plugin> Plugins { get; set; } = new List<Plugins.Plugin>();
         public DateOnly Released { get; set; } = DateOnly.FromDateTime(DateTime.Now);
         public Guid TenantId { get; set; } = Guid.Empty;
         public List<Tenant> Tenants { get; set; } = new List<Tenant>();
@@ -122,16 +116,26 @@ public partial class DataObjects
         public string Version { get; set; } = "";
     }
 
-    public class BooleanResponse
+    public partial class BooleanResponse
     {
         public List<string> Messages { get; set; } = new List<string>();
         public bool Result { get; set; }
     }
 
-    public class ConnectionStringConfig : ActionResponseObject
+    public partial class ConnectionStringConfig : ActionResponseObject
     {
         public string? ConnectionString { get; set; }
+        public string? DatabaseType { get; set; }
 
+        public string? MySQL_Server { get; set; }
+        public string? MySQL_Database { get; set; }
+        public string? MySQL_User { get; set; }
+        public string? MySQL_Password { get; set; }
+        public string? PostgreSql_Host { get; set; }
+        public string? PostgreSql_Database { get; set; }
+        public string? PostgreSql_Username { get; set; }
+        public string? PostgreSql_Password { get; set; }
+        public string? SQLiteDatabase { get; set; }
         public string? SqlServer_Server { get; set; }
         public string? SqlServer_Database { get; set; }
         public string? SqlServer_UserId { get; set; }
@@ -146,7 +150,7 @@ public partial class DataObjects
         }
     }
 
-    public class CustomLoginProvider
+    public partial class CustomLoginProvider
     {
         public string Name { get; set; } = "";
         public string Icon { get; set; } = "";
@@ -154,19 +158,25 @@ public partial class DataObjects
         public string Code { get; set; } = "";
     }
 
-    public class DataMigration
+    public partial class DataMigration
     {
         public List<string> Migration { get; set; } = new List<string>();
         public string MigrationId { get; set; } = String.Empty;
     }
 
-    public class DeletedRecordCounts
+    public partial class DeletedRecordCounts
     {
+        public int DepartmentGroups { get; set; }
+        public int Departments { get; set; }
         public int FileStorage { get; set; }
+        // {{ModuleItemStart:Tags}}
+        public int Tags { get; set; }
+        // {{ModuleItemEnd:Tags}}
+        public int UserGroups { get; set; }
         public int Users { get; set; }
     }
 
-    public class DeletedRecordItem
+    public partial class DeletedRecordItem
     {
         public Guid ItemId { get; set; }
         public string Display { get; set; } = "";
@@ -174,19 +184,25 @@ public partial class DataObjects
         public string DeletedBy { get; set; } = "";
     }
 
-    public class DeletedRecords
+    public partial class DeletedRecords
     {
+        public List<DeletedRecordItem> DepartmentGroups { get; set; } = new List<DeletedRecordItem>();
+        public List<DeletedRecordItem> Departments { get; set; } = new List<DeletedRecordItem>();
         public List<DeletedRecordItem> FileStorage { get; set; } = new List<DeletedRecordItem>();
+        // {{ModuleItemStart:Tags}}
+        public List<DeletedRecordItem> Tags { get; set; } = new List<DeletedRecordItem>();
+        // {{ModuleItemEnd:Tags}}
+        public List<DeletedRecordItem> UserGroups { get; set; } = new List<DeletedRecordItem>();
         public List<DeletedRecordItem> Users { get; set; } = new List<DeletedRecordItem>();
     }
 
-    public class Dictionary
+    public partial class Dictionary
     {
         public string? Key { get; set; }
         public string? Value { get; set; }
     }
 
-    public class EmailMessage : ActionResponseObject
+    public partial class EmailMessage : ActionResponseObject
     {
         public string From { get; set; } = "";
         public string? FromDisplayName { get; set; }
@@ -199,7 +215,7 @@ public partial class DataObjects
         public List<DataObjects.FileStorage>? Files { get; set; }
     }
 
-    public class ExternalDataSource
+    public partial class ExternalDataSource
     {
         public string Name { get; set; } = String.Empty;
         public string Type { get; set; } = String.Empty;
@@ -209,7 +225,7 @@ public partial class DataObjects
         public bool Active { get; set; }
     }
 
-    public class FileStorage : ActionResponseObject
+    public partial class FileStorage : ActionResponseObject
     {
         public Guid FileId { get; set; }
         public Guid TenantId { get; set; }
@@ -228,7 +244,7 @@ public partial class DataObjects
         public DateTime? DeletedAt { get; set; }
     }
 
-    public class Filter : ActionResponseObject
+    public partial class Filter : ActionResponseObject
     {
         public Guid TenantId { get; set; }
         public Guid? FilterId { get; set; }
@@ -252,7 +268,7 @@ public partial class DataObjects
         public string? CultureCode { get; set; }
     }
 
-    public class FilterColumn
+    public partial class FilterColumn
     {
         public string? Align { get; set; }
         public string? Label { get; set; }
@@ -264,7 +280,7 @@ public partial class DataObjects
         public string? BooleanIcon { get; set; }
     }
 
-    public class FilterFileStorage : Filter
+    public partial class FilterFileStorage : Filter
     {
         public List<FileStorage>? Records { get; set; }
         public List<string> AvailableExtensions { get; set; } = new List<string>();
@@ -273,14 +289,25 @@ public partial class DataObjects
         public string[]? Source { get; set; } = new string[] { };
     }
 
-    public class FilterUsers : Filter
+    public partial class FilterUsers : Filter
     {
         public List<User>? Records { get; set; }
+        public Guid[]? FilterDepartments { get; set; } = new Guid[] { };
         public string? Enabled { get; set; }
         public string? Admin { get; set; }
+        public string? udf01 { get; set; }
+        public string? udf02 { get; set; }
+        public string? udf03 { get; set; }
+        public string? udf04 { get; set; }
+        public string? udf05 { get; set; }
+        public string? udf06 { get; set; }
+        public string? udf07 { get; set; }
+        public string? udf08 { get; set; }
+        public string? udf09 { get; set; }
+        public string? udf10 { get; set; }
     }
 
-    public class Language
+    public partial class Language
     {
         public Guid TenantId { get; set; }
         public string Culture { get; set; } = String.Empty;
@@ -288,7 +315,7 @@ public partial class DataObjects
         public List<DataObjects.OptionPair> Phrases { get; set; } = new List<OptionPair>();
     }
 
-    public class ListItem : ActionResponseObject
+    public partial class ListItem : ActionResponseObject
     {
         public Guid Id { get; set; }
         public Guid TenantId { get; set; }
@@ -298,20 +325,20 @@ public partial class DataObjects
         public bool Enabled { get; set; }
     }
 
-    public class LoginTenantListing
+    public partial class LoginTenantListing
     {
         public List<Tenant> Tenants { get; set; } = new List<Tenant>();
         public List<Language> Languages { get; set; } = new List<Language>();
     }
 
-    public class MailServerConfig
+    public partial class MailServerConfig
     {
         public string Type { get; set; } = "";
         public string? Config { get; set; }
         public bool AllowSendingFromIndividualEmailAddresses { get; set; }
     }
 
-    public class MailServerConfigMicrosoftGraph
+    public partial class MailServerConfigMicrosoftGraph
     {
         public string? TenantId { get; set; }
         public string? ClientId { get; set; }
@@ -319,7 +346,7 @@ public partial class DataObjects
         public string? EmailAddress { get; set; }
     }
 
-    public class MailServerConfigSMTP
+    public partial class MailServerConfigSMTP
     {
         public string? Server { get; set; }
         public int Port { get; set; }
@@ -328,17 +355,28 @@ public partial class DataObjects
         public string? Password { get; set; }
     }
 
-    public class OptionPair
+    public class MenuItem
+    {
+        public string Title { get; set; } = "";
+        public string? Icon { get; set; }
+        public string url { get; set; } = "";
+        public List<string> PageNames { get; set; } = new List<string>();
+        public bool AppAdminOnly { get; set; }
+        public int SortOrder { get; set; }
+    }
+
+    public partial class OptionPair
     {
         public string? Id { get; set; }
         public string? Value { get; set; }
     }
 
-    public class PluginCache {
+    public partial class PluginCache {
         public Guid RecordId { get; set; }
+        public Plugins.Plugin Plugin { get; set; } = new Plugins.Plugin();
     }
 
-    public class Setting : ActionResponseObject
+    public partial class Setting : ActionResponseObject
     {
         public int SettingId { get; set; }
         public string SettingName { get; set; } = null!;
@@ -351,19 +389,19 @@ public partial class DataObjects
         public string? LastModifiedBy { get; set; }
     }
 
-    public class SimplePost
+    public partial class SimplePost
     {
         public string? SingleItem { get; set; }
         public List<string> Items { get; set; } = new List<string>();
     }
 
-    public class SimpleResponse
+    public partial class SimpleResponse
     {
         public bool Result { get; set; }
         public string? Message { get; set; }
     }
 
-    public class Tenant : ActionResponseObject
+    public partial class Tenant : ActionResponseObject
     {
         public Guid TenantId { get; set; }
         public string Name { get; set; } = null!;
@@ -373,18 +411,21 @@ public partial class DataObjects
         public string? AddedBy { get; set; }
         public DateTime LastModified { get; set; }
         public string? LastModifiedBy { get; set; }
+        public List<Department>? Departments { get; set; } = null!;
+        public List<DepartmentGroup>? DepartmentGroups { get; set; } = null!;
         public TenantSettings TenantSettings { get; set; } = new TenantSettings();
+        public List<udfLabel>? udfLabels { get; set; } = null!;
         public List<UserListing> Users { get; set; } = new List<UserListing>();
     }
 
-    public class TenantList
+    public partial class TenantList
     {
         public Guid TenantId { get; set; }
         public string Name { get; set; } = "";
         public string TenantCode { get; set; } = "";
     }
 
-    public class TenantSettings
+    public partial class TenantSettings
     {
         public List<string> AllowedFileTypes { get; set; } = new List<string>();
         public bool AllowUsersToManageAvatars { get; set; }
@@ -394,19 +435,27 @@ public partial class DataObjects
         public bool AllowUsersToSignUpForLocalLogin { get; set; }
         public string? AppIcon { get; set; }
         public string? CustomAuthenticationButtonClass { get; set; }
+        [Sensitive]
         public string? CustomAuthenticationCode { get; set; }
         public string? CustomAuthenticationIcon { get; set; }
         public string? CustomAuthenticationName { get; set; }
         public string? DefaultCultureCode { get; set; }
+        public int DefaultAppointmentDuration { get; set; }
         public string? DefaultReplyToAddress { get; set; }
         public DeletePreference DeletePreference { get; set; } = DeletePreference.MarkAsDeleted;
         public int DeleteMarkedRecordsAfterDays { get; set; } = 90;
         public bool HideAbout { get; set; }
+        [Sensitive]
         public string? LdapLookupRoot { get; set; }
+        [Sensitive]
         public string? LdapLookupUsername { get; set; }
+        [Sensitive]
         public string? LdapLookupPassword { get; set; }
+        [Sensitive]
         public string? LdapLookupSearchBase { get; set; }
+        [Sensitive]
         public string? LdapLookupLocationAttribute { get; set; }
+        [Sensitive]
         public int LdapLookupPort { get; set; }
         public List<string> LoginOptions { get; set; } = new List<string>();
         public Guid? Logo { get; set; }
@@ -419,20 +468,23 @@ public partial class DataObjects
         public string? ThemeCss { get; set; } = "";
         public string? ThemeFont { get; set; } = "";
         public string? ThemeFontCssImport { get; set; } = "";
+        public WorkSchedule WorkSchedule { get; set; } = new WorkSchedule();
         public bool RequirePreExistingAccountToLogIn { get; set; }
         public List<ListItem>? ListItems { get; set; } = null!;
         //public List<ExternalDataSource>? ExternalUserDataSources { get; set; }
+        [Sensitive]
         public string? JwtRsaPrivateKey { get; set; }
+        [Sensitive]
         public string? JwtRsaPublicKey { get; set; }
     }
 
-    public class Test
+    public partial class Test
     {
         public DateTime? TestDate { get; set; }
         public string? Value { get; set; }
     }
 
-    public class User : ActionResponseObject
+    public partial class User : ActionResponseObject
     {
         public Guid UserId { get; set; }
         public Guid TenantId { get; set; }
@@ -443,18 +495,33 @@ public partial class DataObjects
         public string? Phone { get; set; }
         public string? Username { get; set; }
         public string? EmployeeId { get; set; }
+        public Guid? DepartmentId { get; set; }
+        public string? DepartmentName { get; set; }
         public string? Title { get; set; }
+        public string? Location { get; set; }
         public bool Enabled { get; set; }
         public DateTime? LastLogin { get; set; }
         public string? LastLoginSource { get; set; }
         public bool Admin { get; set; }
         public bool AppAdmin { get; set; }
+        public bool CanBeScheduled { get; set; }
         public bool ManageFiles { get; set; }
+        public bool ManageAppointments { get; set; }
         public string? Password { get; set; }
         public bool PreventPasswordChange { get; set; }
         public int FailedLoginAttempts { get; set; }
         public DateTime? LastLockoutDate { get; set; }
         public string? Source { get; set; }
+        public string? udf01 { get; set; }
+        public string? udf02 { get; set; }
+        public string? udf03 { get; set; }
+        public string? udf04 { get; set; }
+        public string? udf05 { get; set; }
+        public string? udf06 { get; set; }
+        public string? udf07 { get; set; }
+        public string? udf08 { get; set; }
+        public string? udf09 { get; set; }
+        public string? udf10 { get; set; }
         public DateTime Added { get; set; }
         public string? AddedBy { get; set; }
         public DateTime LastModified { get; set; }
@@ -466,10 +533,12 @@ public partial class DataObjects
         public string? AuthToken { get; set; }
         public List<UserAccount> UserAccounts { get; set; } = new List<UserAccount>();
         public UserPreferences UserPreferences { get; set; } = new UserPreferences();
+        public List<Guid>? UserGroups { get; set; }
         public string? Confirmation { get; set; }
+        public bool Sudo { get; set; }
     }
 
-    public class UserAccount
+    public partial class UserAccount
     {
         public Guid UserId { get; set; }
         public Guid TenantId { get; set; }
@@ -478,20 +547,22 @@ public partial class DataObjects
         public string LastName { get; set; } = "";
     }
 
-    public class UserListing
+    public partial class UserListing
     {
         public Guid UserId { get; set; }
         public string? FirstName { get; set; }
         public string? LastName { get; set; }
         public string? Email { get; set; }
         public string? Username { get; set; }
+        public string? Department { get; set; }
+        public string? Location { get; set; }
         public bool Enabled { get; set; }
         public bool Deleted { get; set; }
         public DateTime? DeletedAt { get; set; }
         public bool Admin { get; set; }
     }
 
-    public class UserPasswordReset
+    public partial class UserPasswordReset
     {
         public Guid UserId { get; set; }
         public Guid TenantId { get; set; }
@@ -500,8 +571,9 @@ public partial class DataObjects
         public bool AllAccounts { get; set; }
     }
 
-    public class UserPreferences
+    public partial class UserPreferences
     {
+        public int DefaultAppointmentDuration { get; set; }
         public bool EnabledItemsOnly { get; set; }
         public FilterFileStorage filterFileStorage { get; set; } = new FilterFileStorage();
         public FilterUsers filterUsers { get; set; } = new FilterUsers();
@@ -512,7 +584,7 @@ public partial class DataObjects
         public bool StickyMenus { get; set; }
     }
 
-    public class UserTenant
+    public partial class UserTenant
     {
         public Guid UserId { get; set; }
         public Guid TenantId { get; set; }
@@ -520,10 +592,48 @@ public partial class DataObjects
         public string TenantName { get; set; } = null!;
     }
 
-    public class VersionInfo
+    public partial class VersionInfo
     {
         public DateOnly Released { get; set; }
         public double RunningSince { get; set; }
         public string? Version { get; set; }
+    }
+
+    public partial class WorkSchedule
+    {
+        public bool Sunday { get; set; }
+        public bool SundayAllDay { get; set; }
+        public string? SundayStart { get; set; } = null!;
+        public string? SundayEnd { get; set; } = null!;
+
+        public bool Monday { get; set; }
+        public bool MondayAllDay { get; set; }
+        public string? MondayStart { get; set; } = null!;
+        public string? MondayEnd { get; set; } = null!;
+
+        public bool Tuesday { get; set; }
+        public bool TuesdayAllDay { get; set; }
+        public string? TuesdayStart { get; set; } = null!;
+        public string? TuesdayEnd { get; set; } = null!;
+
+        public bool Wednesday { get; set; }
+        public bool WednesdayAllDay { get; set; }
+        public string? WednesdayStart { get; set; } = null!;
+        public string? WednesdayEnd { get; set; } = null!;
+
+        public bool Thursday { get; set; }
+        public bool ThursdayAllDay { get; set; }
+        public string? ThursdayStart { get; set; } = null!;
+        public string? ThursdayEnd { get; set; } = null!;
+
+        public bool Friday { get; set; }
+        public bool FridayAllDay { get; set; }
+        public string? FridayStart { get; set; } = null!;
+        public string? FridayEnd { get; set; } = null!;
+
+        public bool Saturday { get; set; }
+        public bool SaturdayAllDay { get; set; }
+        public string? SaturdayStart { get; set; } = null!;
+        public string? SaturdayEnd { get; set; } = null!;
     }
 }

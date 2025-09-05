@@ -105,6 +105,7 @@
                     LastName = user.LastName,
                     Email = user.Email,
                     EmployeeId = user.EmployeeId,
+                    DepartmentName = user.DepartmentName,
                     Title = user.Title,
                     Username = user.Username,
                     Admin = false,
@@ -122,6 +123,8 @@
 
         if (userId != Guid.Empty) {
             string token = data.GetUserToken(tenantId, userId, fingerprint);
+
+            await data.UpdateUserFromPlugins(userId);
 
             data.CookieWrite("user-token", token);
             data.CookieWrite("Login-Method", "Custom");

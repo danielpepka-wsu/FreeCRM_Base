@@ -1,3 +1,24 @@
+using BlazorBootstrap;
+using Blazored.LocalStorage;
+// {{ModuleItemStart:Tags}}
+using FreeCICD.Client.Pages.Settings.Tags;
+// {{ModuleItemEnd:Tags}}
+using FreeCICD.Client.Pages.Settings.Users;
+using FreeCICD.Client.Shared;
+using Humanizer;
+using Humanizer.Localisation;
+using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Forms;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.Extensions.Primitives;
+using Microsoft.JSInterop;
+using MudBlazor.Utilities;
+using Plugins;
+using Radzen;
+using Radzen.Blazor;
+using Radzen.Blazor.Markdown;
+using Radzen.Blazor.Rendering;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Globalization;
@@ -9,25 +30,11 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
-using BlazorBootstrap;
-using Blazored.LocalStorage;
-using FreeCICD.Client.Shared;
-using Humanizer;
-using Humanizer.Localisation;
-using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Forms;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Microsoft.Extensions.Primitives;
-using Microsoft.JSInterop;
-using MudBlazor.Utilities;
-using Radzen;
-using Radzen.Blazor;
-using Radzen.Blazor.Rendering;
 using static MudBlazor.Colors;
 
 namespace FreeCICD.Client;
 
-public static class Helpers
+public static partial class Helpers
 {
     private static Radzen.DialogService DialogService = null!;
     private static HttpClient Http = null!;
@@ -52,10 +59,10 @@ public static class Helpers
     /// <param name="tooltipService">A reference to the Radzen TooltipService.</param>
     /// <param name="navigationManager">A reference to the NavigationManager interface.</param>
     public static void Init(
-        IJSRuntime jSRuntime,
-        BlazorDataModel model,
-        HttpClient httpClient,
-        ILocalStorageService localStorage,
+        IJSRuntime jSRuntime, 
+        BlazorDataModel model, 
+        HttpClient httpClient, 
+        ILocalStorageService localStorage, 
         Radzen.DialogService dialogService,
         Radzen.TooltipService tooltipService,
         NavigationManager navigationManager
@@ -140,7 +147,8 @@ public static class Helpers
     /// Gets the list of allowed file types from the TenantSettings.
     /// </summary>
     /// <returns>A List of strings.</returns>
-    public static List<string> AllowedFileTypes {
+    public static List<string> AllowedFileTypes
+    {
         get {
             return Model.Tenant.TenantSettings.AllowedFileTypes;
         }
@@ -149,7 +157,8 @@ public static class Helpers
     /// <summary>
     /// The BaseUri from the NavigationManager
     /// </summary>
-    public static string BaseUri {
+    public static string BaseUri
+    {
         get {
             return NavManager.BaseUri;
         }
@@ -207,7 +216,7 @@ public static class Helpers
     {
         string output = "";
 
-        if (value.HasValue && (bool)value == true) {
+        if(value.HasValue && (bool)value == true) {
             if (!String.IsNullOrWhiteSpace(icon)) {
                 // First, see if this is an Icon
                 output = Icon(icon, true);
@@ -218,7 +227,7 @@ public static class Helpers
                 output = Icon("Checked", true);
             }
 
-            if (output != "") {
+            if(output != "") {
                 if (!output.Contains("<")) {
                     output = "<i class=\"" + output + "\"></i>";
                 }
@@ -248,11 +257,11 @@ public static class Helpers
     {
         string output = "";
 
-        if (labels == null || labels.Count() < 4) {
+        if(labels == null || labels.Count() < 4) {
             labels = new List<string> { "b", "kb", "m", "gb" };
         }
 
-        if (bytes > 0) {
+        if(bytes > 0) {
             if (bytes < 1024) {
                 output = ((int)bytes).ToString() + labels[0];
             } else if (bytes < (1024 * 1024)) {
@@ -370,7 +379,8 @@ public static class Helpers
     /// <summary>
     /// The default text to use for "Cancel" in the confirmation button control.
     /// </summary>
-    public static string ConfirmButtonTextCancel {
+    public static string ConfirmButtonTextCancel
+    {
         get {
             return Helpers.Text("Cancel");
         }
@@ -379,7 +389,8 @@ public static class Helpers
     /// <summary>
     /// The default text to use for "Confirm Delete" in the confirmation button control.
     /// </summary>
-    public static string ConfirmButtonTextConfirmDelete {
+    public static string ConfirmButtonTextConfirmDelete
+    {
         get {
             return Helpers.Text("ConfirmDelete");
         }
@@ -388,7 +399,8 @@ public static class Helpers
     /// <summary>
     /// The default text to use for "Delete" in the confirmation button control.
     /// </summary>
-    public static string ConfirmButtonTextDelete {
+    public static string ConfirmButtonTextDelete
+    {
         get {
             return Helpers.Text("Delete");
         }
@@ -397,7 +409,8 @@ public static class Helpers
     /// <summary>
     /// The default text to use for "Delete All" in the confirmation button control.
     /// </summary>
-    public static string ConfirmButtonTextDeleteAll {
+    public static string ConfirmButtonTextDeleteAll
+    {
         get {
             return Helpers.Text("DeleteAll");
         }
@@ -463,6 +476,45 @@ public static class Helpers
         return output;
     }
 
+    /// <summary>
+    /// Converts C# code to a plugin object.
+    /// </summary>
+    /// <param name="code">The C# code.</param>
+    /// <returns>A nullable Plugin object.</returns>
+    public static Plugins.Plugin? ConvertCodeToPlugin(string? code)
+    {
+        Plugins.Plugin? output = null;
+
+        if (!String.IsNullOrWhiteSpace(code)) {
+            string ns = GetPluginNamespace(code);
+            string c = GetPluginClass(code);
+
+            if (!String.IsNullOrWhiteSpace(ns) && !String.IsNullOrWhiteSpace(c)) {
+                output = new Plugin {
+                    Id = Guid.Empty,
+                    Author = "From Code",
+                    ClassName = c,
+                    Code = code,
+                    ContainsSensitiveData = false,
+                    Description = "",
+                    LimitToTenants = new List<Guid>(),
+                    Name = "From Code",
+                    Namespace = ns,
+                    Prompts = new List<PluginPrompt>(),
+                    PromptValues = new List<PluginPromptValue>(),
+                    PromptValuesOnUpdate = "",
+                    Properties = new Dictionary<string, object>(),
+                    Type = "Code",
+                    Version = "X",
+                    AdditionalAssemblies = new List<string>(),
+                    Invoker = "Execute",
+                    Values = new List<PluginPromptValue>(),
+                };
+            }
+        }
+
+        return output;
+    }
 
     /// <summary>
     /// Reads a cookie using jsInterop.
@@ -493,7 +545,7 @@ public static class Helpers
     /// <param name="value">The value to copy to the clipboard.</param>
     public static async Task CopyToClipboard(string value)
     {
-        if (jsRuntime != null) {
+        if(jsRuntime != null) {
             await jsRuntime.InvokeVoidAsync("CopyToClipboard", value);
         }
     }
@@ -520,7 +572,8 @@ public static class Helpers
     /// <summary>
     /// Gets the Uri as a string from the NavigationManager
     /// </summary>
-    public static string CurrentUrl {
+    public static string CurrentUrl
+    {
         get {
             return NavManager.Uri.ToString();
         }
@@ -609,7 +662,7 @@ public static class Helpers
     {
         string output = String.Empty;
 
-        if (Model != null) {
+        if(Model != null) {
             if (!String.IsNullOrWhiteSpace(text)) {
                 if (Model.DefaultLanguage.Phrases.Any()) {
                     var phrase = Model.DefaultLanguage.Phrases.FirstOrDefault(x => x.Id != null && x.Id.ToUpper() == text.ToUpper());
@@ -631,7 +684,7 @@ public static class Helpers
     /// <param name="elementId">The id of the HTML element.</param>
     public static async Task DelayedFocus(string elementId)
     {
-        if (jsRuntime != null) {
+        if(jsRuntime != null) {
             await jsRuntime.InvokeVoidAsync("DelayedFocus", elementId);
         }
     }
@@ -647,6 +700,123 @@ public static class Helpers
         }
     }
 
+    /// <summary>
+    /// Gets the name for a department group from the unique id.
+    /// </summary>
+    /// <param name="DepartmentGroupId">The unique id of the department group.</param>
+    /// <returns>The name of the department group.</returns>
+    public static async Task<string> DepartmentGroupName(string? DepartmentGroupId)
+    {
+        string output = String.Empty;
+
+        if (!String.IsNullOrWhiteSpace(DepartmentGroupId)) {
+            if (!Model.DepartmentGroups.Any()) {
+                await LoadDepartmentGroups();
+            }
+
+            var dept = Model.DepartmentGroups.FirstOrDefault(x => x.DepartmentGroupId.ToString() == DepartmentGroupId);
+            if (dept != null) {
+                output += dept.DepartmentGroupName;
+            }
+        }
+
+        return output;
+    }
+
+    /// <summary>
+    /// Gets the name for a department group from the unique id.
+    /// </summary>
+    /// <param name="DepartmentGroupId">The unique id of the department group.</param>
+    /// <returns>The name of the department group.</returns>
+    public static async Task<string> DepartmentGroupName(Guid? DepartmentGroupId)
+    {
+        string output = String.Empty;
+
+        if (DepartmentGroupId.HasValue) {
+            if (!Model.DepartmentGroups.Any()) {
+                await LoadDepartmentGroups();
+            }
+
+            var dept = Model.DepartmentGroups.FirstOrDefault(x => x.DepartmentGroupId == DepartmentGroupId);
+            if (dept != null) {
+                output += dept.DepartmentGroupName;
+            }
+        }
+
+        return output;
+    }
+
+    /// <summary>
+    /// Gets the name for a department from the unique id
+    /// </summary>
+    /// <param name="DepartmentId">The unique id of the department.</param>
+    /// <returns>The name of the department.</returns>
+    public static async Task<string> DepartmentName(string? DepartmentId)
+    {
+        string output = String.Empty;
+
+        if (!String.IsNullOrWhiteSpace(DepartmentId)) {
+            if (!Model.Departments.Any()) {
+                await LoadDepartments();
+            }
+
+            var dept = Model.Departments.FirstOrDefault(x => x.DepartmentId.ToString() == DepartmentId);
+            if (dept != null) {
+                output += dept.DepartmentName;
+            }
+        }
+
+        return output;
+    }
+
+    /// <summary>
+    /// Gets the name for a department from the unique id
+    /// </summary>
+    /// <param name="DepartmentId">The unique id of the department.</param>
+    /// <returns>The name of the department.</returns>
+    public static async Task<string> DepartmentName(Guid? DepartmentId)
+    {
+        string output = String.Empty;
+
+        if (DepartmentId.HasValue) {
+            if (!Model.Departments.Any()) {
+                await LoadDepartments();
+            }
+
+            var dept = Model.Departments.FirstOrDefault(x => x.DepartmentId == DepartmentId);
+            if (dept != null) {
+                output += dept.DepartmentName;
+            }
+        }
+
+        return output;
+    }
+
+    /// <summary>
+    /// Gets the list of department names from a list of unique ids.
+    /// </summary>
+    /// <param name="departmentIds">The list of unique ids of the departments.</param>
+    /// <param name="orderAlphabetically">Option to order the output alphabetically (Defaults to True).</param>
+    /// <returns>A list of strings containing the department names.</returns>
+    public static List<string> DepartmentNamesFromListOfGuids(List<Guid>? departmentIds, bool orderAlphabetically = true)
+    {
+        var output = new List<string>();
+
+        if (departmentIds != null && departmentIds.Any() && Model.Tenant.Departments != null && Model.Tenant.Departments.Any()) {
+            foreach (var deptId in departmentIds) {
+                var dept = Model.Tenant.Departments.FirstOrDefault(x => x.DepartmentId == deptId);
+                if (dept != null && !String.IsNullOrWhiteSpace(dept.DepartmentName)) {
+                    output.Add(dept.DepartmentName);
+                }
+            }
+
+            if (orderAlphabetically) {
+                output = output.OrderBy(x => x).ToList();
+            }
+        }
+
+        return output;
+    }
 
     /// <summary>
     /// Deserializes an object that was serialized as a JSON Document Object back into the object.
@@ -658,7 +828,7 @@ public static class Helpers
     {
         var output = default(T);
 
-        if (o != null) {
+        if(o != null) {
             try {
                 var json = ((System.Text.Json.JsonElement)o).GetRawText();
                 var jsonString = json.ToString();
@@ -719,13 +889,16 @@ public static class Helpers
                                 case System.Text.Json.JsonValueKind.Array:
                                     using (var memoryStream = new MemoryStream(Encoding.UTF8.GetBytes(v))) {
                                         var dataContractJsonSerializer = new System.Runtime.Serialization.Json.DataContractJsonSerializer(typeof(List<object>));
-                                        var a = (List<object>)dataContractJsonSerializer.ReadObject(memoryStream);
+                                        var msObject = dataContractJsonSerializer.ReadObject(memoryStream);
+                                        if (msObject != null) {
+                                            var a = (List<object>)msObject;
 
-                                        var listOfTypedObjects = ListOfObjectsToTypedList(a);
-                                        if (listOfTypedObjects != null) {
-                                            output.Add(key, listOfTypedObjects);
-                                        } else {
-                                            output.Add(key, a);
+                                            var listOfTypedObjects = ListOfObjectsToTypedList(a);
+                                            if (listOfTypedObjects != null) {
+                                                output.Add(key, listOfTypedObjects);
+                                            } else {
+                                                output.Add(key, a);
+                                            }
                                         }
                                     }
                                     break;
@@ -735,7 +908,7 @@ public static class Helpers
                                     break;
 
                                 case System.Text.Json.JsonValueKind.Null:
-                                    output.Add(key, null);
+                                    output.Add(key, new());
                                     break;
 
                                 case System.Text.Json.JsonValueKind.Number:
@@ -787,6 +960,11 @@ public static class Helpers
         return output;
     }
 
+    /// <summary>
+    /// Converts an object that was serialized as JSON back into a Dictionary&lt;string, object&gt; object.
+    /// </summary>
+    /// <param name="o">A nullable object.</param>
+    /// <returns>A dictionary of string, object values.</returns>
     public static Dictionary<string, object> DictionaryFromJsonObject(object? o)
     {
         var output = new Dictionary<string, object>();
@@ -807,8 +985,10 @@ public static class Helpers
     /// <param name="LastName">The last name of the user.</param>
     /// <param name="FirstName">The first name of the user.</param>
     /// <param name="Email">The email address of the user.</param>
+    /// <param name="DepartmentName">The department name of the user.</param>
+    /// <param name="Location">The location of the user.</param>
     /// <returns>A formatted user display name.</returns>
-    public static string DisplayNameFromLastAndFirst(string? LastName, string? FirstName, string? Email)
+    public static string DisplayNameFromLastAndFirst(string? LastName, string? FirstName, string? Email, string? DepartmentName, string? Location)
     {
         string output = String.Empty;
 
@@ -825,6 +1005,24 @@ public static class Helpers
 
         if (String.IsNullOrEmpty(output) && !String.IsNullOrEmpty(Email)) {
             output = Email;
+        }
+
+        if (!String.IsNullOrEmpty(DepartmentName) || !String.IsNullOrEmpty(Location)) {
+            if(
+                Model.FeatureEnabledDepartments
+            ) {
+                output += " [";
+                if (
+                    !String.IsNullOrEmpty(DepartmentName)
+                    && Model.FeatureEnabledDepartments
+                ) {
+                    output += Location + "/" + DepartmentName;
+                } else if (Model.FeatureEnabledDepartments) {
+                    output += DepartmentName;
+                }
+
+                output += "]";
+            }
         }
         return output;
     }
@@ -888,7 +1086,7 @@ public static class Helpers
     {
         T? output = default(T);
 
-        if (o != null) {
+        if(o != null) {
             // To make a new copy serialize the object and then deserialize it back to a new object.
             var serialized = System.Text.Json.JsonSerializer.Serialize(o);
             if (!String.IsNullOrEmpty(serialized)) {
@@ -976,6 +1174,13 @@ public static class Helpers
         return output;
     }
 
+    /// <summary>
+    /// Opens a dialog to edit a user.
+    /// </summary>
+    /// <param name="UserId">The unique user id.</param>
+    /// <param name="OnSaved">The callback handler to handle the save method.</param>
+    /// <param name="width">The width of the dialog (defaults to "auto".)</param>
+    /// <param name="height">The height of the dialog (defaults to "auto".)</param>
     public static async Task EditUser(Guid UserId, Delegate? OnSaved = null, string width = "auto", string height = "auto")
     {
         Dictionary<string, object> parameters = new Dictionary<string, object>();
@@ -1018,6 +1223,43 @@ public static class Helpers
         });
     }
 
+
+    /// <summary>
+    /// Executes a plugin and returns the results.
+    /// </summary>
+    /// <param name="plugin">The Plugin object to be executed.</param>
+    /// <param name="objects">Any objects being passed to this plugin code.</param>
+    /// <returns>A PluginExecuteResult object.</returns>
+    public static async Task<PluginExecuteResult> ExecutePlugin(Plugin plugin, object[]? objects = null)
+    {
+        var output = new PluginExecuteResult {
+            Messages = new List<string>(),
+            Objects = new List<object>(),
+            Result = false,
+        };
+
+        var request = new PluginExecuteRequest {
+            Plugin = plugin,
+            Objects = objects,
+        };
+
+        var result = await Helpers.GetOrPost<PluginExecuteResult>("api/Data/ExecutePlugin", request);
+        if (result != null) {
+            output.Result = result.Result;
+
+            if (result.Messages != null && result.Messages.Count > 0) {
+                output.Messages = result.Messages;
+            }
+
+            if (result.Objects != null && result.Objects.Count > 0) {
+                output.Objects = result.Objects;
+            }
+        } else {
+            output.Messages.Add("An unknown error occurred attempting to execute the plugin '" + plugin.Name + "'.");
+        }
+
+        return output;
+    }
 
     /// <summary>
     /// The thumbnail graphic to show for a given file based on the file extension.
@@ -1063,6 +1305,12 @@ public static class Helpers
         return output;
     }
 
+    /// <summary>
+    /// Finds the first line in the code that starts with the given text.
+    /// </summary>
+    /// <param name="code">The code to check.</param>
+    /// <param name="startsWith">The text to find.</param>
+    /// <returns>The first line that starts with the given text.</returns>
     public static string FindFirstLineStartingWith(string code, string startsWith)
     {
         string output = String.Empty;
@@ -1149,6 +1397,7 @@ public static class Helpers
 
         Model.Language = lang;
     }
+
 
 
     /// <summary>
@@ -1375,13 +1624,14 @@ public static class Helpers
     /// Formats the user display name of a UserListing object.
     /// </summary>
     /// <param name="userListing">The UserListing object to be formatted.</param>
+    /// <param name="IncludeLocation">Option to include the Location in the output.</param>
     /// <param name="IncludeEmail">Option to include the email address in the output.</param>
     /// <returns>The formatting user display name.</returns>
-    public static string FormatUserDisplayName(DataObjects.UserListing? userListing, bool IncludeEmail = true)
+    public static string FormatUserDisplayName(DataObjects.UserListing? userListing, bool IncludeLocation = true, bool IncludeEmail = true)
     {
         string output = String.Empty;
 
-        if (userListing != null) {
+        if(userListing != null) {
             output += userListing.FirstName;
 
             if (!String.IsNullOrWhiteSpace(userListing.LastName)) {
@@ -1389,6 +1639,13 @@ public static class Helpers
                     output += " ";
                 }
                 output += userListing.LastName;
+            }
+
+            if (IncludeLocation && !String.IsNullOrWhiteSpace(userListing.Location)) {
+                if (!String.IsNullOrWhiteSpace(output)) {
+                    output += " ";
+                }
+                output += "[" + userListing.Location + "]";
             }
 
             if (IncludeEmail && !String.IsNullOrWhiteSpace(userListing.Email)) {
@@ -1407,9 +1664,10 @@ public static class Helpers
     /// Formats the user display name of a user based on the unique user id.
     /// </summary>
     /// <param name="UserId">The unique user id of the user.</param>
+    /// <param name="IncludeLocation">Option to include the Location in the output.</param>
     /// <param name="IncludeEmail">Option to include the email address in the output.</param>
     /// <returns>The formatting user display name.</returns>
-    public static string FormatUserDisplayName(string? UserId, bool IncludeEmail = false)
+    public static string FormatUserDisplayName(string? UserId, bool IncludeLocation = false, bool IncludeEmail = false)
     {
         string output = String.Empty;
 
@@ -1424,6 +1682,13 @@ public static class Helpers
                         output += " ";
                     }
                     output += user.LastName;
+                }
+
+                if (IncludeLocation && !String.IsNullOrWhiteSpace(user.Location)) {
+                    if (!String.IsNullOrWhiteSpace(output)) {
+                        output += " ";
+                    }
+                    output += "[" + user.Location + "]";
                 }
 
                 if (IncludeEmail && !String.IsNullOrWhiteSpace(user.Email)) {
@@ -1443,9 +1708,10 @@ public static class Helpers
     /// Formats the user display name of a user based on the unique user id.
     /// </summary>
     /// <param name="UserId">The unique user id of the user.</param>
+    /// <param name="IncludeLocation">Option to include the Location in the output.</param>
     /// <param name="IncludeEmail">Option to include the email address in the output.</param>
     /// <returns>The formatting user display name.</returns>
-    public static string FormatUserDisplayName(Guid? UserId, bool IncludeEmail = false)
+    public static string FormatUserDisplayName(Guid? UserId, bool IncludeLocation = false, bool IncludeEmail = false)
     {
         string output = String.Empty;
 
@@ -1460,6 +1726,13 @@ public static class Helpers
                         output += " ";
                     }
                     output += user.LastName;
+                }
+
+                if (IncludeLocation && !String.IsNullOrWhiteSpace(user.Location)) {
+                    if (!String.IsNullOrWhiteSpace(output)) {
+                        output += " ";
+                    }
+                    output += "[" + user.Location + "]";
                 }
 
                 if (IncludeEmail && !String.IsNullOrWhiteSpace(user.Email)) {
@@ -1590,6 +1863,69 @@ public static class Helpers
     }
 
     /// <summary>
+    /// Gets the deleted records from the API endpoint.
+    /// </summary>
+    /// <returns></returns>
+    public static async Task<DataObjects.DeletedRecords> GetDeletedRecords()
+    {
+        var output = new DataObjects.DeletedRecords();
+
+        var result = await GetOrPost<DataObjects.DeletedRecords>("api/Data/GetDeletedRecords");
+        if (result != null) {
+            output = result;
+        }
+
+        // Also update the counts on the Main Model
+
+
+        Model.DeletedRecordCounts.DepartmentGroups = output.DepartmentGroups.Count();
+        Model.DeletedRecordCounts.Departments = output.Departments.Count();
+
+
+        Model.DeletedRecordCounts.FileStorage = output.FileStorage.Count();
+
+
+
+        // {{ModuleItemStart:Tags}}
+        Model.DeletedRecordCounts.Tags = output.Tags.Count();
+        // {{ModuleItemEnd:Tags}}
+
+        Model.DeletedRecordCounts.UserGroups = output.UserGroups.Count();
+        Model.DeletedRecordCounts.Users = output.Users.Count();
+
+        UpdateModelDeletedRecordCountsForAppItems(output);
+
+        return output;
+    }
+
+    /// <summary>
+    /// Gets the list of deleted record types.
+    /// </summary>
+    /// <returns>A list of strings.</returns>
+    public static List<string> GetDeletedRecordTypes()
+    {
+        var output = new List<string> {
+            "Department",
+            "DepartmentGroup",
+            "FileStorage",
+            // {{ModuleItemStart:Tags}}
+            "Tag",
+            // {{ModuleItemEnd:Tags}}
+            "User",
+            "UserGroup"
+        };
+
+        var appDeletedRecordTypes = GetDeletedRecordTypesApp();
+        if (appDeletedRecordTypes != null && appDeletedRecordTypes.Any()) {
+            output.AddRange(appDeletedRecordTypes);
+        }
+
+        output = output.OrderBy(x => x).ToList();
+
+        return output;
+    }
+
+    /// <summary>
     /// Gets a value from a dictionary of string, object.
     /// </summary>
     /// <typeparam name="T">The type of value expected.</typeparam>
@@ -1614,7 +1950,7 @@ public static class Helpers
                     output = (T)value;
                 }
 
-
+                    
             } catch (Exception ex) {
                 if (ex != null) { }
             }
@@ -1623,6 +1959,10 @@ public static class Helpers
         return output;
     }
 
+    /// <summary>
+    /// Gets the unique browser fingerprint.
+    /// </summary>
+    /// <returns>A string containing the unique browser fingerprint.</returns>
     public static async Task<string> GetFingerprint()
     {
         var output = await jsRuntime.InvokeAsync<string>("GetFingerprint");
@@ -1734,6 +2074,7 @@ public static class Helpers
         return output;
     }
 
+
     /// <summary>
     /// Shows a dialog to get a new password.
     /// </summary>
@@ -1810,11 +2151,7 @@ public static class Helpers
         if (obj != null) {
             try {
                 output = DeserializeObject<T>(SerializeObject(obj));
-            } catch (Exception ex) {
-                if (ex != null) {
-                    //Console.WriteLine(ex.Message);
-                }
-            }
+            } catch { }
         }
 
         return output;
@@ -1835,7 +2172,7 @@ public static class Helpers
             type = type.GetElementType();
             list = true;
         } else if (type.IsGenericType) {
-            type = type.GetGenericArguments()[0];
+            type = type.GetGenericArguments()[0]; 
             list = true;
         }
 
@@ -2003,14 +2340,14 @@ public static class Helpers
                 case System.Text.Json.JsonValueKind.Undefined:
                     break;
             }
-        } catch (Exception ex) {
-            if (ex != null) { }
+        } catch (Exception ex) { 
+            if(ex != null) { }
         }
 
         if (!String.IsNullOrWhiteSpace(stringValue)) {
             try {
                 Type t = typeof(T);
-                if (t == typeof(System.Guid)) {
+                if(t == typeof(System.Guid)) {
                     Guid g = new Guid(stringValue);
                     output = (T)(object)g;
                 } else if (t == typeof(System.DateTime)) {
@@ -2041,10 +2378,10 @@ public static class Helpers
                     output = (T)(object)stringValue;
                 }
 
-            } catch (Exception ex) {
-                if (ex != null) { }
+            } catch(Exception ex) {
+                if(ex != null) { }
             }
-
+            
         }
 
         return output;
@@ -2084,6 +2421,11 @@ public static class Helpers
         return output;
     }
 
+    /// <summary>
+    /// Returns the type for a given object.
+    /// </summary>
+    /// <param name="o">A nullable object.</param>
+    /// <returns>A string containing the object type.</returns>
     public static string GetObjectType(object? o)
     {
         string output = String.Empty;
@@ -2167,7 +2509,7 @@ public static class Helpers
                         }
                     }
                 }
-            } catch (Exception ex) {
+            } catch(Exception ex) {
                 await ConsoleLog("An Exception Occurred Calling '" + url + "' - " + ex.Message);
             }
         }
@@ -2175,6 +2517,143 @@ public static class Helpers
         return output;
     }
 
+    /// <summary>
+    /// Gets a plugin by it's unique Guid Id.
+    /// </summary>
+    /// <param name="id">The Guid Id of the plugin.</param>
+    /// <returns>A nullable Plugin object.</returns>
+    public static Plugin? GetPluginById(Guid id)
+    {
+        var output = Model.Plugins.FirstOrDefault(x => x.Id == id);
+        return output;
+    }
+
+    /// <summary>
+    /// Gets a plugin by it's unique Guid Id as a string.
+    /// </summary>
+    /// <param name="id">The Guid Id of the plugin as a string.</param>
+    /// <returns>A nullable Plugin object.</returns>
+    public static Plugin? GetPluginById(string? id)
+    {
+        Plugin? output = null;
+
+        if (!String.IsNullOrWhiteSpace(id)) {
+            Guid pluginId = Guid.Empty;
+
+            try {
+                pluginId = new Guid(id);
+            } catch { }
+
+            if (pluginId != Guid.Empty) {
+                output = GetPluginById(pluginId);
+            }
+        }
+
+        return output;
+    }
+
+    /// <summary>
+    /// Gets the code namespace from the plugin code.
+    /// </summary>
+    /// <param name="code">The C# code.</param>
+    /// <returns>The code namespace.</returns>
+    public static string GetPluginNamespace(string code)
+    {
+        string output = String.Empty;
+
+        var line = FindFirstLineStartingWith(code, "namespace");
+        if (!String.IsNullOrWhiteSpace(line)) {
+            output = line.Replace("namespace ", "").Replace(";", "").Replace("{", "").Trim();
+        }
+
+        return output;
+    }
+
+    /// <summary>
+    /// Gets the code class from the plugin code.
+    /// </summary>
+    /// <param name="code">The C# code.</param>
+    /// <returns>The code class.</returns>
+    public static string GetPluginClass(string code)
+    {
+        string output = String.Empty;
+
+        var line = FindFirstLineStartingWith(code, "public class ");
+        if (String.IsNullOrWhiteSpace(line)) {
+            line = FindFirstLineStartingWith(code, "public partial class ");
+        }
+
+        if (!String.IsNullOrWhiteSpace(line)) {
+            output = line.Replace("public class", "").Replace(";", "").Replace("{", "").Trim();
+
+            if (output.Contains(":")) {
+                output = output.Substring(0, output.IndexOf(":")).Trim();
+            }
+        }
+
+
+        return output;
+    }
+
+    /// <summary>
+    /// Gets the default value for a given prompt type.
+    /// </summary>
+    /// <param name="type">The PluginPromptType enum.</param>
+    /// <returns>The default value for the given type.</returns>
+    public static string[] GetPromptDefaultValue(PluginPromptType type)
+    {
+        var output = new string[] { "" };
+
+        switch (type) {
+            case PluginPromptType.Checkbox:
+                output = new string[] { "False" };
+                break;
+
+            case PluginPromptType.CheckboxList:
+                break;
+
+            case PluginPromptType.Date:
+                break;
+
+            case PluginPromptType.DateTime:
+                break;
+
+            case PluginPromptType.File:
+                break;
+
+            case PluginPromptType.Multiselect:
+                break;
+
+            case PluginPromptType.Number:
+                break;
+
+            case PluginPromptType.Password:
+                break;
+
+            case PluginPromptType.Radio:
+                break;
+
+            case PluginPromptType.Select:
+                break;
+
+            case PluginPromptType.Text:
+                break;
+
+            case PluginPromptType.Textarea:
+                break;
+
+            case PluginPromptType.Time:
+                break;
+        }
+
+        return output;
+    }
+
+    /// <summary>
+    /// Gets a prompt item value as a string.
+    /// </summary>
+    /// <param name="o">A nullable object.</param>
+    /// <returns>The value as a string.</returns>
     public static string GetPromptItemValueAsString(object? o)
     {
         string output = String.Empty;
@@ -2318,6 +2797,32 @@ public static class Helpers
         return output;
     }
 
+    // {{ModuleItemStart:Tags}}
+    /// <summary>
+    /// Gets a Tag by its unique id.
+    /// </summary>
+    /// <param name="tagId">The unique id of the Tag.</param>
+    /// <returns>A nullable Tag object.</returns>
+    public static async Task<DataObjects.Tag?> GetTag(Guid? tagId)
+    {
+        DataObjects.Tag? output = null;
+
+        if (tagId.HasValue) {
+            output = Model.Tags.FirstOrDefault(x => x.TagId == tagId);
+
+            if (output == null) {
+                output = await GetOrPost<DataObjects.Tag>("api/Data/GetTag/" + tagId.ToString());
+
+                if (output != null) {
+                    Model.Tags.Add(output);
+                }
+            }
+        }
+
+        return output;
+    }
+    // {{ModuleItemEnd:Tags}}
+
     /// <summary>
     /// Gets a User object for the given unique user id.
     /// </summary>
@@ -2382,7 +2887,8 @@ public static class Helpers
     /// <summary>
     /// The value for our built-in Guid1.
     /// </summary>
-    public static Guid Guid1 {
+    public static Guid Guid1
+    {
         get {
             return new Guid("00000000-0000-0000-0000-000000000001");
         }
@@ -2391,7 +2897,8 @@ public static class Helpers
     /// <summary>
     /// The value for our built-in Guid2.
     /// </summary>
-    public static Guid Guid2 {
+    public static Guid Guid2
+    {
         get {
             return new Guid("00000000-0000-0000-0000-000000000002");
         }
@@ -2581,7 +3088,13 @@ public static class Helpers
         string output = String.Empty;
 
         if (!String.IsNullOrWhiteSpace(name)) {
-            var icon = Icons.FirstOrDefault(x => x.Value.Contains(name.Trim(), StringComparer.InvariantCultureIgnoreCase));
+            KeyValuePair<string, List<string>> icon = new KeyValuePair<string, List<string>>();
+
+            icon = AppIcons.FirstOrDefault(x => x.Value.Contains(name.Trim(), StringComparer.InvariantCultureIgnoreCase));
+            if (String.IsNullOrWhiteSpace(icon.Key)) {
+                icon = Icons.FirstOrDefault(x => x.Value.Contains(name.Trim(), StringComparer.InvariantCultureIgnoreCase));
+            }
+
             if (!String.IsNullOrWhiteSpace(icon.Key)) {
                 string key = icon.Key;
                 string source = String.Empty;
@@ -2651,7 +3164,7 @@ public static class Helpers
             output += icon;
         }
 
-        if (!String.IsNullOrWhiteSpace(text)) {
+        if(!String.IsNullOrWhiteSpace(text)) {
             if (!String.IsNullOrEmpty(output)) {
                 output += " ";
             }
@@ -2664,22 +3177,20 @@ public static class Helpers
     /// <summary>
     /// The collection of icons for the application.
     /// </summary>
-    public static Dictionary<string, List<string>> Icons {
+    public static Dictionary<string, List<string>> Icons
+    {
         get {
             // Icons names are listed as the first item, and any matching text is included in the List<string> object.
             // Icons can come from various sources, so the first part of the icon name indicates the source,
             // then the second part indicates the source (eg: google:home, fa:fa fa-home, etc.)
-            Dictionary<string, List<string>> icons = new Dictionary<string, List<string>> {
+            Dictionary<string, List<string>> icons =    new Dictionary<string, List<string>> {
                 { "fa:fa-regular fa-address-card",               new List<string> { "ManageProfile", "ManageProfileInfo" }},
-                { "fa:fa-regular fa-calendar-check",             new List<string> { "Now" }},
                 { "fa:fa-regular fa-circle",                     new List<string> { "TenantChange" }},
                 { "fa:fa-regular fa-circle-check",               new List<string> { "CurrentCredential", "OK", "Select", "Selected", "UserEnabled" }},
                 { "fa:fa-regular fa-circle-dot",                 new List<string> { "TenantCurrent" }},
-                { "fa:fa-regular fa-circle-left",                new List<string> { "Previous" }},
-                { "fa:fa-regular fa-circle-right",               new List<string> { "Next" }},
                 { "fa:fa-regular fa-file",                       new List<string> { "Files", "ManageFile" }},
                 { "fa:fa-regular fa-square-check",               new List<string> { "Checked" }},
-                { "fa:fa-regular fa-square-plus",                new List<string> { "Add", "AddLanguage" }},
+                { "fa:fa-regular fa-square-plus",                new List<string> { "Add", "AddLanguage", "AddNewEmailTemplate", "AddNewUserGroup", "CreateInvoiceForUser", "InvoiceAddItem" }},
                 { "fa:fa-regular fa-sun",                        new List<string> { "Theme", "ThemeLight" }},
 
                 { "fa:fa-solid fa-arrows-rotate",                new List<string> { "Refresh" }},
@@ -2695,7 +3206,6 @@ public static class Helpers
                 { "fa:fa-solid fa-circle-info",                  new List<string> { "About", "Info" }},
                 { "fa:fa-solid fa-circle-user",                  new List<string> { "ManageAvatar", "User", "UserMenuIcon" }},
                 { "fa:fa-solid fa-code",                         new List<string> { "Code", "HTML", "ThemeCustomCssDefault" }},
-                { "fa:fa-solid fa-file-invoice",                 new List<string> { "CreateInvoice", "EditInvoice", "Invoice", "Invoices", "ViewInvoice" }},
                 { "fa:fa-solid fa-file-lines",                   new List<string> { "UserDefinedFields" }},
                 { "fa:fa-solid fa-file-pdf",                     new List<string> { "DownloadPDF", "PDF" }},
                 { "fa:fa-solid fa-filter",                       new List<string> { "AllItems", "ShowFilter" }},
@@ -2717,8 +3227,10 @@ public static class Helpers
                 { "fa:fa-solid fa-shield-halved",                new List<string> { "AccessDenied" }},
                 { "fa:fa-solid fa-sign-in-alt",                  new List<string> { "Log-In", "Login", "LoginTitle", "LoginWithLocalAccount", "Logout" }},
                 { "fa:fa-solid fa-signature",                    new List<string> { "SignUp" }},
+                { "fa:fa-solid fa-sitemap",                      new List<string> { "AddNewDepartment", "Departments", "EditDepartment" }},
                 { "fa:fa-solid fa-sliders",                      new List<string> { "Admin", "Settings" }},
                 { "fa:fa-solid fa-table-columns",                new List<string> { "ShowColumn" }},
+                { "fa:fa-solid fa-tags",                         new List<string> { "Tags" }},
                 { "fa:fa-solid fa-thumbtack",                    new List<string> { "Pinned" }},
                 { "fa:fa-solid fa-thumbtack-slash",              new List<string> { "Unpinned" }},
                 { "fa:fa-solid fa-trash",                        new List<string> { "ConfirmDelete", "ConfirmDeleteTenant", "Delete", "DeleteAvatar", "DeleteTenant", "PermanentlyDelete", "Remove", "RemoveFile" }},
@@ -2730,7 +3242,8 @@ public static class Helpers
                 { "fa:fa-solid fa-user-lock",                    new List<string> { "ResetPassword", "ResetUserPassword", "UpdatePassword" }},
                 { "fa:fa-solid fa-user-plus",                    new List<string> { "AddNewUser" }},
                 { "fa:fa-solid fa-user-shield",                  new List<string> { "RecordsTableIconAdmin" }},
-                { "fa:fa-solid fa-users",                        new List<string> { "ActiveUsers" }},
+                { "fa:fa-solid fa-users",                        new List<string> { "ActiveUsers", "AppointmentTypeMeeting", "EditUserGroup", "NewUserGroup", "UserGroups" }},
+                { "fa:fa-solid fa-users-rectangle",              new List<string> { "AddNewDepartmentGroup", "DepartmentGroups", "EditDepartmentGroup" }},
                 { "fa:fa-solid fa-xmark",                        new List<string> { "Cancel", "Close", "CloseDialog", "Hide" }},
             };
 
@@ -2741,7 +3254,8 @@ public static class Helpers
     /// <summary>
     /// Indicates if this helpers class has been initialized.
     /// </summary>
-    public static bool Initialized {
+    public static bool Initialized
+    {
         get {
             return _initialized;
         }
@@ -2971,11 +3485,11 @@ public static class Helpers
             output = Regex.Matches(input, "\n").Count + 1;
         }
 
-        if (output < MinimumLines) {
+        if(output < MinimumLines) {
             output = MinimumLines;
         }
 
-        if (output < 0) {
+        if(output < 0) {
             output = 0;
         }
 
@@ -2991,15 +3505,15 @@ public static class Helpers
     {
         List<Guid> output = new List<Guid>();
 
-        if (guids != null && guids.Any()) {
-            foreach (var item in guids) {
+        if(guids != null && guids.Any()) {
+            foreach(var item in guids) {
                 Guid? g = null;
 
                 try {
                     g = new Guid(item);
                 } catch { }
 
-                if (g != null) {
+                if(g != null) {
                     output.Add((Guid)g);
                 }
             }
@@ -3112,7 +3626,7 @@ public static class Helpers
     {
         string[] output = new string[] { };
 
-        if (values != null && values.Any()) {
+        if(values != null && values.Any()) {
             output = values.ToArray();
         }
 
@@ -3125,7 +3639,7 @@ public static class Helpers
     /// <param name="userId">The unique id of the user.</param>
     public async static Task LoadActiveUser(Guid? userId)
     {
-        if (GuidValue(userId) != Guid.Empty) {
+        if(GuidValue(userId) != Guid.Empty) {
             var activeUser = await GetOrPost<DataObjects.ActiveUser>("api/Data/GetActiveUser/" + userId.ToString());
             if (activeUser != null && activeUser.UserId == userId) {
                 var activeUsers = Model.ActiveUsers.ToList();
@@ -3156,6 +3670,23 @@ public static class Helpers
         }
     }
 
+    /// <summary>
+    /// Loads the Department Groups from the API endpoint.
+    /// </summary>
+    public async static Task LoadDepartmentGroups()
+    {
+        var items = await GetOrPost<List<DataObjects.DepartmentGroup>>("api/Data/GetDepartmentGroups");
+        Model.DepartmentGroups = items != null && items.Any() ? items : new List<DataObjects.DepartmentGroup>();
+    }
+
+    /// <summary>
+    /// Loads the Departments from the API endpoint.
+    /// </summary>
+    public async static Task LoadDepartments()
+    {
+        var items = await GetOrPost<List<DataObjects.Department>>("api/Data/GetDepartments");
+        Model.Departments = items != null && items.Any() ? items : new List<DataObjects.Department>();
+    }
 
     /// <summary>
     /// Loads the Image Files from the API endpoint.
@@ -3166,6 +3697,19 @@ public static class Helpers
         Model.ImageFiles = items != null && items.Any() ? items : new List<DataObjects.FileStorage>();
     }
 
+
+
+    // {{ModuleItemStart:Tags}}
+    /// <summary>
+    /// Loads the Tags from the API endpoint.
+    /// </summary>
+    public async static Task LoadTags()
+    {
+        var items = await GetOrPost<List<DataObjects.Tag>>("api/Data/GetTags");
+        Model.Tags = items != null && items.Any() ? items : new List<DataObjects.Tag>();
+    }
+    // {{ModuleItemEnd:Tags}}
+
     /// <summary>
     /// Loads the Tenant List from the API endpoint.
     /// </summary>
@@ -3173,6 +3717,24 @@ public static class Helpers
     {
         var items = await GetOrPost<List<DataObjects.TenantList>>("api/Data/GetTenantList");
         Model.TenantList = items != null && items.Any() ? items : new List<DataObjects.TenantList>();
+    }
+
+    /// <summary>
+    /// Loads the User-Defined Field Labels from the API endpoint.
+    /// </summary>
+    public async static Task LoadUdfLabels()
+    {
+        var items = await GetOrPost<List<DataObjects.udfLabel>>("api/Data/GetUdfLabels");
+        Model.udfLabels = items != null && items.Any() ? items : new List<DataObjects.udfLabel>();
+    }
+
+    /// <summary>
+    /// Loads the User Groups from the API endpoint.
+    /// </summary>
+    public async static Task LoadUserGroups()
+    {
+        var items = await GetOrPost<List<DataObjects.UserGroup>>("api/Data/GetUserGroups");
+        Model.UserGroups = items != null && items.Any() ? items : new List<DataObjects.UserGroup>();
     }
 
     /// <summary>
@@ -3387,6 +3949,9 @@ public static class Helpers
         }
     }
 
+    /// <summary>
+    /// The name of the CSS class that marks a field as missing if no value is provided.
+    /// </summary>
     public static string MissingValueClass {
         get {
             return "m-r";
@@ -3440,7 +4005,7 @@ public static class Helpers
     /// <param name="forceReload">Option to force a full reload on navigate.</param>
     public static void NavigateTo(string subUrl, bool forceReload = false)
     {
-        if (subUrl.ToLower().StartsWith("http:") || subUrl.ToLower().StartsWith("https:")) {
+        if(subUrl.ToLower().StartsWith("http:") || subUrl.ToLower().StartsWith("https:")) {
             NavManager.NavigateTo(subUrl, forceReload);
         } else {
             NavManager.NavigateTo(Model.ApplicationUrlFull + subUrl, forceReload);
@@ -3498,21 +4063,204 @@ public static class Helpers
     }
 
     /// <summary>
-    /// A method that can be used to update an object property when a field changes and optionally can fire a method when the change is complete.
+    /// Converts an object to an HTML table.
     /// </summary>
-    /// <param name="objectToUpdate">The object to be updated.</param>
-    /// <param name="propertyToUpdate">The name of the property to update.</param>
-    /// <param name="e">The ChangeEventArgs from the OnChange event.</param>
-    /// <param name="onChangeComplete">An optional delegate to be called when the update is complete.</param>
-    public static void OnChangeHandler<T>(object objectToUpdate, string propertyToUpdate, ChangeEventArgs e, Delegate? onChangeComplete = null)
+    /// <param name="o">The object to render.</param>
+    /// <param name="addClassToTable">An optional class to add to the table.</param>
+    /// <param name="addHeaderRowClass">An optional class to add to table rows that contain TH elements.</param>
+    /// <param name="sortByPropertyNames">Option to sort the property names alphabetically (defaults to true.)</param>
+    /// <returns></returns>
+    public static string ObjectToTable(object? o, string addClassToTable = "", string addHeaderRowClass = "", bool sortByPropertyNames = true)
     {
-        var value = GetChangeEventArgValue<T>(e);
+        var output = new System.Text.StringBuilder();
 
-        SetObjectPropertyValue(objectToUpdate, propertyToUpdate, value);
+        if (o != null) {
+            // If the object is enumerable draw a table with multiple rows.
+            // Otherwise, draw rows for each property.
+            var type = o.GetType();
 
-        if (onChangeComplete != null) {
-            onChangeComplete.DynamicInvoke();
+            if (o is IEnumerable) {
+                if (!String.IsNullOrWhiteSpace(addClassToTable)) {
+                    output.AppendLine("<table class=\"" + addClassToTable + "\">");
+                } else {
+                    output.AppendLine("<table>");
+                }
+
+                output.AppendLine("<thead>");
+
+                if (!String.IsNullOrWhiteSpace(addHeaderRowClass)) {
+                    output.AppendLine("<tr class=\"" + addHeaderRowClass + "\">");
+                } else {
+                    output.AppendLine("<tr>");
+                }
+
+                var dynamicO = (dynamic)o;
+                var firstItem = dynamicO[0];
+
+                var properties = firstItem.GetType().GetProperties();
+                var propertyNames = new List<string>();
+
+                foreach (var prop in properties) {
+                    propertyNames.Add(prop.Name);
+                }
+
+                if (sortByPropertyNames) {
+                    propertyNames = propertyNames.OrderBy(x => x).ToList();
+                }
+
+                foreach (var prop in propertyNames) {
+                    output.AppendLine("<th>" + prop + "</th>");
+                }
+
+                output.AppendLine("</tr>");
+                output.AppendLine("</thead>");
+                output.AppendLine("<tbody>");
+
+                foreach (var row in (IEnumerable)o) {
+                    output.AppendLine("<tr>");
+
+                    foreach (var prop in propertyNames) {
+                        output.AppendLine("<td>");
+
+                        var value = ObjectToTableGetPropertyValue(row, prop);
+                        if (value != null) {
+                            var thisType = value.GetType();
+
+                            if (thisType.IsGenericType) {
+                                var baseType = thisType.GetGenericArguments()[0];
+                                if (!baseType.ToString().ToLower().StartsWith("system.")) {
+                                    thisType = baseType;
+                                }
+                            }
+
+                            var thisTypeString = thisType.ToString().ToLower();
+
+                            if (thisTypeString.StartsWith("system.collections.generic.list")) {
+                                output.AppendLine(ObjectToTableListAsDIVs(value));
+                            } else if (thisTypeString.StartsWith("system.")) {
+                                output.AppendLine(value.ToString());
+                            } else if (value is IList || thisType.IsArray) {
+                                output.AppendLine(ObjectToTable(value, addClassToTable, addHeaderRowClass, sortByPropertyNames));
+                            } else if (value.GetType().GetProperties().Count() > 1) {
+                                output.AppendLine(ObjectToTable(value, addClassToTable, addHeaderRowClass, sortByPropertyNames));
+                            } else {
+                                output.AppendLine(value.ToString());
+                            }
+                        }
+
+                        output.AppendLine("</td>");
+                    }
+
+                    output.AppendLine("</tr>");
+                }
+
+                output.AppendLine("</tbody>");
+                output.AppendLine("</table>");
+            } else {
+                if (!String.IsNullOrWhiteSpace(addClassToTable)) {
+                    output.AppendLine("<table class=\"" + addClassToTable + "\">");
+                } else {
+                    output.AppendLine("<table>");
+                }
+
+                output.AppendLine("<tbody>");
+
+                foreach (var prop in type.GetProperties()) {
+                    output.AppendLine("<tr>");
+                    output.AppendLine("<td><b>" + prop.Name + "</b></td>");
+                    output.AppendLine("<td>");
+
+                    var value = prop.GetValue(o);
+
+                    if (value != null) {
+                        var thisType = value.GetType();
+
+                        if (thisType.IsGenericType) {
+                            var baseType = thisType.GetGenericArguments()[0];
+                            if (!baseType.ToString().ToLower().StartsWith("system.")) {
+                                thisType = baseType;
+                            }
+                        }
+
+                        var thisTypeString = thisType.ToString().ToLower();
+
+                        if (thisTypeString.StartsWith("system.collections.generic.list")) {
+                            output.AppendLine(ObjectToTableListAsDIVs(value));
+                        } else if (thisTypeString.StartsWith("system.")) {
+                            output.AppendLine(value.ToString());
+                        } else if (value is IList || thisType.IsArray) {
+                            output.AppendLine(ObjectToTable(value, addClassToTable, addHeaderRowClass, sortByPropertyNames));
+                        } else if (value.GetType().GetProperties().Count() > 1) {
+                            output.AppendLine(ObjectToTable(value, addClassToTable, addHeaderRowClass, sortByPropertyNames));
+                        } else {
+                            output.AppendLine(value.ToString());
+                        }
+                    }
+
+                    output.AppendLine("</td>");
+                    output.AppendLine("</tr>");
+                }
+
+                output.AppendLine("</tbody>");
+                output.AppendLine("</table>");
+            }
         }
+
+        return output.ToString();
+    }
+
+    /// <summary>
+    /// Used by the ObjectToTable function to get the value of an object property.
+    /// </summary>
+    /// <param name="o">The object.</param>
+    /// <param name="property">The property to return.</param>
+    /// <returns>The property value if it exists, or null.</returns>
+    private static object? ObjectToTableGetPropertyValue(object? o, string property)
+    {
+        if (o != null) {
+            foreach (String part in property.Split(".")) {
+                Type type = o.GetType();
+
+                System.Reflection.BindingFlags bindingAttrs = System.Reflection.BindingFlags.Instance |
+                    System.Reflection.BindingFlags.Static |
+                    System.Reflection.BindingFlags.Public |
+                    System.Reflection.BindingFlags.NonPublic |
+                    System.Reflection.BindingFlags.IgnoreCase;
+
+                var info = type.GetProperty(part, bindingAttrs);
+                if (info != null) {
+                    var obj = info.GetValue(o, null);
+                    if (obj != null) {
+                        return obj;
+                    }
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Used by the ObjectToTable function to convert a list of objects to a list of DIV elements.
+    /// </summary>
+    /// <param name="o">An object that contains an enumerable collection.</param>
+    /// <returns>The items in individual DIV elements.</returns>
+    public static string ObjectToTableListAsDIVs(object? o)
+    {
+        var output = new System.Text.StringBuilder();
+
+        if (o != null) {
+            try {
+                var type = o.GetType();
+
+                var dyn = (dynamic)o;
+                foreach (var item in dyn) {
+                    output.AppendLine("<div>" + item + "</div>");
+                }
+            } catch { }
+        }
+
+        return output.ToString();
     }
 
     /// <summary>
@@ -3532,9 +4280,28 @@ public static class Helpers
     }
 
     /// <summary>
+    /// A method that can be used to update an object property when a field changes and optionally can fire a method when the change is complete.
+    /// </summary>
+    /// <param name="objectToUpdate">The object to be updated.</param>
+    /// <param name="propertyToUpdate">The name of the property to update.</param>
+    /// <param name="e">The ChangeEventArgs from the OnChange event.</param>
+    /// <param name="onChangeComplete">An optional delegate to be called when the update is complete.</param>
+    public static void OnChangeHandler<T>(object objectToUpdate, string propertyToUpdate, ChangeEventArgs e, Delegate? onChangeComplete = null)
+    {
+        var value = GetChangeEventArgValue<T>(e);
+
+        SetObjectPropertyValue(objectToUpdate, propertyToUpdate, value);
+
+        if (onChangeComplete != null) {
+            onChangeComplete.DynamicInvoke();
+        }
+    }
+
+    /// <summary>
     /// Gets the current date and time in UTC.
     /// </summary>
-    public static DateTime Now {
+    public static DateTime Now
+    {
         get {
             var output = Convert.ToDateTime(DateTime.UtcNow.ToString("o"));
             return output;
@@ -3612,9 +4379,75 @@ public static class Helpers
     }
 
     /// <summary>
+    /// Gets the value for a given option value for a prompt.
+    /// </summary>
+    /// <param name="prompt">The prompt.</param>
+    /// <param name="label">The label of the option item.</param>
+    /// <returns>The value for the option item, or an empty string.</returns>
+    public static string PluginPromptOptionValue(PluginPrompt prompt, string? label)
+    {
+        string output = String.Empty;
+
+        if (!String.IsNullOrWhiteSpace(label) && prompt.Options != null && prompt.Options.Count > 0) {
+            var option = prompt.Options.FirstOrDefault(x => x.Label.ToLower() == label.ToLower());
+            if (option != null) {
+                output += option.Value;
+            }
+        }
+
+        return output;
+    }
+
+    /// <summary>
+    /// Converts the results of executing a plugin to a friendly string.
+    /// </summary>
+    /// <param name="result">The PluginExecuteResult object.</param>
+    /// <param name="includeObjects">An option to include objects in the output (defaults to false.)</param>
+    /// <returns>The results of the plugin execution formatted as a string.</returns>
+    public static string PluginResultToString(Plugins.PluginExecuteResult result, bool includeObjects = false)
+    {
+        System.Text.StringBuilder output = new StringBuilder();
+
+        output.AppendLine(Text("Result") + ": " + result.Result.ToString().ToLower());
+
+        if (result.Messages != null && result.Messages.Count > 0) {
+            output.AppendLine("");
+            output.AppendLine((result.Messages.Count == 1 ? Text("Message") : Text("Messages")) + ":");
+            foreach (var msg in result.Messages) {
+                output.AppendLine(" - " + msg);
+            }
+        }
+
+        if (result.Objects != null && result.Objects.Count() > 0) {
+            var objects = result.Objects.ToList();
+            output.AppendLine("");
+
+            int index = -1;
+
+            if (includeObjects) {
+                output.AppendLine(Text("Objects"));
+
+                foreach (var o in objects) {
+                    index++;
+                    var json = SerializeObject(o);
+
+                    if (!String.IsNullOrWhiteSpace(json) && json != "[]") {
+                        output.AppendLine("");
+                        output.AppendLine(Text("Object") + " " + index.ToString() + ":");
+                        output.AppendLine(json);
+                    }
+                }
+            }
+        }
+
+        return output.ToString();
+    }
+
+
+    /// <summary>
     /// Opens a quick action slideout.
     /// </summary>
-    /// <param name="Action">The name of the action (AddUser)</param>
+    /// <param name="Action">The name of the action (AddUser or AppointmentNote)</param>
     /// <param name="OnComplete">An optional Delegate to be invoked after the action has completed.</param>
     public async static Task QuickAction(string Action, Delegate? OnComplete = null)
     {
@@ -3633,6 +4466,7 @@ public static class Helpers
                 };
                 focus = "quickadd-user-FirstName";
                 break;
+
         }
 
         if (focus != String.Empty) {
@@ -3673,6 +4507,67 @@ public static class Helpers
         return output;
     }
 
+    // {{ModuleItemStart:Tags}}
+    /// <summary>
+    /// Renders a tag as HTML.
+    /// </summary>
+    /// <param name="tag">The tag to render.</param>
+    /// <returns>The HTML for the tag.</returns>
+    public static string RenderTag(DataObjects.Tag tag)
+    {
+        string output = String.Empty;
+
+        if (!String.IsNullOrWhiteSpace(tag.Name)) {
+            if (!String.IsNullOrWhiteSpace(tag.Style)) {
+                string style = tag.Style;
+
+                if (TagColors.Contains(style)) {
+                    output += "<div class=\"tag tag-" + style.ToLower() + "\">" + tag.Name + "</div>";
+                } else {
+                    output += "<div class=\"tag\"" + (!String.IsNullOrWhiteSpace(tag.Style) ? " style=\"" + tag.Style + "\"" : "") + ">" +
+                    tag.Name +
+                    "</div>";
+                }
+            } else {
+                output += "<div class=\"tag\">" +
+                tag.Name +
+                "</div>";
+            }
+
+
+        }
+
+        return output;
+    }
+
+    /// <summary>
+    /// Renders a collection of tags as HTML.
+    /// </summary>
+    /// <param name="TagIds">The collection of tag ids.</param>
+    /// <param name="SortAlphabetically">Option to sort the results alphabetically.</param>
+    /// <returns>The rendered HTML for the tags.</returns>
+    public static string RenderTags(List<Guid>? TagIds, bool SortAlphabetically = true)
+    {
+        string output = String.Empty;
+
+        if (SortAlphabetically) {
+            TagIds = SortTagList(TagIds);
+        }
+
+        if (TagIds != null && TagIds.Any()) {
+            List<DataObjects.OptionPair> tags = new List<DataObjects.OptionPair>();
+
+            foreach(var tagId in TagIds) {
+                var tag = Model.Tags.FirstOrDefault(x => x.TagId == tagId);
+                if(tag != null) {
+                    output += RenderTag(tag);
+                }
+            }
+        }
+
+        return output;
+    }
+    // {{ModuleItemEnd:Tags}}
 
     /// <summary>
     /// Reloads the entire data model for the selected user id.
@@ -3681,9 +4576,9 @@ public static class Helpers
     {
         DataObjects.BlazorDataModelLoader? blazorDataModelLoader = null;
 
-        if (Model.User.Enabled && Model.User.UserId != Guid.Empty) {
+        if(Model.User.Enabled && Model.User.UserId != Guid.Empty) {
             blazorDataModelLoader = await GetOrPost<DataObjects.BlazorDataModelLoader>("api/Data/GetBlazorDataModel/" + Model.User.UserId.ToString());
-        } else if (!String.IsNullOrWhiteSpace(Model.TenantCodeFromUrl)) {
+        }else if (!String.IsNullOrWhiteSpace(Model.TenantCodeFromUrl)) {
             blazorDataModelLoader = await GetOrPost<DataObjects.BlazorDataModelLoader>("api/Data/GetBlazorDataModelByTenantCode/" + Model.TenantCodeFromUrl);
         } else {
             blazorDataModelLoader = await GetOrPost<DataObjects.BlazorDataModelLoader>("api/Data/GetBlazorDataModel/");
@@ -3755,6 +4650,8 @@ public static class Helpers
                 Model.LoggedIn = blazorDataModelLoader.LoggedIn;
             }
 
+            Model.Plugins = blazorDataModelLoader.Plugins;
+
             if (Model.Released != blazorDataModelLoader.Released) {
                 Model.Released = blazorDataModelLoader.Released;
             }
@@ -3774,19 +4671,21 @@ public static class Helpers
 
             // Set the current tenant
             var tenant = Model.Tenants.FirstOrDefault(x => x.TenantId == Model.User.TenantId);
-            if (tenant == null && !String.IsNullOrWhiteSpace(Model.TenantCodeFromUrl)) {
+            if(tenant == null && !String.IsNullOrWhiteSpace(Model.TenantCodeFromUrl)) {
                 tenant = Model.Tenants.FirstOrDefault(x => x.TenantCode.ToLower() == Model.TenantCodeFromUrl.ToLower());
             }
 
-            if (tenant != null) {
+            if(tenant != null) {
                 Model.Tenant = tenant;
                 if (Model.TenantId != tenant.TenantId) {
                     Model.TenantId = tenant.TenantId;
                 }
-            } else if (Model.Tenant == null) {
+            } else if(Model.Tenant == null) {
                 Model.Tenant = new DataObjects.Tenant();
                 Model.TenantId = Guid.Empty;
             }
+
+            await ReloadModelApp();
 
             if (!Model.Loaded) {
                 Model.Loaded = true;
@@ -3802,12 +4701,12 @@ public static class Helpers
         // Only reload this list if this tenant has the users loaded.
         if (Model.Tenant.Users.Any()) {
             var users = await GetOrPost<List<DataObjects.UserListing>>("api/Data/ReloadTenantUsers");
-            if (users != null && users.Any()) {
+            if(users != null && users.Any()) {
                 Model.Tenant.Users = users;
 
                 // Also update the tenant object in Tenants.
                 var tenantInTenants = Model.Tenants.FirstOrDefault(x => x.TenantId == Model.TenantId);
-                if (tenantInTenants != null) {
+                if(tenantInTenants != null) {
                     tenantInTenants.Users = users;
                 }
             }
@@ -3820,7 +4719,7 @@ public static class Helpers
     public async static Task ReloadUser()
     {
         var user = await GetOrPost<DataObjects.User>("api/Data/ReloadUser/" + Model.User.UserId.ToString());
-        if (user != null && user.ActionResponse.Result) {
+        if(user != null && user.ActionResponse.Result) {
             Model.User = user;
             // Also save the latest token
             await CookieWrite("user-token", StringValue(Model.User.AuthToken));
@@ -3899,36 +4798,36 @@ public static class Helpers
 
         int totalSeconds = (int)seconds;
 
-        if (totalSeconds > 0) {
+        if(totalSeconds > 0) {
             int minutes = 0;
             int hours = 0;
             int days = 0;
 
-            if (totalSeconds >= 86400) {
+            if(totalSeconds >= 86400) {
                 days = (totalSeconds / 86400);
                 totalSeconds = totalSeconds - (86400 * days);
             }
 
-            if (totalSeconds >= 3600) {
+            if(totalSeconds >= 3600) {
                 hours = (totalSeconds / 3600);
                 totalSeconds = totalSeconds - (3600 * hours);
             }
 
-            if (totalSeconds > 60) {
+            if(totalSeconds > 60) {
                 minutes = (totalSeconds / 60);
                 totalSeconds = totalSeconds - (60 * minutes);
             }
 
-            if (days > 0) {
+            if(days > 0) {
                 output += days.ToString() + " " + (days > 1 ? Text("Days") : Text("Day"));
             }
 
-            if (hours > 0) {
-                if (output != "") { output += ", "; }
+            if(hours > 0) {
+                if(output != "") { output += ", "; }
                 output += hours.ToString() + " " + (hours > 1 ? Text("Hours") : Text("Hour"));
             }
 
-            if (minutes > 0) {
+            if(minutes > 0) {
                 if (output != "") { output += ", "; }
                 output += minutes.ToString() + " " + (minutes > 1 ? Text("Minutes") : Text("Minute"));
             }
@@ -3974,6 +4873,47 @@ public static class Helpers
         });
     }
 
+    // {{ModuleItemStart:Tags}}
+    /// <summary>
+    /// Shows a dialog to select tags.
+    /// </summary>
+    /// <param name="OnComplete">The Delegate that will be invoked and received the selected tags.</param>
+    /// <param name="Title">An optional title for the dialog.</param>
+    /// <param name="ExistingTags">An optional collection of any existing selected tags.</param>
+    /// <param name="ShowCurrentTags">An option to show the currently-selected tags.</param>
+    /// <param name="PreventDeselctingSelectedTags">An option to prevent the user from deselecting existing tags.</param>
+    public static async Task SelectTags(Delegate OnComplete, 
+        string Title = "", 
+        DataObjects.TagModule? Module = null, 
+        List<Guid>? ExistingTags = null, 
+        bool ShowCurrentTags = true, 
+        bool PreventDeselctingSelectedTags = false){
+
+        if (String.IsNullOrWhiteSpace(Title)) {
+            Title = IconAndText("SelectTags");
+        }
+
+        Dictionary<string, object> parameters = new Dictionary<string, object>();
+        parameters.Add("OnComplete", OnComplete);
+
+        if(Module != null) {
+            parameters.Add("Module", Module);
+        }
+
+        if (ExistingTags != null) {
+            parameters.Add("SelectedTags", ExistingTags);
+        }
+
+        parameters.Add("ShowCurrentTags", ShowCurrentTags);
+        parameters.Add("PreventDeselctingSelectedTags", PreventDeselctingSelectedTags);
+
+        await DialogService.OpenAsync<TagSelector>(Title, parameters, new Radzen.DialogOptions() {
+            AutoFocusFirstElement = false,
+            Resizable = false,
+            Draggable = false,
+        });
+    }
+    // {{ModuleItemEnd:Tags}}
 
     /// <summary>
     /// Serializes an object to JSON using the System.Text.Json.JsonSerializer.
@@ -4044,6 +4984,17 @@ public static class Helpers
     }
 
     /// <summary>
+    /// Calls the jsInterop method to set the theme.
+    /// </summary>
+    /// <param name="theme">The theme to be set.</param>
+    public static async void SetTheme(string theme)
+    {
+        Model.Theme = theme;
+        await jsRuntime.InvokeVoidAsync("SetPreferredColorScheme", theme);
+        await LocalStorage.SetItemAsync("Theme", theme);
+    }
+
+    /// <summary>
     /// Executes a function after a specific delay.
     /// </summary>
     /// <param name="methodToInvoke">The delegate to the method to invoke.</param>
@@ -4051,13 +5002,46 @@ public static class Helpers
     public static void SetTimeout(Delegate methodToInvoke, int millisecondsDelay = 100)
     {
         System.Threading.Timer? timer = null;
-        timer = new System.Threading.Timer((obj) => {
+        timer = new System.Threading.Timer((obj) =>
+        {
             methodToInvoke.DynamicInvoke();
             timer?.Dispose();
         },
         null, millisecondsDelay, System.Threading.Timeout.Infinite);
     }
 
+    // {{ModuleItemStart:Tags}}
+    /// <summary>
+    /// Sorts a list of tag by their names.
+    /// </summary>
+    /// <param name="TagIds">A list of Guids representing tags.</param>
+    /// <returns>The list of Guids sorted by the name of the tags.</returns>
+    public static List<Guid>? SortTagList(List<Guid>? TagIds)
+    {
+        var output = TagIds;
+
+        if (TagIds != null && TagIds.Any()) {
+            List<DataObjects.OptionPair> items = new List<DataObjects.OptionPair>();
+            foreach (var tagId in TagIds) {
+                var tag = Model.Tags.FirstOrDefault(x => x.TagId == tagId);
+                if (tag != null) {
+                    items.Add(new DataObjects.OptionPair {
+                        Id = tag.Name,
+                        Value = tag.TagId.ToString(),
+                    });
+                }
+            }
+
+            output = items
+                .OrderBy(x => x.Id)
+                .ToList()
+                .Select(x => new Guid(String.Empty + x.Value)).ToList();
+        }
+
+
+        return output;
+    }
+    // {{ModuleItemEnd:Tags}}
 
     /// <summary>
     /// Returns a spacer image with a given width.
@@ -4070,6 +5054,11 @@ public static class Helpers
         return output;
     }
 
+    /// <summary>
+    /// Splits a string based on newline characters.
+    /// </summary>
+    /// <param name="input">The string to split.</param>
+    /// <returns>A list of strings.</returns>
     public static List<string> SplitStringIntoLines(string? input)
     {
         var output = new List<string>();
@@ -4120,7 +5109,7 @@ public static class Helpers
 
         Model.TenantId = TenantId;
 
-        if (tenant != null) {
+        if(tenant != null) {
             Model.Tenant = tenant;
         }
 
@@ -4138,7 +5127,7 @@ public static class Helpers
             if (!String.IsNullOrWhiteSpace(user.AuthToken)) {
                 await CookieWrite("user-token", user.AuthToken);
             }
-        } else {
+        }else {
             Model.User = new DataObjects.User();
             await CookieWrite("user-token", "");
         }
@@ -4147,12 +5136,124 @@ public static class Helpers
 
         ForceModelUpdates();
 
-        if (user != null) {
+        if(user != null) {
             NavigateToRoot(true);
         }
 
         Model.NotifyTenantChanged();
     }
+
+    // {{ModuleItemStart:Tags}}
+    /// <summary>
+    /// The list of colors for tags.
+    /// </summary>
+    public static List<string> TagColors
+    {
+        get {
+            return new List<string> {
+                "LIGHTCORAL", "SALMON", "DARKSALMON", "LIGHTSALMON", "CRIMSON",
+                "RED", "FIREBRICK", "DARKRED", "PINK", "LIGHTPINK", "HOTPINK",
+                "DEEPPINK", "MEDIUMVIOLETRED", "PALEVIOLETRED",
+                "CORAL", "TOMATO", "ORANGERED", "DARKORANGE", "ORANGE",
+                "GOLD", "YELLOW", "LIGHTYELLOW", "LEMONCHIFFON",
+                "LIGHTGOLDENRODYELLOW", "PAPAYAWHIP", "MOCCASIN", "PEACHPUFF",
+                "PALEGOLDENROD", "KHAKI", "DARKKHAKI", "LAVENDER", "THISTLE",
+                "PLUM", "VIOLET", "ORCHID", "FUCHSIA", "MAGENTA", "MEDIUMORCHID",
+                "MEDIUMPURPLE", "REBECCAPURPLE", "BLUEVIOLET", "DARKVIOLET",
+                "DARKORCHID", "DARKMAGENTA", "PURPLE", "INDIGO", "SLATEBLUE",
+                "DARKSLATEBLUE", "MEDIUMSLATEBLUE", "GREENYELLOW", "CHARTREUSE",
+                "LAWNGREEN", "LIME", "LIMEGREEN", "PALEGREEN", "LIGHTGREEN",
+                "MEDIUMSPRINGGREEN", "SPRINGGREEN", "MEDIUMSEAGREEN", "SEAGREEN",
+                "FORESTGREEN", "GREEN", "DARKGREEN", "YELLOWGREEN", "OLIVEDRAB",
+                "OLIVE", "DARKOLIVEGREEN", "MEDIUMAQUAMARINE", "DARKSEAGREEN",
+                "LIGHTSEAGREEN", "DARKCYAN", "TEAL", "AQUA", "CYAN", "LIGHTCYAN",
+                "PALETURQUOISE", "AQUAMARINE", "TURQUOISE", "MEDIUMTURQUOISE",
+                "DARKTURQUOISE", "CADETBLUE", "STEELBLUE", "LIGHTSTEELBLUE",
+                "POWDERBLUE", "LIGHTBLUE", "SKYBLUE", "LIGHTSKYBLUE", "DEEPSKYBLUE",
+                "DODGERBLUE", "CORNFLOWERBLUE", "ROYALBLUE",
+                "BLUE", "MEDIUMBLUE", "DARKBLUE", "NAVY", "MIDNIGHTBLUE",
+                "CORNSILK", "BLANCHEDALMOND", "BISQUE", "NAVAJOWHITE", "WHEAT",
+                "BURLYWOOD", "TAN", "ROSYBROWN", "SANDYBROWN", "GOLDENROD",
+                "DARKGOLDENROD", "PERU", "CHOCOLATE", "SADDLEBROWN", "SIENNA",
+                "BROWN", "MAROON", "MISTYROSE", "GAINSBORO", "LIGHTGRAY",
+                "SILVER", "DARKGRAY", "GRAY", "DIMGRAY", "LIGHTSLATEGRAY",
+                "SLATEGRAY", "DARKSLATEGRAY", "BLACK" };
+        }
+    }
+
+    /// <summary>
+    /// Converts a CSV list of tag ids to a list of tag names.
+    /// </summary>
+    /// <param name="TagsAsCsvString">A string containing a CSV list of tag ids.</param>
+    /// <returns>A list of tag names.</returns>
+    public static async Task<string> TagsListFromIds(string? TagsAsCsvString)
+    {
+        string output = String.Empty;
+
+        if (!String.IsNullOrWhiteSpace(TagsAsCsvString)) {
+            var list = TagsAsCsvString.Split(',').Select(x => x.Trim()).ToList();
+            output = await TagsListFromIds(list);
+        }
+
+        return output;
+    }
+
+    /// <summary>
+    /// Converts a list of strings containing tag id to a list of tag names.
+    /// </summary>
+    /// <param name="Tags">The list of strings of tag ids.</param>
+    /// <returns>A list of tag names.</returns>
+    public static async Task<string> TagsListFromIds(List<string>? Tags)
+    {
+        string output = String.Empty;
+
+        if (Tags != null && Tags.Any()) {
+            if (!Model.Tags.Any()) {
+                await LoadTags();
+            }
+
+            foreach (var tagId in Tags) {
+                var tag = Model.Tags.FirstOrDefault(x => x.TagId.ToString() == tagId);
+                if (tag != null && !String.IsNullOrWhiteSpace(tag.Name)) {
+                    if (!String.IsNullOrEmpty(output)) {
+                        output += ", ";
+                    }
+                    output += tag.Name;
+                }
+            }
+        }
+
+        return output;
+    }
+
+    /// <summary>
+    /// Converts a list of tag ids to a list of tag names.
+    /// </summary>
+    /// <param name="Tags">The list of tag ids.</param>
+    /// <returns>A list of tag names.</returns>
+    public static async Task<string> TagsListFromIds(List<Guid>? Tags)
+    {
+        string output = String.Empty;
+
+        if (Tags != null && Tags.Any()) {
+            if (!Model.Tags.Any()) {
+                await LoadTags();
+            }
+
+            foreach (var tagId in Tags) {
+                var tag = Model.Tags.FirstOrDefault(x => x.TagId == tagId);
+                if (tag != null && !String.IsNullOrWhiteSpace(tag.Name)) {
+                    if (!String.IsNullOrEmpty(output)) {
+                        output += ", ";
+                    }
+                    output += tag.Name;
+                }
+            }
+        }
+
+        return output;
+    }
+    // {{ModuleItemEnd:Tags}}
 
     /// <summary>
     /// Gets the name of a tenant from the unique id.
@@ -4185,9 +5286,9 @@ public static class Helpers
     /// <param name="MarkUndefinedStrings">An option to mark undefined strings (those not included in your custom language definitions) by converting them to uppercase</param>
     /// <param name="textCase">An option to override the default text case for the text formatting.</param>
     /// <returns>The language item.</returns>
-    public static string Text(string? text,
-        bool ReplaceSpaces = false,
-        List<string>? ReplaceValues = null,
+    public static string Text(string? text, 
+        bool ReplaceSpaces = false, 
+        List<string>? ReplaceValues = null, 
         bool MarkUndefinedStrings = true,
         TextCase textCase = TextCase.Normal)
     {
@@ -4310,8 +5411,8 @@ public static class Helpers
     /// <param name="options">Any TooltipOptions to override the defaults.</param>
     public static void Tooltip(ElementReference element, string html, TooltipOptions? options = null)
     {
-        if (options == null) {
-            options = new TooltipOptions {
+        if(options == null) {
+            options = new TooltipOptions { 
                 Duration = 5000,
             };
         }
@@ -4328,7 +5429,7 @@ public static class Helpers
     {
         var output = filter;
 
-        if (output.Columns != null && output.Columns.Any()) {
+        if(output.Columns != null && output.Columns.Any()) {
             foreach (var column in output.Columns) {
                 if (!String.IsNullOrWhiteSpace(column.BooleanIcon)) {
                     string booleanIcon = Icon(column.BooleanIcon, true);
@@ -4337,10 +5438,10 @@ public static class Helpers
                     }
                 }
 
-                if (!String.IsNullOrWhiteSpace(column.Label) && column.Label.ToLower().StartsWith("icon:")) {
+                if(!String.IsNullOrWhiteSpace(column.Label) && column.Label.ToLower().StartsWith("icon:")) {
                     string label = column.Label.Substring(5);
                     string icon = Icon(label, true);
-                    if (!String.IsNullOrWhiteSpace(icon)) {
+                    if(!String.IsNullOrWhiteSpace(icon)) {
                         column.Label = icon;
                         if (String.IsNullOrWhiteSpace(column.BooleanIcon)) {
                             column.BooleanIcon = column.Label;
@@ -4363,7 +5464,7 @@ public static class Helpers
     /// <param name="UploadInstructions">Any upload instructions to show before the upload control.</param>
     /// <param name="SupportedFileTypes">A list of extensions if you wish to limit the upload types allowed.</param>
     /// <param name="AllowMultipleUploads">Option to indicate if the user can upload only a single file or multiple files.</param>
-    public static async Task UploadFile(Delegate OnUploadComplete, string Title = "",
+    public static async Task UploadFile(Delegate OnUploadComplete, string Title = "", 
         string UploadInstructions = "", List<string>? SupportedFileTypes = null, bool AllowMultipleUploads = false)
     {
         if (String.IsNullOrWhiteSpace(Title)) {
@@ -4448,12 +5549,38 @@ public static class Helpers
         return output;
     }
 
-    public static string Uri {
+    /// <summary>
+    /// Gets the Uri from the NavManager.
+    /// </summary>
+    public static string Uri
+    {
         get {
             return NavManager.Uri;
         }
     }
 
+    /// <summary>
+    /// Gets the name of a User Group based on the unique id.
+    /// </summary>
+    /// <param name="GroupId">The unique id of the User Group.</param>
+    /// <returns>The name of the User Group.</returns>
+    public static async Task<string> UserGroupName(Guid? GroupId)
+    {
+        string output = String.Empty;
+
+        if (GroupId.HasValue) {
+            if (!Model.UserGroups.Any()) {
+                await LoadUserGroups();
+            }
+
+            var userGroup = Model.UserGroups.FirstOrDefault(x => x.GroupId == GroupId);
+            if (userGroup != null) {
+                output += userGroup.Name;
+            }
+        }
+
+        return output;
+    }
 
     /// <summary>
     /// Gets either the user photo or the default user icon.
@@ -4525,9 +5652,9 @@ public static class Helpers
                         recs = recs.Where(x => x.FirstName != null && x.FirstName.ToLower().StartsWith(firstName) && x.Username?.ToLower() != "admin").ToList();
                     }
                 } else {
-                    recs = recs.Where(x =>
+                    recs = recs.Where(x =>  
                             (x.Username != null ? x.Username : "").ToLower() != "admin"
-                            &&
+                            && 
                             (
                                 (x.FirstName != null && x.FirstName.ToLower().Contains(search)) ||
                                 (x.LastName != null && x.LastName.ToLower().Contains(search)) ||
@@ -4631,12 +5758,12 @@ public static class Helpers
                 }
 
                 var tenant = Model.TenantList.FirstOrDefault(x => x.TenantCode.ToLower() == TenantCode.ToLower());
-                if (tenant == null) {
+                if(tenant == null) {
                     // The Tenant Code was not a valid Tenant Code, so redirect to the InvalidTenantCode page.
                     NavManager.NavigateTo(Model.ApplicationUrl + "InvalidTenantCode");
                 } else {
                     // It's a valid tenant code, so make sure it's the current tenant.
-                    if (Helpers.StringValue(Model.Tenant.TenantCode).ToLower() != TenantCode.ToLower()) {
+                    if(Helpers.StringValue(Model.Tenant.TenantCode).ToLower() != TenantCode.ToLower()) {
                         await SwitchTenant(tenant.TenantId);
                     }
                 }

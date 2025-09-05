@@ -1,8 +1,5 @@
 namespace FreeCICD;
 
-/// <summary>
-/// This static class is used to persist a few settings about the startup state of the application.
-/// </summary>
 public static partial class GlobalSettings
 {
     public enum EnvironmentType
@@ -19,10 +16,10 @@ public static partial class GlobalSettings
     }
     public static class App
     {
-        public static string Name { get; set; } = "CICD";
-        public static string Version { get; set; } = "1.0.0";
-        public static string ReleaseDate { get; set; } = "3/6/2025";
-        public static string CompanyName { get; set; } = "Company Name";
+        public static string Name { get; set; } = "FreeCICD";
+        public static string Version { get; set; } = "1.0.1";
+        public static string ReleaseDate { get; set; } = "8/29/2025";
+        public static string CompanyName { get; set; } = "Washington State Universityz";
         public static string CompanyUrl { get; set; } = "em.wsu.edu";
 
         public static List<GlobalSettings.EnvironmentType> EnviormentTypeOrder = new List<GlobalSettings.EnvironmentType>() { EnvironmentType.DEV, EnvironmentType.PROD, EnvironmentType.CMS };

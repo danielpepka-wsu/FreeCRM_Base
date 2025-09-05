@@ -12,192 +12,23 @@
 @inject Radzen.TooltipService TooltipService
 <PageTitle>@Helpers.Text("AppTitle")</PageTitle>
 
-@if (IncludeCustomCss) {
-    // For clients that are using custom theme CSS and font settings that gets rendered here.
-    <style>
-        @if (!String.IsNullOrWhiteSpace(Model.Tenant.TenantSettings.ThemeFontCssImport)) {
-            @((MarkupString)Model.Tenant.TenantSettings.ThemeFontCssImport)
-        }
-        @if (!String.IsNullOrWhiteSpace(Model.Tenant.TenantSettings.ThemeCss)) {
-            @((MarkupString)Model.Tenant.TenantSettings.ThemeCss)
-        }
-        @((MarkupString)IncludeCustomCssFont)
-    </style>
+@if (IncludeCustomCss) { // For clients that are using custom theme CSS and font settings that gets rendered here.
+<style>
+    @if(!String.IsNullOrWhiteSpace(Model.Tenant.TenantSettings.ThemeFontCssImport)){
+        @((MarkupString)Model.Tenant.TenantSettings.ThemeFontCssImport)
+    }
+    @if(!String.IsNullOrWhiteSpace(Model.Tenant.TenantSettings.ThemeCss)){
+        @((MarkupString)Model.Tenant.TenantSettings.ThemeCss)
+    }
+    @((MarkupString)IncludeCustomCssFont)
+</style>
 }
 
 <div id="page-area" class="@PageAreaClass">
-    <div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasQuickAction" aria-labelledby="offcanvasQuickActionLabel" role="dialog">
-        <div class="offcanvas-header">
-            <h5 class="offcanvas-title" id="offcanvasQuickActionLabel"></h5>
-            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
-        </div>
-        <div class="offcanvas-body">
-            @switch (Model.QuickAction.ToLower()) {
-                case "adduser":
-                    <h2 class="quick-action">
-                        <Language Tag="AddNewUser" IncludeIcon="true" />
-                    </h2>
-
-                    <RequiredIndicator />
-
-                    <div class="mb-2">
-                        <label for="quickadd-user-FirstName">
-                            <Language Tag="FirstName" Required="true" />
-                        </label>
-                        <input type="text" id="quickadd-user-FirstName" class="form-control" @bind="Model.QuickAddUser.FirstName" />
-                    </div>
-
-                    <div class="mb-2">
-                        <label for="quickadd-user-LastName">
-                            <Language Tag="LastName" Required="true" />
-                        </label>
-                        <input type="text" id="quickadd-user-LastName" class="form-control" @bind="Model.QuickAddUser.LastName" />
-                    </div>
-
-                    <div class="mb-2">
-                        <label for="quickadd-user-Email">
-                            <Language Tag="Email" Required="true" />
-                        </label>
-                        <input type="text" id="quickadd-user-Email" class="form-control" @bind="Model.QuickAddUser.Email" />
-                    </div>
-
-                    <button type="button" class="btn btn-success btn-sm" @onclick="QuickAddUserSave">
-                        <Language Tag="Save" IncludeIcon="true" />
-                    </button>
-
-                    <button type="button" class="btn btn-dark btn-sm" @onclick="QuickActionClose">
-                        <Language Tag="Cancel" IncludeIcon="true" />
-                    </button>
-                    break;
-
-                case "addusersaving":
-                    <h2 class="quick-action">
-                        <Language Tag="SavingWait" IncludeIcon="true" />
-                    </h2>
-                    break;
-            }
-        </div>
-    </div>
-
-    <div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasUserMenu" aria-labelledby="offcanvasUserMenuLabel" role="dialog">
-        <div class="offcanvas-header">
-            <h5 class="offcanvas-title" id="offcanvasUserMenuLabel"></h5>
-            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
-        </div>
-        <div class="offcanvas-body">
-            @if (Model.LoggedIn) {
-                <div class="mb-2">
-                    <div class="menu-user-name">
-                        <span>@Model.User.FirstName</span>
-                        <span>@Model.User.LastName</span>
-                    </div>
-                    @if (!String.IsNullOrWhiteSpace(Model.User.Title)) {
-                        <div class="menu-user-title">@Model.User.Title</div>
-                    }
-                    <div class="menu-user-username">
-                        <Language Tag="Username" TransformCase="TextCase.Lowercase" />:
-                        <span>@Model.User.Username</span>
-                    </div>
-                    <div class="menu-user-email">
-                        <Language Tag="Email" TransformCase="TextCase.Lowercase" />:
-                        <span>@Model.User.Email</span>
-                    </div>
-                </div>
-
-                @if (Model.Tenants != null && Model.Tenants.Count() > 1) {
-                    <hr />
-                    <div class="mt-2">
-                        <Language Tag="SwitchAccountMessage" />
-                    </div>
-                    @foreach (var tenant in Model.Tenants.Where(x => x.Enabled == true).OrderBy(x => x.Name)) {
-                        string tenantDisplayName = Helpers.TenantNameFromId(tenant.TenantId);
-
-                        if (tenant.TenantId == Model.TenantId) {
-                            <div class="current-tenant">
-                                <Icon Name="TenantCurrent" />
-                                @if (tenantDisplayName.Length > 40) {
-                                    string truncatedName = tenantDisplayName.Substring(0, 18).Trim() + "..." + tenantDisplayName.Substring(tenantDisplayName.Length - 18).Trim();
-                                    <span title="@tenantDisplayName">@truncatedName</span>
-                                } else {
-                                    <span class="icon-text">@tenantDisplayName</span>
-                                }
-                            </div>
-                        } else {
-                            <div class="pointer hover-highlight" @onclick="@(() => Helpers.SwitchTenant(tenant.TenantId))">
-                                <Icon Name="TenantChange" />
-                                @if (tenantDisplayName.Length > 40) {
-                                    string truncatedName = tenantDisplayName.Substring(0, 18).Trim() + "..." + tenantDisplayName.Substring(tenantDisplayName.Length - 18).Trim();
-                                    <span class="icon-text" title="@tenantDisplayName">@truncatedName</span>
-                                } else {
-                                    <span class="icon-text">@tenantDisplayName</span>
-                                }
-                            </div>
-                        }
-                    }
-                }
-
-                @if (Model.Languages.Any()) {
-                    var languages = Model.Languages.Where(x => x.TenantId == Model.User.TenantId);
-                    if (languages != null && languages.Count() > 1) {
-                        <hr />
-                        <div class="mb-2">
-                            <div class="input-group mt-2">
-                                <span class="input-group-text" title="@Helpers.Text("Language")">
-                                    <Icon Name="Language" />
-                                </span>
-                                <select class="form-select language-selector" @onchange="@SetCultureCode">
-                                    @foreach (var language in languages.OrderBy(x => x.Description)) {
-                                        @if (language.Culture == Model.CultureCode) {
-                                            <option value="@language.Culture" SELECTED>@FormatCultureCode(language)</option>
-                                        } else {
-                                            <option value="@language.Culture">@FormatCultureCode(language)</option>
-                                        }
-
-                                    }
-                                </select>
-                            </div>
-                        </div>
-                    }
-                }
-            }
-
-            @if (Model.LoggedIn) {
-                <hr />
-                @if (AllowManageProfile) {
-                    <div class="mb-1 pointer hover-highlight" @onclick="@(() => Helpers.NavigateTo("Profile"))">
-                        <Language Tag="ManageProfile" IncludeIcon="true" />
-                    </div>
-                }
-
-                @if (!Model.User.PreventPasswordChange) {
-                    <div class="mb-1 pointer hover-highlight" @onclick="@(() => Helpers.NavigateTo("ChangePassword"))">
-                        <Language Tag="ChangePassword" IncludeIcon="true" />
-                    </div>
-                }
-
-                <div class="mb-1 pointer hover-highlight" @onclick="@(() => Helpers.NavigateTo("Logout"))">
-                    <Language Tag="Logout" IncludeIcon="true" />
-                </div>
-            }
-
-            @if (!String.IsNullOrWhiteSpace(Model.Version)) {
-                <hr />
-                <div class="version-and-copyright">
-                    v. <span>@Model.Version</span>
-                    @if (Model.Released > DateOnly.FromDateTime(DateTime.MinValue)) {
-                        <span> - <span>@Model.Released.ToShortDateString()</span></span>
-                    }
-                    @if (Model.LoggedIn && !String.IsNullOrWhiteSpace(Helpers.Text("CopyrightName"))) {
-                        <div>&copy; <Language Tag="CopyrightName" /></div>
-                    }
-
-                </div>
-            }
-        </div>
-    </div>
+    <OffcanvasPopoutMenu />
 
     @if (!Loading) {
-        if (Model.AppSettings.MaintenanceMode && !BypassMaintenanceMode) {
+        if(Model.AppSettings.MaintenanceMode  && !BypassMaintenanceMode){
             <div class="maintenance-mode container-fluid">
                 <h1 class="page-title">
                     <Language Tag="MaintenanceMode" IncludeIcon="true" />
@@ -207,151 +38,9 @@
                 </div>
             </div>
         } else {
-            <header>
-                <nav class="navbar fixed-top navbar-expand-lg navbar-expand-md border-bottom box-shadow mb-3">
-                    <div class="container-fluid">
-                        <a class="navbar-brand" href="@(Helpers.BuildUrl())">
-                            @if (!String.IsNullOrWhiteSpace(LogoUrl) && Model.Tenant.TenantSettings.LogoIncludedOnNavbar) {
-                                <img src="@LogoUrl" class="logo-navbar" title="@Helpers.Text("AppTitle")" />
-                            } else {
-                                @if (!String.IsNullOrWhiteSpace(Model.Tenant.TenantSettings.AppIcon)) {
-                                    <i>@((MarkupString)Model.Tenant.TenantSettings.AppIcon)</i>
-                                }
-                                <span>@Helpers.Text("AppTitle")</span>
-                            }
-                        </a>
-                        <button id="menu-bar-toggler" class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navBarToggler" aria-controls="navbarSupportedContent"
-                                aria-expanded="false" aria-label="Toggle navigation">
-                            <span class="navbar-toggler-icon"></span>
-                        </button>
-                        <div class="navbar-collapse collapse" id="navBarToggler">
-                            <ul class="navbar-nav me-auto">
-                                @if (Model.LoggedIn) {
+            <NavigationMenu />
 
-
-
-                                    @if (Model.User.Admin) {
-                                        <li class="nav-item dropdown">
-                                            <a class="@(AdminView ? "nav-link dropdown-toggle active" : "nav-link dropdown-toggle")" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                                <Language Tag="Admin" IncludeIcon="true" />
-                                            </a>
-                                            <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
-                                                @if (Model.User.AppAdmin) {
-                                                    <li>
-                                                        <a class="@(Model.View == "appsettings" ? "dropdown-item app-admin-only active" : "dropdown-item app-admin-only")" href="@(Helpers.BuildUrl("Settings/AppSettings"))">
-                                                            <Language Tag="AppSettings" IncludeIcon="true" />
-                                                        </a>
-                                                    </li>
-                                                }
-
-                                                @if (Model.FeatureEnabledFiles) {
-                                                    <li>
-                                                        <a class="@(Model.View == "files" ? "dropdown-item active" : "dropdown-item")" href="@(Helpers.BuildUrl("Settings/Files"))">
-                                                            <Language Tag="Files" IncludeIcon="true" />
-                                                        </a>
-                                                    </li>
-                                                }
-                                                <li>
-                                                    <a class="@(Model.View == "language" ? "dropdown-item active" : "dropdown-item")" href="@(Helpers.BuildUrl("Settings/Language"))">
-                                                        <Language Tag="Language" IncludeIcon="true" />
-                                                    </a>
-                                                </li>
-
-                                                <li>
-                                                    <a class="@(Model.View == "settings" ? "dropdown-item active" : "dropdown-item")" href="@(Helpers.BuildUrl("Settings"))">
-                                                        <Language Tag="Settings" IncludeIcon="true" />
-                                                    </a>
-                                                </li>
-                                                @if (Model.User.AppAdmin) {
-                                                    <li>
-                                                        <a class="@(new List<string> { "edittenant", "tenants" }.Contains(Model.View) ? "dropdown-item app-admin-only active" : "dropdown-item app-admin-only")" href="@(Helpers.BuildUrl("Settings/Tenants"))">
-                                                            <Language Tag="Tenants" IncludeIcon="true" />
-                                                        </a>
-                                                    </li>
-                                                }
-                                                <li>
-                                                    <a class="@(new List<string> { "edituser", "users" }.Contains(Model.View) ? "dropdown-item active" : "dropdown-item")" href="@(Helpers.BuildUrl("Settings/Users"))">
-                                                        <Language Tag="Users" IncludeIcon="true" />
-                                                    </a>
-                                                </li>
-                                            </ul>
-                                        </li>
-                                    }
-                                }
-                            </ul>
-                            <form class="d-flex">
-                                <ul class="navbar-nav me-auto">
-                                    @if (Model.HaveDeletedRecords) {
-                                        <li class="nav-item">
-                                            <a class="nav-link deleted-records" role="button" href="@(Helpers.BuildUrl("Settings/DeletedRecords"))" title="@Helpers.Text("PendingDeletedRecords")">
-                                                <Icon Name="DeletedRecords" />
-                                            </a>
-                                        </li>
-                                    }
-
-                                    @if (String.IsNullOrWhiteSpace(Model.Tenant.TenantSettings.Theme)) {
-                                        <li class="nav-item dropdown" title="@Helpers.Text("Theme")">
-                                            <a class="nav-link dropdown-toggle" href="#" id="themeDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                                @switch (Model.Theme) {
-                                                    case "dark":
-                                                        <Icon Name="ThemeDark" />
-                                                        break;
-
-                                                    case "light":
-                                                        <Icon Name="ThemeLight" />
-                                                        break;
-
-                                                    case "auto":
-                                                        <Icon Name="ThemeAuto" />
-                                                        break;
-                                                }
-                                            </a>
-                                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="themeDropdown">
-                                                <li>
-                                                    <a class="dropdown-item disabled" href="javascript:void('0');">
-                                                        <Language Tag="Theme" IncludeIcon="true" />
-                                                    </a>
-                                                </li>
-                                                <li><hr class="dropdown-divider"></li>
-                                                <li>
-                                                    <a class="dropdown-item" href="javascript:void('0');" @onclick="@(() => SetTheme("auto"))">
-                                                        <Language Tag="ThemeAuto" IncludeIcon="true" />
-                                                    </a>
-                                                </li>
-                                                <li>
-                                                    <a class="dropdown-item" href="javascript:void('0');" @onclick="@(() => SetTheme("light"))">
-                                                        <Language Tag="ThemeLight" IncludeIcon="true" />
-                                                    </a>
-                                                </li>
-                                                <li>
-                                                    <a class="dropdown-item" href="javascript:void('0');" @onclick="@(() => SetTheme("dark"))">
-                                                        <Language Tag="ThemeDark" IncludeIcon="true" />
-                                                    </a>
-                                                </li>
-                                            </ul>
-                                        </li>
-                                    }
-                                    <li class="nav-item">
-                                        <a class="nav-link" data-bs-toggle="offcanvas" href="#offcanvasUserMenu" role="button" aria-controls="offcanvasUserMenu">
-                                            @if (Model.LoggedIn) {
-                                                @if (!String.IsNullOrWhiteSpace(UserAvatarUrl)) {
-                                                    <img class="user-menu-icon" src="@UserAvatarUrl" />
-                                                } else {
-                                                    <Icon Name="User" />
-                                                }
-                                            } else {
-                                                <Icon Name="Info" />
-                                            }
-                                        </a>
-                                    </li>
-                                </ul>
-                            </form>
-                        </div>
-                    </div>
-                </nav>
-            </header>
-
-            @if (!Model.AppOnline) {
+            @if (!Model.AppOnline){
                 <div class="container-fluid">
                     <div role="alert" class="alert alert-danger">
                         <Language Tag="ServerOffline" />
@@ -464,13 +153,13 @@
 
                     <table class="padded">
                         <tbody>
-                            @foreach (var user in Model.UsersOnSamePage.OrderBy(x => x.FirstName).ThenBy(x => x.LastName)) {
-                                string icon = Helpers.UserIcon(user.Photo);
-                                <tr>
-                                    <td>@((MarkupString)icon)</td>
-                                    <td>@user.FirstName @user.LastName</td>
-                                </tr>
-                            }
+                        @foreach (var user in Model.UsersOnSamePage.OrderBy(x => x.FirstName).ThenBy(x => x.LastName)) {
+                            string icon = Helpers.UserIcon(user.Photo);
+                            <tr>
+                                <td>@((MarkupString)icon)</td>
+                                <td>@user.FirstName @user.LastName</td>
+                            </tr>
+                        }
                         </tbody>
                     </table>
                 </div>
@@ -486,11 +175,11 @@
 <div id="blazor-error-ui">
     An unhandled error has occurred.
     <a href="" class="reload">Reload</a>
-    <a class="dismiss">🗙</a>
+    <a class="dismiss">X</a>
 </div>
 
 <RadzenDialog />
-<RadzenTooltip />
+<RadzenTooltip/>
 
 @code {
     private bool hubConfigured = false;
@@ -509,12 +198,19 @@
 
     protected DotNetObjectReference<MainLayout>? dotNetHelper;
 
-    public void Dispose() {
+    public void Dispose()
+    {
         dotNetHelper?.Dispose();
+
+        Model.Subscribers_OnChange.Remove("MainLayout");
+        Model.OnChange -= StateHasChanged;
+
+        NavManager.LocationChanged -= LocationChanged;
     }
 
-    protected override async Task OnInitializedAsync() {
-        if (!Model.Subscribers_OnChange.Contains("MainLayout")) {
+    protected override async Task OnInitializedAsync()
+    {
+        if (!Model.Subscribers_OnChange.Contains("MainLayout")){
             Model.Subscribers_OnChange.Add("MainLayout");
             Model.OnChange += StateHasChanged;
         }
@@ -544,10 +240,11 @@
 
         updateTimer = new System.Threading.Timer(async (object? stateInfo) => {
             await CheckForUpdates();
-        }, new System.Threading.AutoResetEvent(false), 0, 60000);
+        }, new System.Threading.AutoResetEvent(false), 0, 10000);
     }
 
-    protected async override Task OnAfterRenderAsync(bool firstRender) {
+    protected async override Task OnAfterRenderAsync(bool firstRender)
+    {
         if (firstRender) {
             dotNetHelper = DotNetObjectReference.Create(this);
             await jsRuntime.InvokeVoidAsync("SetDotNetHelper", dotNetHelper);
@@ -557,7 +254,7 @@
             if (String.IsNullOrWhiteSpace(theme)) {
                 theme = "light";
             }
-            SetTheme(theme);
+            Helpers.SetTheme(theme);
 
             await ValidateStartupState();
             StartupValidated = true;
@@ -572,7 +269,7 @@
                 await ValidateLogin();
             }
 
-            if (!Validating && Model.LoggedIn && StartupValidated && Model.User.Admin && !DeletedRecordCountsLoaded) {
+            if(!Validating && Model.LoggedIn && StartupValidated && Model.User.Admin && !DeletedRecordCountsLoaded) {
                 DeletedRecordCountsLoaded = true;
                 await Helpers.GetDeletedRecordCount();
                 StateHasChanged();
@@ -581,44 +278,28 @@
 
         Loading = false;
 
-        if (Model.Loaded) {
-            if (!hubConfigured) {
+        if(Model.Loaded) {
+            if(!hubConfigured){
                 hubConfigured = true;
 
                 hubConnection = new HubConnectionBuilder()
-                    .WithUrl(Model.ApplicationUrl + "FreeCICDhub")
+                    .WithUrl(Model.ApplicationUrl + "freecicdHub")
                     .WithStatefulReconnect()
                     .WithAutomaticReconnect()
                     .Build();
 
-                hubConnection.On<DataObjects.SignalRUpdate>("SignalRUpdate", async (update) => {
+                hubConnection.On<DataObjects.SignalRUpdate>("SignalRUpdate", async(update) => {
                     await ProcessSignalRUpdate(update);
                 });
 
                 await hubConnection.StartAsync();
 
                 await hubConnection.InvokeAsync("JoinTenantId", Model.TenantId);
-
-                //Console.WriteLine("SignalR Connected: " + hubConnection.ConnectionId);
-                hubConnection.Reconnected += async (connectionId) => {
-                    //Console.WriteLine("SignalR Reconnected: " + connectionId);
-
-                    Model.SignalrClientRegistration = new DataObjects.SignalrClientRegistration {
-                        ConnectionId = hubConnection.ConnectionId,
-                        RegistrationId = Guid.NewGuid().ToString()
-                    };
-                    await hubConnection.InvokeAsync("JoinTenantId", Model.TenantId);
-                };
-
-                Model.SignalrClientRegistration = new DataObjects.SignalrClientRegistration {
-                    ConnectionId = hubConnection.ConnectionId,
-                    RegistrationId = Guid.NewGuid().ToString()
-                };
             }
 
-            if (!versionInfoLoaded) {
+            if(!versionInfoLoaded) {
                 var info = await Helpers.GetOrPost<DataObjects.VersionInfo>("api/Data/GetVersionInfo");
-                if (info != null) {
+                if(info != null) {
                     versionInfo = info;
                     versionInfoLoaded = true;
                 }
@@ -627,71 +308,40 @@
     }
 
     [JSInvokable]
-    public void DotNetHelperHandler(params string[] arguments) {
-        if (arguments != null) {
+    public void DotNetHelperHandler(params string[] arguments){
+        if (arguments != null){
             Model.DotNetHelperHandler(arguments.ToList());
         }
     }
 
-    protected bool AdminView {
+    protected bool BypassMaintenanceMode
+    {
         get {
-            bool output = false;
-
-            switch (Model.View) {
-                case "appsettings":
-                case "files":
-                case "language":
-                case "settings":
-                case "tenants":
-                case "users":
-                    output = true;
-                    break;
-            }
-
-            return output;
-        }
-    }
-
-    protected bool AllowManageProfile {
-        get {
-            bool output = false;
-
-            if (Model.Tenant.TenantSettings.AllowUsersToManageAvatars || Model.Tenant.TenantSettings.AllowUsersToManageBasicProfileInfo) {
-                output = true;
-            }
-
-            return output;
-        }
-    }
-
-    protected bool BypassMaintenanceMode {
-        get {
-            bool output = false;
-
-            if (Model.User.AppAdmin) {
-                output = true;
-            } else if (Model.View == "login" && !String.IsNullOrWhiteSpace(Model.TenantCodeFromUrl) && Model.TenantCodeFromUrl.ToLower() == "admin") {
+            if(Model.User.AppAdmin) {
+                return true;
+            }else if (Model.View == "login" && !String.IsNullOrWhiteSpace(Model.TenantCodeFromUrl) && Model.TenantCodeFromUrl.ToLower() == "admin") {
                 // Allow logging in to the Admin tenant
-                output = true;
+                return true;
             }
 
-            return output;
+            return false;
         }
     }
 
-    protected async Task CheckForUpdates() {
+    protected async Task CheckForUpdates()
+    {
         if (versionInfoLoaded) {
             bool reload = false;
             bool wasOnline = Model.AppOnline;
 
             var info = await Helpers.GetOrPost<DataObjects.VersionInfo>("api/Data/GetVersionInfo");
 
-            if (info != null) {
+            if(info != null){
                 if (!String.IsNullOrWhiteSpace(info.Version)) {
                     Model.AppOnline = true;
                 }
 
-                if (versionInfo.Released != info.Released || versionInfo.RunningSince != info.RunningSince || versionInfo.Version != info.Version) {
+                if(versionInfo.Released != info.Released || versionInfo.RunningSince != info.RunningSince || versionInfo.Version != info.Version) {
                     reload = true;
                 }
 
@@ -699,13 +349,13 @@
                     var uri = Helpers.ToAbsoluteUri(Helpers.Uri);
                     string redirect = uri.ToString();
 
-                    if (!String.IsNullOrWhiteSpace(redirect)) {
-                        if (redirect.ToLower().Contains("serverupdated")) {
+                    if(!String.IsNullOrWhiteSpace(redirect)){
+                        if (redirect.ToLower().Contains("serverupdated")){
                             // Already in the process of redirecting
                         } else {
-                            Helpers.NavigateTo("ServerUpdated?Redirect=" + Helpers.UrlEncode(redirect));
+                            Helpers.NavigateTo("ServerUpdated?Redirect=" + Helpers.UrlEncode(redirect));    
                         }
-                    } else {
+                    }else{
                         Helpers.NavigateToRoot();
                     }
                 }
@@ -716,48 +366,45 @@
                 StateHasChanged();
             }
 
-            if (wasOnline != Model.AppOnline) {
+            if(wasOnline != Model.AppOnline) {
                 if (Model.AppOnline) {
                     updateTimer?.Change(0, 10000);
                 } else {
-                    updateTimer?.Change(0, 2000);
+                    updateTimer?.Change(0, 2000);        
                 }
             }
         }
     }
 
-    protected void CloseMessage(string messageId) {
+    protected void CloseMessage(string messageId)
+    {
         Model.Messages = Model.Messages.Where(x => x.Id != messageId).ToList();
     }
 
-    public async ValueTask DisposeAsync() {
+    public async ValueTask DisposeAsync()
+    {
         if (hubConnection is not null) {
             await hubConnection.DisposeAsync();
         }
     }
 
-    protected string FormatCultureCode(DataObjects.Language language) {
-        string output = language.Description + " [" + language.Culture + "]";
-        return output;
-    }
-
-    protected bool IncludeCustomCss {
+    protected bool IncludeCustomCss
+    {
         get {
-            bool output = false;
-
-            if (Model.Tenant.TenantSettings.Theme == "custom") {
-                output = true;
+            if(Model.Tenant.TenantSettings.Theme == "custom") {
+                return true;
             } else if (!String.IsNullOrWhiteSpace(Model.Tenant.TenantSettings.ThemeFontCssImport)) {
-                output = true;
+                return true;
             } else if (!String.IsNullOrWhiteSpace(Model.Tenant.TenantSettings.ThemeFont)) {
-                output = true;
+                return true;
             }
 
-            return output;
+            return false;
         }
     }
 
-    protected string IncludeCustomCssFont {
+    protected string IncludeCustomCssFont
+    {
         get {
             string output = String.Empty;
 
@@ -774,10 +421,11 @@
     public bool IsSignalRConnected =>
         hubConnection?.State == HubConnectionState.Connected;
 
-    void LocationChanged(object? sender, LocationChangedEventArgs e) {
+    void LocationChanged(object? sender, LocationChangedEventArgs e)
+    {
         // Remove any messages
         Model.Messages = new List<Message>();
-        Model.NavigationId = "";
+        Model.NavigationId = String.Empty;
         Model.ViewIsEditPage = false;
 
         bool reloadDeleteCounts = Model.User.Admin && Model.Tenant.TenantSettings.DeletePreference == DataObjects.DeletePreference.MarkAsDeleted;
@@ -790,19 +438,8 @@
         });
     }
 
-    protected string LogoUrl {
-        get {
-            string output = "";
-
-            if (Model.Tenant.TenantSettings.Logo.HasValue && Model.Tenant.TenantSettings.Logo != Guid.Empty) {
-                output = Helpers.BaseUri + "File/View/" + ((Guid)Model.Tenant.TenantSettings.Logo).ToString();
-            }
-
-            return output;
-        }
-    }
-
-    protected void MessageWatcher() {
+    protected void MessageWatcher()
+    {
         if (Model.Messages.Any()) {
             int maxMessages = Model.Tenant.TenantSettings.MaxToastMessages;
             int totalPersistentMessages = 0;
@@ -836,35 +473,40 @@
         }
     }
 
-    protected string PageAreaClass {
+    protected string PageAreaClass
+    {
         get {
-            string output = "";
-
-            if (Model.AppSettings.MaintenanceMode && !BypassMaintenanceMode) {
-                output += "maintenance-mode";
+            if(Model.AppSettings.MaintenanceMode && !BypassMaintenanceMode) {
+                return "maintenance-mode";
             }
 
-            return output;
+            return String.Empty;
         }
     }
 
-    protected async Task ProcessSignalRUpdate(DataObjects.SignalRUpdate update) {
-        if (update != null && (update.TenantId == null || update.TenantId == Model.TenantId)) {
+    protected async Task ProcessSignalRUpdate(DataObjects.SignalRUpdate update)
+    {
+        if(update != null && (update.TenantId == null || update.TenantId == Model.TenantId)) {
             var itemId = update.ItemId;
             string message = update.Message.ToLower();
             var userId = update.UserId;
 
             switch (update.UpdateType) {
-                case DataObjects.SignalRUpdateType.LoadingDevOpsInfoStatusUpdate:
-                    // pass - gets handled on the page
+
+                case DataObjects.SignalRUpdateType.Department:
+                    await Helpers.LoadDepartments();
                     break;
+
+                case DataObjects.SignalRUpdateType.DepartmentGroup:
+                    break;
+
 
                 case DataObjects.SignalRUpdateType.File:
                     var file = Helpers.DeserializeObject<DataObjects.FileStorage>(update.ObjectAsString);
                     break;
 
                 case DataObjects.SignalRUpdateType.Language:
-                    if (userId != Model.User.UserId) {
+                    if(userId != Model.User.UserId){
                         await Helpers.ReloadModel();
                     }
                     break;
@@ -872,28 +514,30 @@
                 case DataObjects.SignalRUpdateType.LastAccessTime:
                     // Update the users last access time in the ActiveUsers list.
                     var activeUserItem = Model.ActiveUsers.FirstOrDefault(x => x.UserId == userId);
-                    if (activeUserItem != null) {
+                    if(activeUserItem != null) {
                         activeUserItem.LastAccess = DateTime.UtcNow;
                         StateHasChanged();
                     }
                     break;
 
+
+
                 case DataObjects.SignalRUpdateType.Setting:
                     switch (message) {
                         case "applicationsettingsupdate":
                             var appSettings = Helpers.DeserializeObject<DataObjects.ApplicationSettingsUpdate>(update.ObjectAsString);
-                            if (appSettings != null) {
+                            if(appSettings != null) {
                                 Model.AppSettings = appSettings;
 
-                                if (Model.ApplicationUrl != appSettings.ApplicationURL && !String.IsNullOrWhiteSpace(appSettings.ApplicationURL)) {
+                                if(Model.ApplicationUrl != appSettings.ApplicationURL && !String.IsNullOrWhiteSpace(appSettings.ApplicationURL)) {
                                     Model.ApplicationUrl = appSettings.ApplicationURL;
                                 }
 
-                                if (Model.ShowTenantListingWhenMissingTenantCode != appSettings.ShowTenantListingWhenMissingTenantCode) {
+                                if(Model.ShowTenantListingWhenMissingTenantCode != appSettings.ShowTenantListingWhenMissingTenantCode) {
                                     Model.ShowTenantListingWhenMissingTenantCode = appSettings.ShowTenantListingWhenMissingTenantCode;
                                 }
 
-                                if (Model.UseTenantCodeInUrl != appSettings.UseTenantCodeInUrl) {
+                                if(Model.UseTenantCodeInUrl != appSettings.UseTenantCodeInUrl) {
                                     Model.UseTenantCodeInUrl = appSettings.UseTenantCodeInUrl;
 
                                     Helpers.NavigateToRoot(true);
@@ -902,23 +546,28 @@
                             break;
 
                         default:
-                            if (userId != Model.User.UserId) {
+                            if(userId != Model.User.UserId) {
                                 await Helpers.ReloadModel();
                             }
                             break;
                     }
                     break;
 
+                // {{ModuleItemStart:Tags}}
+                case DataObjects.SignalRUpdateType.Tag:
+                    await Helpers.LoadTags();
+                    break;
+                // {{ModuleItemEnd:Tags}}
 
                 case DataObjects.SignalRUpdateType.Tenant:
                     switch (message) {
                         case "deleted":
-                            if (itemId == Model.TenantId) {
+                            if(itemId == Model.TenantId) {
                                 // The current tenant was deleted, so log any users out that are logged in to this tenant.
                                 Helpers.NavigateTo("Logout");
                             } else {
                                 // Not the current tenant, but if this user has this tenant in their list then reload the model.
-                                if (Model.Tenants.Any(x => x.TenantId == update.TenantId)) {
+                                if(Model.Tenants.Any(x => x.TenantId == update.TenantId)) {
                                     await Helpers.ReloadModel();
                                     StateHasChanged();
                                 }
@@ -926,7 +575,7 @@
                             break;
 
                         case "saved":
-                            if (Model.Tenants.Any(x => x.TenantId == update.TenantId)) {
+                            if(Model.Tenants.Any(x => x.TenantId == update.TenantId)){
                                 await Helpers.ReloadModel();
                                 StateHasChanged();
                             }
@@ -934,18 +583,80 @@
                     }
                     break;
 
+                case DataObjects.SignalRUpdateType.UDF:
+                    break;
+
+                case DataObjects.SignalRUpdateType.Undelete:
+                    // Not all undelete types require reloading data, but those that do are handled here.
+                    switch(message) {
+
+                        case "departmentgroup":
+                            var undeletedDepartmentGroup = Helpers.DeserializeObject<DataObjects.DepartmentGroup>(update.ObjectAsString);
+                            if (undeletedDepartmentGroup != null) {
+                                var modelDepartmentGroups = Model.DepartmentGroups.ToList();
+                                modelDepartmentGroups = modelDepartmentGroups.Where(x => x.DepartmentGroupId != undeletedDepartmentGroup.DepartmentGroupId).ToList();
+                                modelDepartmentGroups.Add(undeletedDepartmentGroup);
+                                Model.DepartmentGroups = modelDepartmentGroups;
+                            }
+                            break;
+
+                        case "department":
+                            var undeletedDepartment = Helpers.DeserializeObject<DataObjects.Department>(update.ObjectAsString);
+                            if (undeletedDepartment != null) {
+                                var modelDepartments = Model.Departments.ToList();
+                                modelDepartments = modelDepartments.Where(x => x.DepartmentId != undeletedDepartment.DepartmentId).ToList();
+                                modelDepartments.Add(undeletedDepartment);
+                                Model.Departments = modelDepartments;
+                            }
+                            break;
+
+
+                        case "filestorage":
+                            break;
+
+
+
+                        // {{ModuleItemStart:Tags}}
+                        case "tag":
+                            await Helpers.LoadTags();
+                            break;
+                        // {{ModuleItemEnd:Tags}}
+
+                        case "user":
+                            await Helpers.ReloadTenantUsers();
+                            break;
+
+                        case "usergroup":
+                            var undeletedUserGroup = Helpers.DeserializeObject<DataObjects.UserGroup>(update.ObjectAsString);
+                            if (undeletedUserGroup != null) {
+                                var modelUserGroups = Model.UserGroups.ToList();
+                                modelUserGroups = modelUserGroups.Where(x => x.GroupId != undeletedUserGroup.GroupId).ToList();
+                                modelUserGroups.Add(undeletedUserGroup);
+                                Model.UserGroups = modelUserGroups;
+                            }
+                            break;
+
+                        default:
+                            await Helpers.ProcessSignalRUpdateAppUndelete(update);
+                            break;
+                    }
+                    break;
+
+                case DataObjects.SignalRUpdateType.Unknown:
+                    await Helpers.ConsoleLog("Unknown SignalR Update Type Received");
+                    break;
 
                 case DataObjects.SignalRUpdateType.User:
                     var user = Helpers.DeserializeObject<DataObjects.User>(update.ObjectAsString);
-                    if (user != null) {
+                    if(user != null) {
                         var existingUser = Model.Users.FirstOrDefault(x => x.UserId == user.UserId);
-                        if (existingUser != null) {
+                        if(existingUser != null) {
                             existingUser = user;
-                        } else {
+                        }else {
                             Model.Users.Add(user);
                         }
 
-                        if (Model.User.UserId == user.UserId) {
+                        if(Model.User.UserId == user.UserId) {
                             Model.User = user;
 
                             if (!user.Enabled) {
@@ -955,7 +666,7 @@
                         }
                     }
 
-                    if (itemId == Model.User.UserId) {
+                    if(itemId == Model.User.UserId) {
                         switch (message) {
                             case "deleteduserphoto":
                                 Model.User.Photo = null;
@@ -970,13 +681,16 @@
                     }
                     break;
 
+                case DataObjects.SignalRUpdateType.UserGroup:
+                    await Helpers.LoadUserGroups();
+                    break;
 
                 case DataObjects.SignalRUpdateType.UserPreferences:
                     var userPreferences = Helpers.DeserializeObject<DataObjects.UserPreferences>(update.ObjectAsString);
-                    if (userPreferences != null) {
+                    if(userPreferences != null) {
                         // Update the item in the ActiveUsers list.
                         var activeUserItem2 = Model.ActiveUsers.FirstOrDefault(x => x.UserId == userId);
-                        if (activeUserItem2 != null) {
+                        if(activeUserItem2 != null) {
                             activeUserItem2.UserPreferences = userPreferences;
                             activeUserItem2.LastAccess = DateTime.UtcNow;
                         } else {
@@ -987,11 +701,14 @@
                     }
                     break;
 
-
-                case DataObjects.SignalRUpdateType.Unknown:
                 default:
-                    await Helpers.ConsoleLog("Unknown SignalR Update Type Received");
+                    await Helpers.ProcessSignalRUpdateApp(update);
                     break;
+            }
+
+            if (message.Contains("delete") || message.Contains("undelete") || update.UpdateType == DataObjects.SignalRUpdateType.Undelete) {
+                await Helpers.GetDeletedRecordCount();
+                StateHasChanged();
             }
 
             // Also trigger the update in the model.
@@ -999,56 +716,12 @@
         }
     }
 
-    protected async Task QuickActionClose() {
-        await Helpers.HideMenus();
-    }
-
-    protected async Task QuickAddUserSave() {
-        string focus = String.Empty;
-
-        if (String.IsNullOrWhiteSpace(Model.QuickAddUser.FirstName)) {
-            if (focus == String.Empty) { focus = "quickadd-user-FirstName"; }
-        }
-        if (String.IsNullOrWhiteSpace(Model.QuickAddUser.LastName)) {
-            if (focus == String.Empty) { focus = "quickadd-user-LastName"; }
-        }
-        if (String.IsNullOrWhiteSpace(Model.QuickAddUser.Email)) {
-            if (focus == String.Empty) { focus = "quickadd-user-Email"; }
-        }
-
-        if (focus != String.Empty) {
-            await Helpers.DelayedFocus(focus);
-            return;
-        }
-
-        Model.QuickAction = "addusersaving";
-
-        var saved = await Helpers.GetOrPost<DataObjects.User>("api/Data/SaveUser", Model.QuickAddUser);
-
-        await Helpers.HideMenus();
-
-        if (saved != null) {
-            if (saved.ActionResponse.Result) {
-                await Helpers.ReloadTenantUsers();
-
-                if (Model.QuickActionOnComplete != null) {
-                    Model.QuickActionOnComplete.DynamicInvoke(saved);
-                }
-
-                Model.AddMessage(Helpers.Text("NewUserCreated"), MessageType.Success);
-            } else {
-                Model.ErrorMessages(saved.ActionResponse.Messages);
-            }
-        } else {
-            Model.UnknownError();
-        }
-    }
-
-    protected async Task SavePendingUserPreferences() {
+    protected async Task SavePendingUserPreferences()
+    {
         if (Model.LoggedIn) {
             string json = Helpers.SerializeObject(Model.User.UserPreferences);
 
-            if (LastUserPreferencesJson != json) {
+            if(LastUserPreferencesJson != json) {
                 // Initially, the LastUserPreferencesJson will be empty. Don't save on that initial load of the object.
                 if (!String.IsNullOrEmpty(LastUserPreferencesJson)) {
                     await Helpers.SaveUserPreferences();
@@ -1059,67 +732,29 @@
         }
     }
 
-    protected async Task SetCultureCode(ChangeEventArgs e) {
-        string cultureCode = String.Empty;
-        try {
-            if (e.Value != null) {
-                cultureCode += e.Value.ToString();
-            }
-        } catch { }
-
-        if (!String.IsNullOrWhiteSpace(cultureCode)) {
-            await LocalStorage.SetItemAsync("CultureCode", cultureCode);
-            Model.CultureCode = cultureCode;
-
-            var lang = Model.Languages.FirstOrDefault(x => x.TenantId == Model.TenantId && x.Culture.ToLower() == cultureCode.ToLower());
-            if (lang != null) {
-                Model.Language = lang;
-            } else {
-                Model.Language = Model.DefaultLanguage;
-            }
-
-            Helpers.ForceModelUpdates();
-        }
-    }
-
     [JSInvokable]
-    public void SetFingerprint(string fingerprint) {
+    public void SetFingerprint(string fingerprint)
+    {
         Model.Fingerprint = fingerprint;
     }
 
-    protected async void SetTheme(string theme) {
-        Model.Theme = theme;
-        await jsRuntime.InvokeVoidAsync("SetPreferredColorScheme", theme);
-        await LocalStorage.SetItemAsync("Theme", theme);
-    }
-
-    protected async Task ThemeWatcher() {
+    protected async Task ThemeWatcher()
+    {
         string theme = Model.Theme;
 
-        if (!String.IsNullOrWhiteSpace(Model.Tenant.TenantSettings.Theme)) {
-            theme = Model.Tenant.TenantSettings.Theme;
+        if(!String.IsNullOrWhiteSpace(Model.Tenant.TenantSettings.Theme)) {
+            theme = Model.Tenant.TenantSettings.Theme; 
         }
 
         await jsRuntime.InvokeVoidAsync("SetPreferredColorScheme", theme);
     }
 
-    protected string UserAvatarUrl {
-        get {
-            string output = "";
-
-            if (Model.User.Photo.HasValue && Model.User.Photo != Guid.Empty) {
-                output = Helpers.BaseUri + "File/View/" + ((Guid)Model.User.Photo).ToString();// + "?Random=" + Guid.NewGuid().ToString();
-            }
-
-            return output;
-        }
-    }
-
-    protected async Task ValidateLogin() {
+    protected async Task ValidateLogin()
+    {
         if (!Validating) {
             Validating = true;
 
-            if (Model.User.ActionResponse.Result) {
+            if(Model.User.ActionResponse.Result){
                 if (!Model.LoggedIn) {
                     await Helpers.ReloadModel();
                 }
@@ -1136,7 +771,7 @@
             if (Model.User.ActionResponse.Result) {
                 Model.TenantId = Model.User.TenantId;
 
-                string token = "";
+                string token = String.Empty;
                 // Check the cookie first
                 var cookieToken = await Helpers.CookieRead<string>("user-token");
                 if (!String.IsNullOrWhiteSpace(cookieToken)) {
@@ -1176,12 +811,25 @@
                             allowAnonymousAccess = true;
                         }
 
+                        if (!String.IsNullOrWhiteSpace(Model.View)) {
+                            // If we have a pagename set by the model view, then use that instead of the parsed URL.
+                            pagename = Model.View;
+                        }
 
                         if (!allowAnonymousAccess) {
-                            if (GlobalSettings.App.AnonamousAccessList
-                                .Select(o => string.Empty + o?.ToUpper())
-                                .Contains(string.Empty + pagename?.ToUpper())) {
-                                allowAnonymousAccess = true;
+                            if (!String.IsNullOrWhiteSpace(pagename)) {
+                                if (!allowAnonymousAccess) {
+                                    switch (pagename.ToUpper()) {
+                                        case "ABOUT":
+                                        case "DATABASEOFFLINE":
+                                        case "LOGIN":
+                                        case "LOGOUT":
+                                        case "PROCESSLOGIN":
+                                        case "SETUP":
+                                            allowAnonymousAccess = true;
+                                            break;
+                                    }
+                                }
                             }
                         }
 
@@ -1189,7 +837,7 @@
                             var requestedUrl = Helpers.Uri;
                             var baseUrl = Helpers.BaseUri;
 
-                            if (requestedUrl != baseUrl) {
+                            if(requestedUrl != baseUrl) {
                                 await Helpers.CookieWrite("requested-url", requestedUrl);
                             }
 
@@ -1203,24 +851,24 @@
         }
     }
 
-    protected async Task ValidateStartupState() {
+    protected async Task ValidateStartupState()
+    {
         bool redirected = false;
 
         DataObjects.SimplePost post = new DataObjects.SimplePost {
-            SingleItem = Helpers.BaseUri,
+            SingleItem = Helpers.BaseUri,    
         };
 
-        //var response = await Http.GetAsync("api/Data/GetStartupState", post);
         var response = await Http.PostAsJsonAsync("api/Data/GetStartupState", post);
-        if (response != null && response.IsSuccessStatusCode) {
+        if(response != null && response.IsSuccessStatusCode) {
             var startupState = await response.Content.ReadFromJsonAsync<DataObjects.BooleanResponse>();
-            if (startupState != null) {
+            if(startupState != null) {
                 if (startupState.Messages.Any()) {
                     bool firstMessage = true;
                     string message = String.Empty;
                     Model.StartupErrors = new List<string>();
 
-                    foreach (var msg in startupState.Messages) {
+                    foreach(var msg in startupState.Messages) {
                         if (firstMessage) {
                             message = startupState.Messages[0];
                             firstMessage = false;

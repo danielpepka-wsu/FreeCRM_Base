@@ -62,6 +62,8 @@ public partial class BlazorDataModel
     private List<DataObjects.OptionPair> _CultureCodes = new List<DataObjects.OptionPair>();
     private DataObjects.Language _DefaultLanguage = new DataObjects.Language();
     private DataObjects.DeletedRecordCounts _DeletedRecordCounts = new DataObjects.DeletedRecordCounts();
+    private List<DataObjects.DepartmentGroup> _DepartmentGroups = new List<DataObjects.DepartmentGroup>();
+    private List<DataObjects.Department> _Departments = new List<DataObjects.Department>();
     private List<string> _DotNetHelperMessages = new List<string>();
     private string _Fingerprint = "";
     private List<string>? _GloballyDisabledModules = null;
@@ -73,6 +75,7 @@ public partial class BlazorDataModel
     private List<Message> _Messages = new List<Message>();
     private DateTime _ModelUpdated = DateTime.UtcNow;
     private string? _NavigationId = "";
+    private List<Plugins.Plugin> _Plugins = new List<Plugins.Plugin>();
     private string _QuickAction = "";
     private Delegate? _QuickActionOnComplete;
     private DataObjects.User _QuickAddUser = new DataObjects.User();
@@ -83,14 +86,19 @@ public partial class BlazorDataModel
     private List<string> _Subscribers_OnChange = new List<string>();
     private List<string> _Subscribers_OnDotNetHelperHandler = new List<string>();
     private List<string> _Subscribers_OnSignalRUpdate = new List<string>();
+    // {{ModuleItemStart:Tags}}
+    private List<DataObjects.Tag> _Tags = new List<DataObjects.Tag>();
+    // {{ModuleItemEnd:Tags}}
     private DataObjects.Tenant _Tenant = new DataObjects.Tenant();
     private string? _TenantCodeFromUrl;
     private Guid _TenantId = Guid.Empty;
     private List<DataObjects.TenantList> _TenantList = new List<DataObjects.TenantList>();
     private List<DataObjects.Tenant> _Tenants = new List<DataObjects.Tenant>();
     private string _Theme = "";
+    private List<DataObjects.udfLabel> _udfLabels = new List<DataObjects.udfLabel>();
     private bool _UseCustomAuthenticationProviderFromAdminAccount = false;
     private DataObjects.User _User = new DataObjects.User();
+    private List<DataObjects.UserGroup> _UserGroups = new List<DataObjects.UserGroup>();
     private List<DataObjects.User> _Users = new List<DataObjects.User>();
     private bool _UseTenantCodeInUrl = false;
     private string _Version = "";
@@ -199,6 +207,13 @@ public partial class BlazorDataModel
     }
 
     /// <summary>
+    /// Indicates if users can edit their Department.
+    /// </summary>
+    public bool AllowUsersToManageDepartment {
+        get { return FeatureEnabledDepartments && AllowUsersToManageAFeature("department"); }
+    }
+
+    /// <summary>
     /// Indicates if users can edit their email address.
     /// </summary>
     public bool AllowUsersToManageEmail {
@@ -211,6 +226,7 @@ public partial class BlazorDataModel
     public bool AllowUsersToManageEmployeeId {
         get { return FeatureEnabledEmployeeId && AllowUsersToManageAFeature("employeeid"); }
     }
+
 
     /// <summary>
     /// Indicates if users can edit their name.
@@ -393,6 +409,10 @@ public partial class BlazorDataModel
         }
     }
 
+    /// <summary>
+    /// A helper invoked from javascript to pass messages from the .NET Helper back into the data model.
+    /// </summary>
+    /// <param name="messages"></param>
     public void DotNetHelperHandler(List<string> messages)
     {
         _DotNetHelperMessages = messages;
@@ -438,6 +458,14 @@ public partial class BlazorDataModel
         return output;
     }
 
+    /// <summary>
+    /// Indicates if the Departments feature is enabled.
+    /// </summary>
+    public bool FeatureEnabledDepartments {
+        get { return FeatureEnabled("departments"); }
+    }
+
+
 
     /// <summary>
     /// Indicates if the EmployeeId feature is enabled.
@@ -454,11 +482,43 @@ public partial class BlazorDataModel
     }
 
 
+
+
+    // {{ModuleItemStart:Tags}}
+    /// <summary>
+    /// Indicates if the Tags feature is enabled.
+    /// </summary>
+    public bool FeatureEnabledTags {
+        get { return FeatureEnabled("tags"); }
+    }
+    // {{ModuleItemEnd:Tags}}
+
     /// <summary>
     /// Indicates if the Themes feature is enabled.
     /// </summary>
     public bool FeatureEnabledThemes {
         get { return FeatureEnabled("themes"); }
+    }
+
+    /// <summary>
+    /// Indicates if the User-Defined Fields feature is enabled.
+    /// </summary>
+    public bool FeatureEnabledUDF {
+        get { return FeatureEnabled("udf"); }
+    }
+
+    /// <summary>
+    /// Indicates if the User Groups feature is enabled.
+    /// </summary>
+    public bool FeatureEnabledUserGroups {
+        get { return FeatureEnabled("usergroups"); }
+    }
+
+    /// <summary>
+    /// Indicates if the Work Schedule feature is enabled.
+    /// </summary>
+    public bool FeatureEnabledWorkSchedule {
+        get { return FeatureEnabled("workschedule"); }
     }
 
     /// <summary>
@@ -474,6 +534,73 @@ public partial class BlazorDataModel
             }
         }
     }
+
+    /// <summary>
+    /// Gets the name of a Department Group from the unique id.
+    /// </summary>
+    /// <param name="DepartmentGroupId">The unique id of the group.</param>
+    /// <returns>The name of the group.</returns>
+    public string DepartmentGroupName(Guid? DepartmentGroupId)
+    {
+        string output = "";
+
+        if (_DepartmentGroups.Any() && DepartmentGroupId.HasValue) {
+            var departmentGroup = _DepartmentGroups.FirstOrDefault(x => x.DepartmentGroupId == DepartmentGroupId);
+            if (departmentGroup != null) {
+                output += departmentGroup.DepartmentGroupName;
+            }
+        }
+
+        return output;
+    }
+
+    /// <summary>
+    /// Gets the name of the Department from the unique id.
+    /// </summary>
+    /// <param name="DepartmentId">The unique id of the department.</param>
+    /// <returns>The name of the department.</returns>
+    public string DepartmentName(Guid? DepartmentId)
+    {
+        string output = "";
+
+        if (_Departments.Any() && DepartmentId.HasValue) {
+            var department = _Departments.FirstOrDefault(x => x.DepartmentId == DepartmentId);
+            if (department != null) {
+                output += department.DepartmentName;
+            }
+        }
+
+        return output;
+    }
+
+    /// <summary>
+    /// The list of all department groups.
+    /// </summary>
+    public List<DataObjects.DepartmentGroup> DepartmentGroups {
+        get { return _DepartmentGroups; }
+        set {
+            if (!ObjectsAreEqual(_DepartmentGroups, value)) {
+                _DepartmentGroups = value;
+                _ModelUpdated = DateTime.UtcNow;
+                NotifyDataChanged();
+            }
+        }
+    }
+
+    /// <summary>
+    /// The list of all deparments.
+    /// </summary>
+    public List<DataObjects.Department> Departments {
+        get { return _Departments; }
+        set {
+            if (!ObjectsAreEqual(_Departments, value)) {
+                _Departments = value;
+                _ModelUpdated = DateTime.UtcNow;
+                NotifyDataChanged();
+            }
+        }
+    }
+
 
     /// <summary>
     /// Shows a Toast with an error message.
@@ -544,6 +671,8 @@ public partial class BlazorDataModel
                 Text = message,
                 MessageType = MessageType.Danger,
             }, AutoHide, RemovePreviousMessages, ReplaceLineBreaks);
+        } else {
+            UnknownError();
         }
     }
 
@@ -583,10 +712,20 @@ public partial class BlazorDataModel
             bool output = false;
 
             if (
+                DeletedRecordCounts.DepartmentGroups > 0 ||
+                DeletedRecordCounts.Departments > 0 ||
                 DeletedRecordCounts.FileStorage > 0 ||
+                // {{ModuleItemStart:Tags}}
+                DeletedRecordCounts.Tags > 0 ||
+                // {{ModuleItemEnd:Tags}}
+                DeletedRecordCounts.UserGroups > 0 ||
                 DeletedRecordCounts.Users > 0
             ) {
                 output = true;
+            }
+
+            if (!output) {
+                output = HaveDeletedRecordsApp;
             }
 
             return output;
@@ -643,7 +782,18 @@ public partial class BlazorDataModel
     /// </summary>
     public List<string> Modules {
         get {
-            var output = new List<string> { "employeeid", "files", "themes" };
+            var output = new List<string> {
+                "departments",
+                "employeeid",
+                "files",
+                // {{ModuleItemStart:Tags}}
+                "tags",
+                // {{ModuleItemEnd:Tags}}
+                "themes",
+                "udf",
+                "usergroups",
+                "workschedule",
+            };
 
             if (_GloballyDisabledModules != null && _GloballyDisabledModules.Any()) {
                 foreach (var item in _GloballyDisabledModules) {
@@ -706,6 +856,7 @@ public partial class BlazorDataModel
             return "<div><div class=\"me-2 spinner-border loading-spinner text-primary\" role=\"status\"></div>" + Helpers.Text("LoadingWait") + "</div>";
         }
     }
+
 
     /// <summary>
     /// Indicates if a user is logged in.
@@ -961,6 +1112,19 @@ public partial class BlazorDataModel
         }
     }
 
+    /// <summary>
+    /// Gets or sets the collection of available plugins.
+    /// </summary>
+    public List<Plugins.Plugin> Plugins {
+        get { return _Plugins.Where(x => x.LimitToTenants.Count() == 0 || x.LimitToTenants.Contains(_TenantId)).ToList(); }
+        set {
+            if (!ObjectsAreEqual(_Plugins, value)) {
+                _Plugins = value;
+                _ModelUpdated = DateTime.UtcNow;
+                NotifyDataChanged();
+            }
+        }
+    }
 
     /// <summary>
     /// Used to indicate which quick action is being used in the offcanvas area.
@@ -989,6 +1153,7 @@ public partial class BlazorDataModel
             }
         }
     }
+
 
     /// <summary>
     /// The user object used when adding a user via the quick action menu.
@@ -1089,6 +1254,7 @@ public partial class BlazorDataModel
         return output;
     }
 
+
     /// <summary>
     /// Gets or sets the option to show the tenant listing when missing the tenant code.
     /// </summary>
@@ -1140,6 +1306,9 @@ public partial class BlazorDataModel
         }
     }
 
+    /// <summary>
+    /// The CSS class for the sticky menu based on whether or not the menu is pinned.
+    /// </summary>
     public string StickyMenuClass {
         get {
             string output = "sticky-menu-unpinned";
@@ -1193,6 +1362,22 @@ public partial class BlazorDataModel
             }
         }
     }
+
+    // {{ModuleItemStart:Tags}}
+    /// <summary>
+    /// The list of Tag objects.
+    /// </summary>
+    public List<DataObjects.Tag> Tags {
+        get { return _Tags; }
+        set {
+            if (!ObjectsAreEqual(_Tags, value)) {
+                _Tags = value;
+                _ModelUpdated = DateTime.UtcNow;
+                NotifyDataChanged();
+            }
+        }
+    }
+    // {{ModuleItemEnd:Tags}}
 
     /// <summary>
     /// The current Tenant object.
@@ -1345,7 +1530,200 @@ public partial class BlazorDataModel
 
 
 
-  
+    /// <summary>
+    /// The options for a given User-Defined Field.
+    /// </summary>
+    /// <param name="module">The name of the module (eg: Users)</param>
+    /// <param name="item">The individual item.</param>
+    /// <returns>A list of strings containing the options for the field.</returns>
+    public List<string> UdfFieldOptions(string? module, int item)
+    {
+        List<string> output = new List<string>();
+
+        string udf = "UDF" + (item < 10 ? "0" : "") + item.ToString();
+
+        if (!String.IsNullOrWhiteSpace(module) && _udfLabels.Any()) {
+            string values = String.Empty;
+
+            var match = _udfLabels.FirstOrDefault(x => x.Module != null && x.Module.ToLower() == module.ToLower() && x.udf != null && x.udf.ToUpper() == udf);
+
+            if (match != null && !String.IsNullOrWhiteSpace(match.Label)) {
+                values += match.Label;
+
+                if (values.Contains("|")) {
+                    var items = values.Split('|');
+                    if (items != null && items.Count() > 2) {
+                        values = items[2].Trim();
+                    }
+                    if (!String.IsNullOrWhiteSpace(values)) {
+                        var splitItems = values.Split(",");
+                        if (splitItems != null && splitItems.Any()) {
+                            foreach (var splitItem in splitItems) {
+                                if (!String.IsNullOrWhiteSpace(splitItem)) {
+                                    output.Add(splitItem.Trim());
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return output;
+    }
+
+    /// <summary>
+    /// Indicates the type of field for a given User-Defined Field.
+    /// </summary>
+    /// <param name="module">The module (eg: Users)</param>
+    /// <param name="item">The individual field item.</param>
+    /// <returns>The field type.</returns>
+    public string UdfFieldType(string? module, int item)
+    {
+        string output = String.Empty;
+
+        if (!String.IsNullOrWhiteSpace(module) && _udfLabels.Any()) {
+            string udf = "UDF" + (item < 10 ? "0" : "") + item.ToString();
+
+            var match = _udfLabels.FirstOrDefault(x => x.Module != null && x.Module.ToLower() == module.ToLower() && x.udf != null && x.udf.ToUpper() == udf);
+            if (match != null && !String.IsNullOrWhiteSpace(match.Label)) {
+                string label = match.Label.Trim();
+
+                if (label.Contains("|")) {
+                    var items = label.Split("|");
+                    if (items != null && items.Count() > 1) {
+                        output = items[1].Trim();
+
+                        if (String.IsNullOrWhiteSpace(output)) {
+                            output = "input";
+                        }
+                    }
+                }
+            }
+        }
+
+        return output;
+    }
+
+    /// <summary>
+    /// Filter options for a given User-Defined Field.
+    /// </summary>
+    /// <param name="module">The module (eg: Users)</param>
+    /// <param name="item">The indiviual field item.</param>
+    /// <returns>A list of strings containing the options.</returns>
+    public List<string> UdfFilterOptions(string? module, int item)
+    {
+        List<string> output = new List<string>();
+
+        if (!String.IsNullOrWhiteSpace(module) && _udfLabels.Any()) {
+            string udf = "UDF" + (item < 10 ? "0" : "") + item.ToString();
+
+            var match = _udfLabels.FirstOrDefault(x => x.Module != null && x.Module.ToLower() == module.ToLower() && x.udf != null && x.udf.ToUpper() == udf);
+            if (match != null && match.FilterOptions.Any()) {
+                output = match.FilterOptions;
+            }
+        }
+
+        return output;
+    }
+
+    /// <summary>
+    /// The label for an individual User-Defined Field.
+    /// </summary>
+    /// <param name="module">The module (eg: Users)</param>
+    /// <param name="item">The indiviual field item.</param>
+    /// <returns>The label for the field.</returns>
+    public string UdfLabel(string? module, int item)
+    {
+        string output = String.Empty;
+
+        if (!String.IsNullOrWhiteSpace(module) && _udfLabels.Any()) {
+            string udf = "UDF" + (item < 10 ? "0" : "") + item.ToString();
+
+            var match = _udfLabels.FirstOrDefault(x => x.Module != null && x.Module.ToLower() == module.ToLower() && x.udf != null && x.udf.ToUpper() == udf);
+            if (match != null && !String.IsNullOrWhiteSpace(match.Label)) {
+                output = match.Label.Trim();
+                if (output.Contains("|")) {
+                    output = output.Substring(0, output.IndexOf("|"));
+                }
+            }
+        }
+
+        return output;
+    }
+
+    /// <summary>
+    /// Indicates if a given User-Defined Field should be shown as a column.
+    /// </summary>
+    /// <param name="module">The module (eg: Users)</param>
+    /// <param name="item">The indiviual field item.</param>
+    /// <returns>True/False</returns>
+    public bool UdfShowColumn(string? module, int item)
+    {
+        bool output = false;
+
+        if (!String.IsNullOrWhiteSpace(module) && _udfLabels.Any()) {
+            string udf = "UDF" + (item < 10 ? "0" : "") + item.ToString();
+
+            var match = _udfLabels.FirstOrDefault(x => x.Module != null && x.Module.ToLower() == module.ToLower() && x.udf != null && x.udf.ToUpper() == udf);
+            if (match != null && !String.IsNullOrWhiteSpace(match.Label) && match.ShowColumn) {
+                output = true;
+            }
+        }
+
+        return output;
+    }
+
+    /// <summary>
+    /// Indicates if a given User-Defined Field is in use.
+    /// </summary>
+    /// <param name="module">The module (eg: Users)</param>
+    /// <param name="item">The indiviual field item.</param>
+    /// <returns>True/False</returns>
+    public bool UdfShowField(string? module, int item)
+    {
+        string label = UdfLabel(module, item);
+
+        bool output = !String.IsNullOrWhiteSpace(label);
+
+        return output;
+    }
+
+    /// <summary>
+    /// Indicates if a given User-Defined Field should be shown as a filter option.
+    /// </summary>
+    /// <param name="module">The module (eg: Users)</param>
+    /// <param name="item">The indiviual field item.</param>
+    /// <returns>True/False</returns>
+    public bool UdfShowInFilter(string? module, int item)
+    {
+        bool output = false;
+
+        if (!String.IsNullOrWhiteSpace(module) && _udfLabels.Any()) {
+            string udf = "UDF" + (item < 10 ? "0" : "") + item.ToString();
+
+            var match = _udfLabels.FirstOrDefault(x => x.Module != null && x.Module.ToLower() == module.ToLower() && x.udf != null && x.udf.ToUpper() == udf);
+            if (match != null && !String.IsNullOrWhiteSpace(match.Label) && match.ShowInFilter) {
+                output = true;
+            }
+        }
+
+        return output;
+    }
+
+    /// <summary>
+    /// Gets or sets the collection of User-Defined Field labels.
+    /// </summary>
+    public List<DataObjects.udfLabel> udfLabels {
+        get { return _udfLabels; }
+        set {
+            if (!ObjectsAreEqual(_udfLabels, value)) {
+                _udfLabels = value;
+                _ModelUpdated = DateTime.UtcNow;
+                NotifyDataChanged();
+            }
+        }
+    }
 
     /// <summary>
     /// Indicates if a Custom Authentication Provider has been configured for the Admin account.
@@ -1375,6 +1753,19 @@ public partial class BlazorDataModel
         }
     }
 
+    /// <summary>
+    /// The collection of all User Group objects.
+    /// </summary>
+    public List<DataObjects.UserGroup> UserGroups {
+        get { return _UserGroups; }
+        set {
+            if (!ObjectsAreEqual(_UserGroups, value)) {
+                _UserGroups = value;
+                _ModelUpdated = DateTime.UtcNow;
+                NotifyDataChanged();
+            }
+        }
+    }
 
     /// <summary>
     /// The collection of all User objects for the current user (as a user may have accounts in more than one tenant).

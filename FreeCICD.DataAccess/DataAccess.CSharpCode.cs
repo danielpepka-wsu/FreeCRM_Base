@@ -112,14 +112,14 @@ public partial class DataAccess
                         diagnostic.Severity == Microsoft.CodeAnalysis.DiagnosticSeverity.Error);
 
                     foreach (Microsoft.CodeAnalysis.Diagnostic diagnostic in failures) {
-                        //Console.WriteLine(diagnostic.Id.ToString() + ": " + diagnostic.GetMessage());
+                        Console.WriteLine(diagnostic.Id.ToString() + ": " + diagnostic.GetMessage());
                     }
                 }
             }
         } catch (Exception ex) {
             // When an error is encountered the output object will be null, so create and return a new object.
             //return new DataObjects.DynamicWorkflowResponse { Message = ex.Message };
-            //Console.WriteLine("Exception: " + RecurseExceptionAsString(ex));
+            Console.WriteLine("Exception: " + RecurseExceptionAsString(ex));
         }
 
         return output;

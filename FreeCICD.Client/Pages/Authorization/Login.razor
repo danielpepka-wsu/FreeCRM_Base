@@ -2,6 +2,7 @@
 @page "/{TenantCode}/Login"
 @implements IDisposable
 @using Blazored.LocalStorage
+@using Plugins
 @inject IJSRuntime jsRuntime
 @inject HttpClient Http
 @inject ILocalStorageService LocalStorage
@@ -122,7 +123,36 @@
                             </div>
                         }
 
-                        
+                        @if (AllowLoginTypePlugin) {
+                            var plugins = Model.Plugins.Where(x => x.Type.ToLower() == "auth" && (x.LimitToTenants.Count == 0 || x.LimitToTenants.Contains(Model.TenantId))).ToList();
+                            foreach(var plugin in plugins) {
+                                string buttonClass = String.Empty + Helpers.GetDictionaryProperty<string>("ButtonClass", plugin.Properties);
+                                string buttonIcon = String.Empty + Helpers.GetDictionaryProperty<string>("ButtonIcon", plugin.Properties);
+                                string buttonText = String.Empty + Helpers.GetDictionaryProperty<string>("ButtonText", plugin.Properties);
+
+                                if (String.IsNullOrWhiteSpace(buttonClass)) {
+                                    buttonClass = "btn btn-secondary";
+                                }
+
+                                if (String.IsNullOrWhiteSpace(buttonIcon)) {
+                                    buttonIcon = Helpers.Icon("Login", true);
+                                }
+
+                                if (String.IsNullOrWhiteSpace(buttonText)) {
+                                    buttonText = plugin.Name;
+                                }
+
+                                <div class="mb-2">
+                                    <button type="button" class="login-button @buttonClass" @onclick="@(() => DoLoginPlugin(plugin))">
+                                        <div class="login-button-contents">
+                                            <div class="login-button-icon">@((MarkupString)buttonIcon)</div>
+                                            <div class="login-button-text"><i>@buttonText</i></div>
+                                        </div>
+                                    </button>
+                                </div>
+                            }
+                        }
+
                         @if (_tenantListing.Tenants.Count() > 1) {
                             <div class="mb-2 mt-4 center">
                                 <button type="button" class="btn btn-warning" @onclick="SelectTenants">
@@ -347,6 +377,28 @@
                     </div>
                     break;
 
+                case "pluginprompts":
+                    <h1 class="page-title">@_plugin.Name</h1>
+
+                    <div class="mb-2">
+                        <PluginPrompts 
+                        Plugin="_plugin"
+                        OnValuesChange="DoLoginPluginWithPromptsPromptValuesChanged" />
+                    </div>
+
+                    <div class="mb-2 center">
+                        @if (AvailableLoginOptions.Count() > 1) {
+                            <button type="button" class="btn btn-dark" @onclick="Back">
+                                <Language Tag="Back" IncludeIcon="true" />
+                            </button>
+                        }
+
+                        <button type="button" class="btn btn-primary" @onclick="DoLoginPluginWithPrompts">
+                            <Language Tag="Log-In" IncludeIcon="true" />
+                        </button>
+                    </div>
+                    @* </form> *@
+                    break;
             }
         </div>
         <div class="login-padding"></div>
@@ -363,6 +415,8 @@
     protected string email = "";
     protected string loginIntro = "";
     protected string password = "";
+    protected Plugin _plugin = new Plugin();
+    protected List<PluginPromptValue> _promptValues = new List<PluginPromptValue>();
     protected bool processing = false;
     protected DataObjects.User _user = new DataObjects.User();
     protected string view = "";
@@ -571,6 +625,18 @@
         }
     }
 
+    protected bool AllowLoginTypePlugin {
+        get {
+            bool output = false;
+
+            if (Model.Plugins.Any(x => x.Type.ToLower() == "auth" && (x.LimitToTenants.Count == 0 || x.LimitToTenants.Contains(Model.TenantId)))) {
+                output = true;
+            }
+
+            return output;
+        }
+    }
+
     public List<string> AvailableLoginOptions
     {
         get {
@@ -583,6 +649,7 @@
             if (AllowLoginTypeLocal) { output.Add("local"); }
             if (AllowLoginTypeMicrosoftAccount) { output.Add("microsoft"); }
             if (AllowLoginTypeOpenId) { output.Add("openid"); }
+            if (AllowLoginTypePlugin) { output.Add("plugin"); }
 
             return output;
         }
@@ -704,6 +771,71 @@
         }
     }
 
+    protected async Task DoLoginPlugin(Plugin plugin)
+    {
+        processing = false;
+        Model.ClearMessages();
+
+        if (plugin.Prompts != null && plugin.Prompts.Count > 0) {
+            _plugin = plugin;
+            SetView("pluginprompts");
+
+            await Helpers.DelayedFocus("plugin-" + _plugin.Id.ToString() + "-prompt-1");
+        } else {
+            SetView("redirecting");
+            Helpers.NavigateTo(Model.ApplicationUrl + "Authorization/Plugin?Name=" + plugin.Name.Replace(" ", "_") + "&TenantId=" + Model.TenantId.ToString() + "&Fingerprint=" + Model.Fingerprint, true);
+        }
+    }
+
+    protected async Task DoLoginPluginWithPrompts()
+    {
+        // First, make sure each prompt element has a value.
+        int index = 0;
+        if (_plugin.Prompts != null && _promptValues != null) {
+            foreach (var prompt in _plugin.Prompts) {
+                index++;
+
+                //string value = Helpers.GetPromptItemValueAsString(prompt.Value);
+                string value = String.Empty;
+
+                var promptValue = _promptValues.FirstOrDefault(x => x.Name.ToLower() == prompt.Name.ToLower());
+                if (promptValue != null && promptValue.Values != null && promptValue.Values.Count() > 0) {
+                    value += promptValue.Values[0];
+                }
+
+                if (String.IsNullOrWhiteSpace(value)) {
+                    await Helpers.DelayedFocus("plugin-" + _plugin.Id.ToString() + "-prompt-" + index.ToString());
+                    return;
+                }
+            }
+        }
+
+        var result = await Helpers.GetOrPost<DataObjects.SimpleResponse>("api/Data/EncryptPrompts", _promptValues);
+
+        if (result != null) {
+            if (result.Result && !String.IsNullOrWhiteSpace(result.Message)) {
+                var url = Model.ApplicationUrl + "Authorization/Plugin?Name=" + _plugin.Name.Replace(" ", "_") + "&TenantId=" + Model.TenantId.ToString() + "&Prompts=" + result.Message + "&Fingerprint=" + Model.Fingerprint;
+
+                SetView("redirecting");
+                StateHasChanged();
+
+                Helpers.NavigateTo(url, true);
+            } else {
+                await Back();
+            }
+        } else {
+            await Back();
+        }
+
+        // Build out the URL to redirect to with the encrypted items in the querystring.
+    }
+
+    protected async Task DoLoginPluginWithPromptsPromptValuesChanged(List<PluginPromptValue> values)
+    {
+        _promptValues = values;
+
+        await DoLoginPluginWithPrompts();
+    }
 
     protected async Task ForgotPassword()
     {
@@ -839,7 +971,7 @@
                     }
                 }
             }
-            
+
         } catch (Exception ex) {
             errors.Add(ex.Message);
         }

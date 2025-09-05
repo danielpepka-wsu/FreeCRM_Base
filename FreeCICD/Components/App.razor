@@ -1,11 +1,28 @@
 ﻿@inject IDataAccess data
 @inject IConfigurationHelper ConfigurationHelper
 @{
-    string unique = data.UniqueId;
     string applicationUrl = data.ApplicationURL;
-    string basePath = !String.IsNullOrWhiteSpace(ConfigurationHelper.BasePath) ? ConfigurationHelper.BasePath : "/";
-    string favicon = applicationUrl + "favicon.ico";
     string appVersion = data.Version;
+    string basePath = !String.IsNullOrWhiteSpace(ConfigurationHelper.BasePath) ? ConfigurationHelper.BasePath : "/";
+    string favicon96 = applicationUrl + "favicon-96x96.png";
+    string faviconAppleTouch = applicationUrl + "apple-touch-icon.png";
+    string faviconIco = applicationUrl + "favicon.ico";
+    string faviconManifest = applicationUrl + "site.webmanifest";
+    string faviconSvg = applicationUrl + "favicon.svg";
+    string unique = data.UniqueId;
+
+    string analyticsCodeHtml = String.Empty;
+    if (!String.IsNullOrWhiteSpace(ConfigurationHelper.AnalyticsCode)) {
+        if (ConfigurationHelper.AnalyticsCode.ToLower().StartsWith("g-")) {
+            // This is a Google Analytics code, so format it accordingly.
+            analyticsCodeHtml = "<!-- Google tag (gtag.js) --> <script async src='https://www.googletagmanager.com/gtag/js?id=" + ConfigurationHelper.AnalyticsCode + "'></script> <script>   window.dataLayer = window.dataLayer || [];   function gtag(){dataLayer.push(arguments);}   gtag('js', new Date());   gtag('config', '" + ConfigurationHelper.AnalyticsCode + "'); </script>";
+        } else if (ConfigurationHelper.AnalyticsCode.ToLower().Contains("<script")) {
+            // This is a full script tag, so just use it as is.
+            analyticsCodeHtml = ConfigurationHelper.AnalyticsCode;
+        } else {
+            // Ignore this value, as it is not a known format.
+        }
+    }
 }
 <!doctype html>
 <html lang="en">
@@ -15,7 +32,11 @@
     <meta name="app:released" content="@data.Released" />
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="icon" type="image/png" href="@favicon" />
+    <link rel="icon" type="image/svg+xml" href="@faviconSvg" />
+    <link rel="icon" type="image/png" href="@favicon96" sizes="96x96" />
+    <link rel="shortcut icon" href="@faviconIco" />
+    <link rel="apple-touch-icon" sizes="180x180" href="@faviconAppleTouch" />
+    <link rel="manifest" href="@faviconManifest" />
     <base href="@basePath" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
     <link rel="stylesheet" href="@(applicationUrl + "_content/Blazor.Bootstrap/blazor.bootstrap.css?v=" + appVersion)" />
@@ -29,11 +50,15 @@
     <link rel="stylesheet" href="@Assets["css/app.css"]" />
     <link rel="stylesheet" href="@Assets["css/themes.css"]" />
     <link rel="stylesheet" href="@Assets["css/tags.css"]" />
+    @if (!String.IsNullOrWhiteSpace(analyticsCodeHtml)) {
+        @((MarkupString)analyticsCodeHtml)
+    }
+    <Modules_App Module="head" />
     <ImportMap />
     <HeadOutlet @rendermode="new InteractiveWebAssemblyRenderMode(prerender: false)" />
 </head>
 
-<body id="body-element" data-bs-theme="" class="">
+<body id="body-element" data-bs-theme="" class="loading">
     <Routes @rendermode="new InteractiveWebAssemblyRenderMode(prerender: false)" />
     <script src="https://cdn.jsdelivr.net/npm/@@thumbmarkjs/thumbmarkjs/dist/thumbmark.umd.js"></script>
     <script src="@(applicationUrl + "_content/Blazor.Bootstrap/blazor.bootstrap.js?v=" + appVersion)"></script>
@@ -47,6 +72,7 @@
     <script src="@(applicationUrl + "_content/BlazorMonaco/lib/monaco-editor/min/vs/loader.js?v=" + appVersion)"></script>
     <script src="@(applicationUrl + "_content/BlazorMonaco/lib/monaco-editor/min/vs/editor/editor.main.js?v=" + appVersion)"></script>
     <script src="_framework/blazor.web.js"></script>
+    <Modules_App Module="body" />
 
     <script type="text/javascript">
         let dotNetHelper;
@@ -310,13 +336,15 @@
         }
 
         function SetPreferredColorScheme(preferred) {
+            Loaded();
+
             if (preferred == undefined || preferred == null) {
                 preferred = "light";
             }
 
             if (preferred == "auto") {
                 let colorScheme = getComputedStyle(document.body, ':after').content;
-                let preferred = colorScheme.indexOf("dark") > -1 ? "dark" : "light";
+                preferred = colorScheme.indexOf("dark") > -1 ? "dark" : "light";
             }
 
             let setTheme = "";
@@ -342,7 +370,7 @@
                 let el = document.getElementById("body-element");
                 if (el != undefined && el != null) {
                     el.setAttribute("data-bs-theme", setTheme);
-                    el.classList.remove();
+                    el.classList = "";
 
                     if (setClass != "") {
                         el.classList.add(setClass);
@@ -397,5 +425,7 @@
             }
         }
     </script>
+
+    <Modules_App Module="javascript" />
 </body>
 </html>
