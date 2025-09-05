@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.SignalR;
 
 namespace FreeManager.Server.Hubs
 {
-    public class freemanagerHub : Hub
+    public partial class freemanagerHub : Hub
     {
         private List<string> tenants = new List<string>();
 
