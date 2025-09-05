@@ -4580,7 +4580,7 @@ public static partial class Helpers
                 Model.TenantId = Guid.Empty;
             }
 
-            await ReloadModelApp();
+            await ReloadModelApp(blazorDataModelLoader);
 
             if (!Model.Loaded) {
                 Model.Loaded = true;

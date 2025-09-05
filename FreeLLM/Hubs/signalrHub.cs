@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.SignalR;
 
 namespace FreeLLM.Server.Hubs
 {
-    public class freellmHub : Hub
+    public partial class freellmHub : Hub
     {
         private List<string> tenants = new List<string>();
 
