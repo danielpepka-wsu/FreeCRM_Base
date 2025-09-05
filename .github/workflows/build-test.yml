@@ -1,0 +1,84 @@
+name: .NET 9 Web App Build, Publish & Runtime Test
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    strategy:
+      matrix:
+        configuration: [Debug, Release]
+
+    env:
+      SOLUTION_FILE: CRM.sln              # <--- Update if solution name changes
+      PROJECT_FILE: CRM/CRM.csproj    # <--- Update if project path changes
+      TEST_ENDPOINT: /api/Data/GetVersionInfo
+      POSSIBLE_PORTS: "5201 7048 15497"       # <--- Add/remove ports as needed
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Setup .NET 9
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 9.0.x
+
+    - name: Restore dependencies
+      run: dotnet restore ${{ env.SOLUTION_FILE }}
+
+    - name: Build solution (${{ matrix.configuration }})
+      run: dotnet build ${{ env.SOLUTION_FILE }} --configuration ${{ matrix.configuration }} --no-restore
+
+    - name: Publish project (${{ matrix.configuration }})
+      run: dotnet publish ${{ env.PROJECT_FILE }} --configuration ${{ matrix.configuration }} --no-build --output ./publish/${{ matrix.configuration }}
+
+    - name: Upload published artifact (${{ matrix.configuration }})
+      uses: actions/upload-artifact@v4
+      with:
+        name: WebApp-${{ matrix.configuration }}
+        path: ./publish/${{ matrix.configuration }}
+
+    - name: Run runtime smoke test (${{ matrix.configuration }})
+      shell: bash
+      run: |
+        echo "Starting app in background with logs..."
+        dotnet ./publish/${{ matrix.configuration }}/$(basename ${{ env.PROJECT_FILE }} .csproj).dll &
+        APP_PID=$!
+
+        timeout=60
+        elapsed=0
+        success=0
+
+        echo "Trying ports: ${{ env.POSSIBLE_PORTS }}"
+        while [ $elapsed -lt $timeout ]; do
+          for port in ${{ env.POSSIBLE_PORTS }}; do
+            url="http://localhost:$port${{ env.TEST_ENDPOINT }}"
+            echo "Checking $url ..."
+            response=$(curl -s -w "%{http_code}" -o response.json $url || true)
+            if [ "$response" = "200" ]; then
+              echo "✅ App responded at $url"
+              echo "Response body:"
+              cat response.json
+              success=1
+              break 2
+            fi
+          done
+          sleep 2
+          elapsed=$((elapsed+2))
+        done
+
+        if [ $success -eq 0 ]; then
+          echo "❌ App failed to respond on any of the candidate ports within $timeout seconds"
+          kill $APP_PID || true
+          exit 1
+        fi
+
+        kill $APP_PID || true
