@@ -14,11 +14,27 @@ jobs:
       matrix:
         configuration: [Debug, Release]
 
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: sapassword
+          MYSQL_DATABASE: crmdb
+          MYSQL_USER: sa
+          MYSQL_PASSWORD: sapassword
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -u sa -psapassword"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
     env:
-      SOLUTION_FILE: CRM.sln              # <--- Update if solution name changes
-      PROJECT_FILE: CRM/CRM.csproj    # <--- Update if project path changes
+      SOLUTION_FILE: CRM.sln
+      PROJECT_FILE: CRM/CRM.csproj
       TEST_ENDPOINT: /api/Data/GetVersionInfo
-      POSSIBLE_PORTS: "5201 7048 15497"       # <--- Add/remove ports as needed
+      POSSIBLE_PORTS: "5201 7048 15497"
 
     steps:
     - name: Checkout repository
@@ -30,6 +46,18 @@ jobs:
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: 9.0.x
+
+    - name: Wait for MySQL service to be ready
+      run: |
+        echo "Waiting for MySQL to accept connections..."
+        for i in {1..30}; do
+          if mysql -h 127.0.0.1 -P 3306 -u sa -psapassword -e "SELECT 1;" crmdb; then
+            echo "✅ MySQL is ready"
+            break
+          fi
+          echo "⏳ Waiting ($i)..."
+          sleep 2
+        done
 
     - name: Restore dependencies
       run: dotnet restore ${{ env.SOLUTION_FILE }}
