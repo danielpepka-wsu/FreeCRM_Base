@@ -179,7 +179,15 @@ public partial class DataController
     public async Task SignalRUpdate(DataObjects.SignalRUpdate update)
     {
         if (_signalR != null) {
-            if (update.TenantId.HasValue) {
+            if (!string.IsNullOrWhiteSpace(update.ConnectionId)) {
+                // this is a signalr client for a particular unique connection
+                try {
+
+                    await _signalR.Clients.All.SendAsync("SignalRUpdate", update);
+                } catch (Exception ex) {
+                    //Console.WriteLine($"SignalRUpdate Error: {ex.Message}");
+                }
+            }else if (update.TenantId.HasValue) {
                 await _signalR.Clients.Group(((Guid)update.TenantId).ToString()).SendAsync("SignalRUpdate", update);
             } else {
                 // This is a non-tenant-specific update.
