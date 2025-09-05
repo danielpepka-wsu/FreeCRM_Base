@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.SignalR;
 
 namespace PJProcessor.Server.Hubs
 {
-    public class pjprocessorHub : Hub
+    public partial class pjprocessorHub : Hub
     {
         private List<string> tenants = new List<string>();
 
