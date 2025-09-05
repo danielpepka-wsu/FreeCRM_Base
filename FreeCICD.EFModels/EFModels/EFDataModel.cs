@@ -53,7 +53,6 @@ public partial class EFDataModel : DbContext
     // => optionsBuilder.UseMySQL("Server=localhost;Database=FreeCICD;User=admin;Password=admin");
     // => optionsBuilder.UseNpgsql("Host=localhost;Database=FreeCICD;Username=postgres;Password=admin");
     // => optionsBuilder.UseSqlServer("Data Source=(local);Initial Catalog=FreeCICD;Persist Security Info=True;User ID=sa;Password=saPassword;MultipleActiveResultSets=True;TrustServerCertificate=True;");
-    // => optionsBuilder.UseSqlServer("Data Source=(local);Initial Catalog=FreeCICD;Integrated Security=True;MultipleActiveResultSets=True;TrustServerCertificate=True;");
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
