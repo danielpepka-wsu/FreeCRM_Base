@@ -1,4 +1,4 @@
-name: .NET (Windows • multi-project remove via feeder • safe rename • snapshot push)
+name: Rename and Branch
 
 on:
   push:
