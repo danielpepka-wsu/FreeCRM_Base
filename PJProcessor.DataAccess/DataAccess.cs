@@ -22,7 +22,7 @@ public partial class DataAccess: IDisposable, IDataAccess
     private bool _inMemoryDatabase = false;
     private string _localModeUrl = "";
     private bool _open;
-    private DateOnly _released = DateOnly.FromDateTime(Convert.ToDateTime("9/5/2025"));
+    private DateOnly _released = DateOnly.FromDateTime(Convert.ToDateTime("9/9/2025"));
     private IServiceProvider? _serviceProvider;
     private string _uniqueId = Guid.NewGuid().ToString().Replace("-", "").ToLower();
 
@@ -42,6 +42,8 @@ public partial class DataAccess: IDisposable, IDataAccess
         if (!String.IsNullOrWhiteSpace(_connectionString)) {
             _connectionString = ConnectionString;
         }
+
+        DataAccessAppInit();
 
         var optionsBuilder = new DbContextOptionsBuilder<EFDataModel>();
 
